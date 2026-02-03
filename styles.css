@@ -8,12 +8,12 @@
 :root {
   --bg:            #0a0a0a;
   --bg-surface:    #111111;
-  --text:          #e8e4df;
-  --text-dim:      #6b6560;
-  --accent:        #c9a96e;
-  --accent-dim:    rgba(201,169,110,0.15);
-  --font-display:  'Bebas Neue', sans-serif;
-  --font-body:     'Cormorant Garamond', serif;
+  --text:          rgba(255,255,255,0.95);
+  --text-dim:      rgba(255,255,255,0.95);
+  --accent:        rgba(255,255,255,0.95);
+  --accent-dim:    rgba(255,255,255,0.15);
+  --font-display:  'Helvetica Neue', 'Arial', sans-serif;
+  --font-body:     'Helvetica Neue', 'Arial', sans-serif;
 }
 
 html { scroll-behavior: smooth; }
@@ -107,7 +107,7 @@ nav.scrolled { background: rgba(10,10,10,0.96); backdrop-filter: blur(6px); }
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   text-align: center;
-  border-bottom: 1px solid rgba(201,169,110,0.1);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 .hero-title {
   font-family: var(--font-display);
@@ -162,12 +162,12 @@ nav.scrolled { background: rgba(10,10,10,0.96); backdrop-filter: blur(6px); }
 
 .project-row {
   position: relative;
-  border-top: 1px solid rgba(201,169,110,0.1);
+  border-top: 1px solid rgba(255,255,255,0.1);
   padding: 0 60px;
   overflow: hidden;
   cursor: pointer;
 }
-.project-row:last-child { border-bottom: 1px solid rgba(201,169,110,0.1); }
+.project-row:last-child { border-bottom: 1px solid rgba(255,255,255,0.1); }
 
 /* the link itself is full-width but visually just the title */
 .project-row a {
@@ -235,7 +235,7 @@ nav.scrolled { background: rgba(10,10,10,0.96); backdrop-filter: blur(6px); }
 
 /* ─── About strip (home) ─── */
 .about-strip {
-  border-top: 1px solid rgba(201,169,110,0.08);
+  border-top: 1px solid rgba(255,255,255,0.08);
   background: var(--bg-surface);
   padding: 100px 60px;
 }
@@ -245,6 +245,7 @@ nav.scrolled { background: rgba(10,10,10,0.96); backdrop-filter: blur(6px); }
 .about-strip p {
   font-size: 20px; font-weight: 300;
   color: var(--text-dim); line-height: 1.9;
+  margin-bottom: 24px;
 }
 .about-strip p em { color: var(--accent); font-style: italic; }
 
@@ -253,7 +254,7 @@ footer {
   background: var(--bg);
   padding: 72px 48px 40px;
   text-align: center;
-  border-top: 1px solid rgba(201,169,110,0.08);
+  border-top: 1px solid rgba(255,255,255,0.08);
 }
 .social-links {
   display: flex; justify-content: center; gap: 40px; margin-bottom: 48px;
@@ -295,7 +296,7 @@ footer {
   text-align: center;
   padding: 0 48px 80px;
   position: relative;
-  border-bottom: 1px solid rgba(201,169,110,0.1);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 /* optional full-bleed background image / video behind title */
 .project-hero-bg {
@@ -387,8 +388,8 @@ footer {
 .project-nav {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border-top: 1px solid rgba(201,169,110,0.1);
-  border-bottom: 1px solid rgba(201,169,110,0.1);
+  border-top: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
   margin: 40px 0 0;
 }
 .project-nav a {
@@ -397,8 +398,8 @@ footer {
   padding: 48px 60px;
   transition: background 0.3s;
 }
-.project-nav a:hover { background: rgba(201,169,110,0.04); }
-.project-nav a:first-child { border-right: 1px solid rgba(201,169,110,0.1); }
+.project-nav a:hover { background: rgba(255,255,255,0.04); }
+.project-nav a:first-child { border-right: 1px solid rgba(255,255,255,0.1); }
 .project-nav a:last-child { align-items: flex-end; text-align: right; }
 
 .project-nav .nav-dir {
@@ -421,7 +422,7 @@ footer {
   .project-preview { width: 280px; height: 180px; }
   .media-grid { grid-template-columns: 1fr; }
   .project-nav { grid-template-columns: 1fr; }
-  .project-nav a:first-child { border-right: none; border-bottom: 1px solid rgba(201,169,110,0.1); }
+  .project-nav a:first-child { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); }
   .project-nav a:last-child { align-items: flex-start; text-align: left; }
 }
 @media (max-width: 600px) {
