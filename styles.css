@@ -206,20 +206,23 @@ nav.scrolled { background: rgba(10,10,10,0.96); backdrop-filter: blur(6px); }
 /* ─── Hover preview (image / video) ─── */
 .project-preview {
   position: absolute;
-  /* center it vertically on the row */
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%) scale(0.88);
-  width: 380px; height: 240px;
-  border-radius: 4px;
+  inset: 0;
   overflow: hidden;
   pointer-events: none;
   z-index: 1;
   opacity: 0;
-  transition: opacity 0.35s ease, transform 0.45s cubic-bezier(0.22,1,0.36,1);
+  transition: opacity 0.45s ease;
 }
 .project-row:hover .project-preview {
   opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
+}
+.project-preview img,
+.project-preview video {
+  transition: transform 0.6s cubic-bezier(0.22,1,0.36,1);
+}
+.project-row:hover .project-preview img,
+.project-row:hover .project-preview video {
+  transform: scale(1.05);
 }
 
 /* placeholder bg when no real media is swapped in */
@@ -510,7 +513,7 @@ footer {
    RESPONSIVE
    ═══════════════════════════════════════════ */
 @media (max-width: 900px) {
-  .project-preview { width: 280px; height: 180px; }
+  .project-preview { /* fills row at all sizes */ }
   .media-grid { grid-template-columns: 1fr; }
   .project-nav { grid-template-columns: 1fr; }
   .project-nav a:first-child { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.1); }
