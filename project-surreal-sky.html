@@ -9,13 +9,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Bebas+Neue&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <style>
-/* ─── Surreal Sky: unified responsive gallery ─── */
+/* ─── Surreal Sky: paired galleries, centered ─── */
 .ss-gallery {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 4px;
+  max-width: 1200px;
   width: 100%;
-  margin: 60px 0;
+  margin: 48px auto;
+  padding: 0 24px;
+  box-sizing: border-box;
 }
 .ss-gallery .media-item {
   overflow: hidden;
@@ -32,8 +35,11 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 4px;
+  max-width: 1200px;
   width: 100%;
-  margin: 80px 0 60px;
+  margin: 80px auto 60px;
+  padding: 0 24px;
+  box-sizing: border-box;
 }
 .sakumo-trio .media-item {
   overflow: hidden;
@@ -45,21 +51,7 @@
   display: block;
 }
 
-.media-caption {
-  max-width: 100%;
-  padding: 0 24px;
-  margin-top: -44px;
-  margin-bottom: 60px;
-  font-size: 13px;
-  font-weight: 300;
-  letter-spacing: 0.15em;
-  color: var(--text-dim);
-}
-
 /* ─── Responsive ─── */
-@media (max-width: 860px) {
-  .ss-gallery { grid-template-columns: repeat(2, 1fr); }
-}
 @media (max-width: 520px) {
   .ss-gallery,
   .sakumo-trio { grid-template-columns: 1fr; }
@@ -98,19 +90,25 @@
   </p>
 </div>
 
-<!-- ─── Gallery 1 ─── -->
+<!-- ─── Gallery 1: Kolobian Spires ─── -->
 <div class="ss-gallery">
   <div class="media-item">
-    <img src="assets/Projects/surreal_sky/AMULEK-01.jpg" alt="AMULEK 01">
+    <img src="assets/Projects/surreal_sky/KOLOBIAN-SPIRES-01.jpg" alt="KOLOBIAN SPIRES 01">
+  </div>
+  <div class="media-item">
+    <img src="assets/Projects/surreal_sky/KOLOBIAN-SPIRES-02.jpg" alt="KOLOBIAN SPIRES 02">
+  </div>
+</div>
+
+<!-- ─── Gallery 2: Gadianton ─── -->
+<div class="ss-gallery">
+  <div class="media-item">
+    <img src="assets/Projects/surreal_sky/GADIANTON-02.jpg" alt="GADIANTON 02">
   </div>
   <div class="media-item">
     <img src="assets/Projects/surreal_sky/GADIANTON-01.jpg" alt="GADIANTON 01">
   </div>
-  <div class="media-item">
-    <img src="assets/Projects/surreal_sky/KOLOBIAN-SPIRES-01.jpg" alt="KOLOBIAN SPIRES 01">
-  </div>
 </div>
-<p class="media-caption">AI-generated · text-to-image · Photoshop image compositing</p>
 
 <!-- ─── Mid copy ─── -->
 <div class="project-body">
@@ -124,19 +122,15 @@
   <blockquote>An alternative reality shaped by the fluid boundaries between human creativity and machine intelligence.</blockquote>
 </div>
 
-<!-- ─── Gallery 2 ─── -->
+<!-- ─── Gallery 3: Amulek ─── -->
 <div class="ss-gallery">
+  <div class="media-item">
+    <img src="assets/Projects/surreal_sky/AMULEK-01.jpg" alt="AMULEK 01">
+  </div>
   <div class="media-item">
     <img src="assets/Projects/surreal_sky/AMULEK-02.jpg" alt="AMULEK 02">
   </div>
-  <div class="media-item">
-    <img src="assets/Projects/surreal_sky/GADIANTON-02.jpg" alt="GADIANTON 02">
-  </div>
-  <div class="media-item">
-    <img src="assets/Projects/surreal_sky/KOLOBIAN-SPIRES-02.jpg" alt="KOLOBIAN SPIRES 02">
-  </div>
 </div>
-<p class="media-caption">ComfyUI · Topaz Upscaling · 2024-2025</p>
 
 <!-- ─── Process ─── -->
 <div class="project-body">
