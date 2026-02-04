@@ -8,6 +8,36 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Bebas+Neue&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<style>
+/* ─── Surreal Sky: full-frame, no crop ─── */
+.media-grid {
+  max-width: 100%;
+  padding: 0;
+  gap: 4px;
+  align-items: start;
+}
+.media-grid .media-item {
+  aspect-ratio: unset;
+  border-radius: 0;
+}
+.media-grid .media-item img {
+  height: auto;
+  object-fit: unset;
+}
+.media-caption {
+  max-width: 100%;
+  padding: 0 24px;
+}
+
+/* ─── SAKUMO trio ─── */
+.media-grid.sakumo-trio {
+  grid-template-columns: repeat(3, 1fr);
+  margin: 80px 0 60px;
+}
+@media (max-width: 900px) {
+  .media-grid.sakumo-trio { grid-template-columns: 1fr; }
+}
+</style>
 </head>
 <body>
 
@@ -25,7 +55,7 @@
   <div class="project-hero-bg"></div>
   <div class="project-hero-content">
     <h1 class="project-hero-title">SURREAL SKY</h1>
-    <p class="project-hero-tagline">Memory · technology · futuristic dreamscapes</p>
+    <p class="project-hero-tagline">futuristic dreamscapes</p>
   </div>
 </section>
 
@@ -36,7 +66,7 @@
     SURREAL_SKY is an AI-driven digital art series that explores the intersection of
     <em>memory, technology, and the hyper-stylized aesthetic of a futuristic dreamscape.</em>
     Rooted in my experiences living in Japan right out of university, this body of work blends
-    nostalgia with speculative fiction — creating an alternative reality shaped by the fluid
+    nostalgia with speculative fiction, creating an alternative reality shaped by the fluid
     boundaries between human creativity and machine intelligence.
   </p>
 </div>
@@ -60,12 +90,12 @@
     <img src="assets/Projects/surreal_sky/SAKUMO-01.jpg" alt="SAKUMO">
   </div>
 </div>
-<p class="media-caption">AI-generated compositions · text-to-image · image-to-image synthesis</p>
+<p class="media-caption">AI-generated · text-to-image · Photoshop image compositing</p>
 
 <!-- ─── Mid copy ─── -->
 <div class="project-body">
   <p>
-    The series is defined by a curated balance of <em>glitch aesthetics, cyberpunk influences, and soft dreamlike hues</em> —
+    The series is defined by a curated balance of <em>glitch aesthetics, cyberpunk influences, and soft dreamlike hues</em>,
     layered compositions integrating elements of surrealism, anime-inspired cyber aesthetics, and traditional art motifs.
     Each piece is refined through iterative prompt engineering and manual post-processing, pushing high-resolution
     upscaling techniques to extract and enhance fine detail from every frame.
@@ -93,7 +123,7 @@
     <img src="assets/Projects/surreal_sky/SAKUMO-02.jpg" alt="SAKUMO">
   </div>
 </div>
-<p class="media-caption">High-res upscaling · iterative refinement · 2025</p>
+<p class="media-caption"> ComfyUI · Topaz Upscaling · 2024-2025</p>
 
 <!-- ─── Process ─── -->
 <div class="project-body">
@@ -108,6 +138,19 @@
     Photoshop it, upscale it again, and color correct it. My background as an art director, photo editor,
     and designer has definitely come in handy when enhancing AI imagery.
   </p>
+</div>
+
+<!-- ─── SAKUMO Trio ─── -->
+<div class="media-grid sakumo-trio">
+  <div class="media-item">
+    <img src="assets/Projects/surreal_sky/SAKUMO-01.jpg" alt="SAKUMO 01">
+  </div>
+  <div class="media-item">
+    <img src="assets/Projects/surreal_sky/SAKUMO-02.jpg" alt="SAKUMO 02">
+  </div>
+  <div class="media-item">
+    <img src="assets/Projects/surreal_sky/SAKUMO-03.jpg" alt="SAKUMO 03">
+  </div>
 </div>
 
 <!-- ─── Footer ─── -->
