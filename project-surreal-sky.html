@@ -9,33 +9,60 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Bebas+Neue&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <style>
-/* ─── Surreal Sky: full-frame, no crop ─── */
-.media-grid {
-  max-width: 100%;
-  padding: 0;
+/* ─── Surreal Sky: unified responsive gallery ─── */
+.ss-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 4px;
-  align-items: start;
+  width: 100%;
+  margin: 60px 0;
 }
-.media-grid .media-item {
-  aspect-ratio: unset;
-  border-radius: 0;
+.ss-gallery .media-item {
+  overflow: hidden;
+  background: var(--bg-surface);
 }
-.media-grid .media-item img {
+.ss-gallery .media-item img {
+  width: 100%;
   height: auto;
-  object-fit: unset;
+  display: block;
 }
+
+/* ─── SAKUMO trio — stays horizontal until phones ─── */
+.sakumo-trio {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  width: 100%;
+  margin: 80px 0 60px;
+}
+.sakumo-trio .media-item {
+  overflow: hidden;
+  background: var(--bg-surface);
+}
+.sakumo-trio .media-item img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
 .media-caption {
   max-width: 100%;
   padding: 0 24px;
+  margin-top: -44px;
+  margin-bottom: 60px;
+  font-size: 13px;
+  font-weight: 300;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
 }
 
-/* ─── SAKUMO trio ─── */
-.media-grid.sakumo-trio {
-  grid-template-columns: repeat(3, 1fr);
-  margin: 80px 0 60px;
+/* ─── Responsive ─── */
+@media (max-width: 860px) {
+  .ss-gallery { grid-template-columns: repeat(2, 1fr); }
 }
-@media (max-width: 900px) {
-  .media-grid.sakumo-trio { grid-template-columns: 1fr; }
+@media (max-width: 520px) {
+  .ss-gallery,
+  .sakumo-trio { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -71,23 +98,16 @@
   </p>
 </div>
 
-<!-- ─── Media Grid 1 ─── -->
-<div class="media-grid">
+<!-- ─── Gallery 1 ─── -->
+<div class="ss-gallery">
   <div class="media-item">
-    <img src="assets/Projects/surreal_sky/AMULEK-01.jpg" alt="AMULEK">
+    <img src="assets/Projects/surreal_sky/AMULEK-01.jpg" alt="AMULEK 01">
   </div>
   <div class="media-item">
-    <img src="assets/Projects/surreal_sky/GADIANTON-01.jpg" alt="GADIANTON">
-  </div>
-</div>
-
-<!-- ─── Media Grid 2 ─── -->
-<div class="media-grid">
-  <div class="media-item">
-    <img src="assets/Projects/surreal_sky/KOLOBIAN-SPIRES-01.jpg" alt="KOLOBIAN SPIRES">
+    <img src="assets/Projects/surreal_sky/GADIANTON-01.jpg" alt="GADIANTON 01">
   </div>
   <div class="media-item">
-    <img src="assets/Projects/surreal_sky/SAKUMO-01.jpg" alt="SAKUMO">
+    <img src="assets/Projects/surreal_sky/KOLOBIAN-SPIRES-01.jpg" alt="KOLOBIAN SPIRES 01">
   </div>
 </div>
 <p class="media-caption">AI-generated · text-to-image · Photoshop image compositing</p>
@@ -104,26 +124,19 @@
   <blockquote>An alternative reality shaped by the fluid boundaries between human creativity and machine intelligence.</blockquote>
 </div>
 
-<!-- ─── Media Grid 3 ─── -->
-<div class="media-grid">
+<!-- ─── Gallery 2 ─── -->
+<div class="ss-gallery">
   <div class="media-item">
-    <img src="assets/Projects/surreal_sky/AMULEK-02.jpg" alt="AMULEK">
+    <img src="assets/Projects/surreal_sky/AMULEK-02.jpg" alt="AMULEK 02">
   </div>
   <div class="media-item">
-    <img src="assets/Projects/surreal_sky/GADIANTON-02.jpg" alt="GADIANTON">
-  </div>
-</div>
-
-<!-- ─── Media Grid 4 ─── -->
-<div class="media-grid">
-  <div class="media-item">
-    <img src="assets/Projects/surreal_sky/KOLOBIAN-SPIRES-02.jpg" alt="KOLOBIAN SPIRES">
+    <img src="assets/Projects/surreal_sky/GADIANTON-02.jpg" alt="GADIANTON 02">
   </div>
   <div class="media-item">
-    <img src="assets/Projects/surreal_sky/SAKUMO-02.jpg" alt="SAKUMO">
+    <img src="assets/Projects/surreal_sky/KOLOBIAN-SPIRES-02.jpg" alt="KOLOBIAN SPIRES 02">
   </div>
 </div>
-<p class="media-caption"> ComfyUI · Topaz Upscaling · 2024-2025</p>
+<p class="media-caption">ComfyUI · Topaz Upscaling · 2024-2025</p>
 
 <!-- ─── Process ─── -->
 <div class="project-body">
@@ -141,7 +154,7 @@
 </div>
 
 <!-- ─── SAKUMO Trio ─── -->
-<div class="media-grid sakumo-trio">
+<div class="sakumo-trio">
   <div class="media-item">
     <img src="assets/Projects/surreal_sky/SAKUMO-01.jpg" alt="SAKUMO 01">
   </div>
