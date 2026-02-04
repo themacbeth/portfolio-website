@@ -56,6 +56,12 @@
   display: block;
 }
 
+/* ─── crop-top: cover + pin to top edge ─── */
+.ss-gallery .media-item.crop-top img {
+  object-fit: cover;
+  object-position: top;
+}
+
 /* ─── Responsive ─── */
 @media (max-width: 520px) {
   .ss-gallery,
@@ -100,7 +106,7 @@
   <div class="media-item">
     <img src="assets/Projects/surreal_sky/KOLOBIAN-SPIRES-01.jpg" alt="KOLOBIAN SPIRES 01">
   </div>
-  <div class="media-item">
+  <div class="media-item crop-top">
     <img src="assets/Projects/surreal_sky/KOLOBIAN-SPIRES-02.jpg" alt="KOLOBIAN SPIRES 02">
   </div>
 </div>
