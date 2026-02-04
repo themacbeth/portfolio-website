@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HYPER_ — MACBETH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Bebas+Neue&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ─── Nav ─── -->
+<nav id="navbar">
+  <a href="index.html" class="logo">MACBETH</a>
+  <ul class="nav-links">
+    <li><a href="index.html#projects">Work</a></li>
+    <li><a href="index.html#about-strip">About</a></li>
+  </ul>
+</nav>
+
+<!-- ─── Project Hero ─── -->
+<section class="project-hero">
+  <div class="project-hero-bg"></div>
+  <div class="project-hero-content">
+    <h1 class="project-hero-title">HYPER_</h1>
+    <p class="project-hero-tagline">AI animation · looping motion · hyper-anime</p>
+  </div>
+</section>
+
+<!-- ─── Intro ─── -->
+<div class="project-body">
+  <h3>HYPER_</h3>
+  <p>
+    HYPER_ is a collection of looping, AI-driven animations that embrace abstraction at full velocity.
+    Bathed in high-saturation neons and warped light, each piece feels like a glitching pulse —
+    <em>fluid, untethered, and emotionally charged.</em>
+  </p>
+  <p>
+    There's no narrative, no characters — just the pure sensation of movement and light, evoking a
+    hyper-anime aesthetic pushed into the uncanny. These loops inhabit a space where form breaks down
+    and the surreal logic of machine vision takes over.
+  </p>
+</div>
+
+<!-- ─── Media Grid ─── -->
+<div class="media-grid">
+  <div class="media-item tall">
+    <video autoplay muted loop playsinline src="assets/Projects/Hyper/HYPER_1.mp4"></video>
+  </div>
+  <div class="media-item">
+    <video autoplay muted loop playsinline src="assets/Projects/Hyper/HYPER_4.mp4"></video>
+  </div>
+  <div class="media-item">
+    <video autoplay muted loop playsinline src="assets/Projects/Hyper/HYPER_Stroll.mp4"></video>
+  </div>
+  <div class="media-item tall">
+    <video autoplay muted loop playsinline src="assets/Projects/Hyper/Hyper-kimono-2_gcg5.mp4"></video>
+  </div>
+</div>
+<p class="media-caption">ComfyUI · AnimateDiff · After Effects · 2023</p>
+
+<!-- ─── Mid copy ─── -->
+<div class="project-body">
+  <blockquote>Just the pure sensation of movement and light.</blockquote>
+
+  <h3>PROCESS</h3>
+  <p>
+    Each animation was generated through a text-to-video pipeline using ComfyUI and AnimateDiff, with
+    heavily anime-trained checkpoints and LoRAs guiding the aesthetic. Prompts were designed to provoke
+    strangeness, intensity, and fluidity — <em>embracing the hallucinatory tendencies of the models.</em>
+  </p>
+  <p>
+    After generation, every piece was fine-tuned in After Effects to enhance glow, contrast, and polish.
+    The results are seamlessly looping fragments of synthetic motion, selected through a rigorous, iterative
+    curation process that prioritizes rhythm, silhouette, and visual impact.
+  </p>
+</div>
+
+<!-- ─── Footer ─── -->
+<footer>
+  <div class="social-links">
+    <a href="https://www.instagram.com/minimal_macbeth/" target="_blank">Instagram</a>
+    <a href="https://x.com/macbethAI" target="_blank">Twitter</a>
+  </div>
+  <div class="footer-logo">MACBETH</div>
+  <p class="footer-copy">&copy; 2026 MACBETH. All rights reserved.</p>
+</footer>
+
+<script>
+  const nav = document.getElementById('navbar');
+  window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 60));
+</script>
+</body>
+</html>
