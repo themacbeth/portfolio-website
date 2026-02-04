@@ -75,68 +75,47 @@
   </p>
 </div>
 
-<p class="media-caption">hover over thumbnail to play · right click for controls to enable sound</p>
-
 <!-- ─── Row 1: portrait pair ─── -->
 <div class="hv-gallery" style="--item-ratio: 0.562">
   <div class="media-item">
-    <video muted loop playsinline preload="metadata" src="assets/Projects/Hydro_void/hydro_void (4).mp4"></video>
+    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (4).mp4"></video>
   </div>
   <div class="media-item">
-    <video muted loop playsinline preload="metadata" src="assets/Projects/Hydro_void/hydro_void (40).mp4"></video>
+    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (40).mp4"></video>
   </div>
 </div>
 
 <!-- ─── Row 2: landscape pair ─── -->
 <div class="hv-gallery" style="--item-ratio: 1.778">
   <div class="media-item">
-    <video muted loop playsinline preload="metadata" src="assets/Projects/Hydro_void/hydro_void (5).mp4"></video>
+    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (5).mp4"></video>
   </div>
   <div class="media-item">
-    <video muted loop playsinline preload="metadata" src="assets/Projects/Hydro_void/hydro_void (8).mp4"></video>
+    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (8).mp4"></video>
   </div>
 </div>
 
 <!-- ─── Row 3: landscape pair ─── -->
 <div class="hv-gallery" style="--item-ratio: 1.778">
   <div class="media-item">
-    <video muted loop playsinline preload="metadata" src="assets/Projects/Hydro_void/hydro_void (30).mp4"></video>
+    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (30).mp4"></video>
   </div>
   <div class="media-item">
-    <video muted loop playsinline preload="metadata" src="assets/Projects/Hydro_void/hydro_void (15).mp4"></video>
+    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (15).mp4"></video>
   </div>
 </div>
 
 <!-- ─── Row 4: square pair ─── -->
 <div class="hv-gallery" style="--item-ratio: 1">
   <div class="media-item">
-    <video muted loop playsinline preload="metadata" src="assets/Projects/Hydro_void/hydro_void (16).mp4"></video>
+    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (16).mp4"></video>
   </div>
   <div class="media-item">
-    <video muted loop playsinline preload="metadata" src="assets/Projects/Hydro_void/hydro_void (22).mp4"></video>
+    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (22).mp4"></video>
   </div>
 </div>
 
-<!-- ─── Mid copy ─── -->
-<div class="project-body">
-  <p>
-    Water became the main character. Not dramatic, churning water — but <em>still, heavy, patient water</em>.
-    The kind that sits on top of things and waits.
-  </p>
 
-  <blockquote>Structures dissolving into something quieter than silence.</blockquote>
-
-  <h3>PROCESS</h3>
-  <p>
-    Built entirely in Cinema 4D with Redshift shaders tuned for caustic light scatter. Each environment
-    was designed as a closed loop — no edges, no horizon — to create a sense of spatial entrapment
-    that mirrors the emotional tone.
-  </p>
-  <p>
-    Volume fog and subsurface scattering were key to getting the water density right.
-    Final grading was done in DaVinci Resolve to push the teal-to-black contrast.
-  </p>
-</div>
 
 <!-- ─── Footer ─── -->
 <footer>
@@ -159,11 +138,11 @@
     scrollY > 0 ? heroVid.pause() : heroVid.play();
   });
 
-  // grid videos: play on hover, pause on hover off
+  // grid videos: show native controls on hover
   document.querySelectorAll('.hv-gallery .media-item').forEach(item => {
     const vid = item.querySelector('video');
-    item.addEventListener('mouseenter', () => vid.play());
-    item.addEventListener('mouseleave', () => vid.pause());
+    item.addEventListener('mouseenter', () => { vid.controls = true; });
+    item.addEventListener('mouseleave', () => { vid.controls = false; });
   });
 </script>
 </body>
