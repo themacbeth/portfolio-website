@@ -307,8 +307,15 @@ footer {
   background: var(--bg);
   /* SWAP: background-image: url('your-hero-image.jpg'); background-size: cover; background-position: center; */
 }
+/* video or img dropped inside hero-bg fills the container */
+.project-hero-bg video,
+.project-hero-bg img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
 .project-hero-bg::after {
-  content: ''; position: absolute; inset: 0;
+  content: ''; position: absolute; inset: 0; z-index: 1;
   background: linear-gradient(to bottom, transparent 30%, var(--bg) 100%);
 }
 .project-hero-content { position: relative; z-index: 1; }
