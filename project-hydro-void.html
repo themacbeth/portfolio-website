@@ -49,11 +49,12 @@
 
 <!-- ─── Project Hero ─── -->
 <section class="project-hero">
-  <!-- SWAP: set background-image on the div for a static image, or drop a <video> inside for motion -->
-  <div class="project-hero-bg"></div>
+  <div class="project-hero-bg">
+    <video id="hero-vid" autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (29).mp4"></video>
+  </div>
   <div class="project-hero-content">
     <h1 class="project-hero-title">HYDRO_VOID</h1>
-    <p class="project-hero-tagline">Submerged architecture · digital environments</p>
+    <p class="project-hero-tagline">liminal aquatic environments</p>
   </div>
 </section>
 
@@ -77,40 +78,40 @@
 <!-- ─── Row 1: portrait pair ─── -->
 <div class="hv-gallery" style="--item-ratio: 0.562">
   <div class="media-item">
-    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (4).mp4"></video>
+    <video muted loop playsinline preload="metadata" src="assets/Projects/Hydro_void/hydro_void (4).mp4"></video>
   </div>
   <div class="media-item">
-    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (40).mp4"></video>
+    <video muted loop playsinline preload="metadata" src="assets/Projects/Hydro_void/hydro_void (40).mp4"></video>
   </div>
 </div>
 
 <!-- ─── Row 2: landscape pair ─── -->
 <div class="hv-gallery" style="--item-ratio: 1.778">
   <div class="media-item">
-    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (5).mp4"></video>
+    <video muted loop playsinline preload="metadata" src="assets/Projects/Hydro_void/hydro_void (5).mp4"></video>
   </div>
   <div class="media-item">
-    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (8).mp4"></video>
+    <video muted loop playsinline preload="metadata" src="assets/Projects/Hydro_void/hydro_void (8).mp4"></video>
   </div>
 </div>
 
 <!-- ─── Row 3: landscape pair ─── -->
 <div class="hv-gallery" style="--item-ratio: 1.778">
   <div class="media-item">
-    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (30).mp4"></video>
+    <video muted loop playsinline preload="metadata" src="assets/Projects/Hydro_void/hydro_void (30).mp4"></video>
   </div>
   <div class="media-item">
-    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (39).mp4"></video>
+    <video muted loop playsinline preload="metadata" src="assets/Projects/Hydro_void/hydro_void (39).mp4"></video>
   </div>
 </div>
 
 <!-- ─── Row 4: square pair ─── -->
 <div class="hv-gallery" style="--item-ratio: 1">
   <div class="media-item">
-    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (16).mp4"></video>
+    <video muted loop playsinline preload="metadata" src="assets/Projects/Hydro_void/hydro_void (16).mp4"></video>
   </div>
   <div class="media-item">
-    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (22).mp4"></video>
+    <video muted loop playsinline preload="metadata" src="assets/Projects/Hydro_void/hydro_void (22).mp4"></video>
   </div>
 </div>
 
@@ -146,8 +147,22 @@
 </footer>
 
 <script>
+  // nav scroll class
   const nav = document.getElementById('navbar');
   window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 60));
+
+  // hero video: autoplay at top, pause on scroll, resume at top
+  const heroVid = document.getElementById('hero-vid');
+  window.addEventListener('scroll', () => {
+    scrollY > 0 ? heroVid.pause() : heroVid.play();
+  });
+
+  // grid videos: play on hover, pause on hover off
+  document.querySelectorAll('.hv-gallery .media-item').forEach(item => {
+    const vid = item.querySelector('video');
+    item.addEventListener('mouseenter', () => vid.play());
+    item.addEventListener('mouseleave', () => vid.pause());
+  });
 </script>
 </body>
 </html>
