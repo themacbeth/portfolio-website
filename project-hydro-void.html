@@ -8,6 +8,33 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Bebas+Neue&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<style>
+/* ─── Hydro Void: paired video rows ─── */
+.hv-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  max-width: 1200px;
+  width: 100%;
+  margin: 48px auto;
+  padding: 0 24px;
+  box-sizing: border-box;
+}
+.hv-gallery .media-item {
+  overflow: hidden;
+  background: var(--bg);
+  aspect-ratio: var(--item-ratio);
+}
+.hv-gallery .media-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+@media (max-width: 520px) {
+  .hv-gallery { grid-template-columns: 1fr; }
+}
+</style>
 </head>
 <body>
 
@@ -32,33 +59,60 @@
 
 <!-- ─── Intro ─── -->
 <div class="project-body">
-  <h3>HYDRO_VOID</h3>
+  <h3>seasick</h3>
   <p>
-    An exploration of <em>underwater architecture dissolved by time</em> — structures that were never meant
-    to exist beneath the surface, now claimed entirely by it.
+    A series of AI-generated video loops that plunge viewers into submerged, impossible spaces—subterranean
+    caverns, flooded voids, and bottomless shafts of water and silence. The work draws from the visual grammar
+    of FPV drone footage, urban exploration videos, and first-person documentation of extreme physical spaces:
+    crane climbs, lightning towers, and deep underwater caves.
   </p>
   <p>
-    The series began as a single still render: a brutalist hallway, half-submerged, light filtering through
-    murky water in long green columns. Something about the quiet wrongness of it pulled me back.
+    By blending those adrenaline-fueled perspectives with a personal fear of the open ocean, the series creates
+    a paradoxical tension—<em>both exhilarating and meditative, vast and claustrophobic.</em> The black circle,
+    reappears here as a silent, gravitational pull. What begins as motion becomes hypnosis; what feels real
+    collapses into dream logic and digital artifact.
   </p>
 </div>
 
-<!-- ─── Media Grid ─── -->
-<div class="media-grid">
+<!-- ─── Row 1: portrait pair ─── -->
+<div class="hv-gallery" style="--item-ratio: 0.562">
   <div class="media-item">
     <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (4).mp4"></video>
   </div>
-  <div class="media-item tall">
+  <div class="media-item">
+    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (40).mp4"></video>
+  </div>
+</div>
+
+<!-- ─── Row 2: landscape pair ─── -->
+<div class="hv-gallery" style="--item-ratio: 1.778">
+  <div class="media-item">
     <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (5).mp4"></video>
   </div>
   <div class="media-item">
     <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (8).mp4"></video>
   </div>
+</div>
+
+<!-- ─── Row 3: landscape pair ─── -->
+<div class="hv-gallery" style="--item-ratio: 1.778">
   <div class="media-item">
-    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (14).mp4"></video>
+    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (30).mp4"></video>
+  </div>
+  <div class="media-item">
+    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (39).mp4"></video>
   </div>
 </div>
-<p class="media-caption">C4D + Redshift · 2023–2024</p>
+
+<!-- ─── Row 4: square pair ─── -->
+<div class="hv-gallery" style="--item-ratio: 1">
+  <div class="media-item">
+    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (16).mp4"></video>
+  </div>
+  <div class="media-item">
+    <video autoplay muted loop playsinline src="assets/Projects/Hydro_void/hydro_void (22).mp4"></video>
+  </div>
+</div>
 
 <!-- ─── Mid copy ─── -->
 <div class="project-body">
