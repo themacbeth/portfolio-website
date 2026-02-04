@@ -8,6 +8,32 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Bebas+Neue&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<style>
+/* ─── In Your Dreams: aspect-ratio-locked video grids ─── */
+.iyd-grid {
+  display: grid;
+  gap: 4px;
+  max-width: 1200px;
+  width: 100%;
+  margin: 48px auto;
+  padding: 0 24px;
+  box-sizing: border-box;
+}
+.iyd-grid .media-item {
+  overflow: hidden;
+  background: var(--bg);
+  aspect-ratio: var(--item-ratio);
+}
+.iyd-grid .media-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+@media (max-width: 520px) {
+  .iyd-grid { grid-template-columns: 1fr !important; }
+}
+</style>
 </head>
 <body>
 
@@ -22,8 +48,9 @@
 
 <!-- ─── Project Hero ─── -->
 <section class="project-hero">
-  <!-- SWAP: set background-image on the div for a static image, or drop a <video> inside for motion -->
-  <div class="project-hero-bg"></div>
+  <div class="project-hero-bg">
+    <video id="hero-vid" autoplay muted loop playsinline src="assets/Projects/in_your_dreams/in_your_dreams_008.mp4"></video>
+  </div>
   <div class="project-hero-content">
     <h1 class="project-hero-title">IN YOUR DREAMS</h1>
     <p class="project-hero-tagline">*put on headphones — unmute videos</p>
@@ -44,16 +71,16 @@
   </p>
 </div>
 
-<!-- ─── Media Grid 1 ─── -->
+<!-- ─── Image Grid: 3D stills ─── -->
 <div class="media-grid" style="grid-template-columns: repeat(3, 1fr)">
   <div class="media-item">
-    <video autoplay muted loop playsinline src="assets/Projects/in_your_dreams/in_your_dreams_007.mp4"></video>
+    <img src="assets/Projects/in_your_dreams/still-01.jpg" alt="IN YOUR DREAMS still 01">
   </div>
   <div class="media-item">
-    <video autoplay muted loop playsinline src="assets/Projects/in_your_dreams/in_your_dreams_015.mp4"></video>
+    <img src="assets/Projects/in_your_dreams/still-02.jpg" alt="IN YOUR DREAMS still 02">
   </div>
   <div class="media-item">
-    <video autoplay muted loop playsinline src="assets/Projects/in_your_dreams/in_your_dreams_018.mp4"></video>
+    <img src="assets/Projects/in_your_dreams/still-03.jpg" alt="IN YOUR DREAMS still 03">
   </div>
 </div>
 <p class="media-caption">3D renders 2021–2023 · C4D + Redshift</p>
@@ -74,16 +101,13 @@
   <blockquote>A doorway into a dream you can't quite exit.</blockquote>
 </div>
 
-<!-- ─── Media Grid 2 ─── -->
-<div class="media-grid" style="grid-template-columns: repeat(3, 1fr)">
+<!-- ─── Media Grid 2: square pair ─── -->
+<div class="iyd-grid" style="grid-template-columns: repeat(2, 1fr); --item-ratio: 1">
   <div class="media-item">
     <video autoplay muted loop playsinline src="assets/Projects/in_your_dreams/in_your_dreams_040.mp4"></video>
   </div>
   <div class="media-item">
     <video autoplay muted loop playsinline src="assets/Projects/in_your_dreams/in_your_dreams_056.mp4"></video>
-  </div>
-  <div class="media-item">
-    <video autoplay muted loop playsinline src="assets/Projects/in_your_dreams/in_your_dreams_069.mp4"></video>
   </div>
 </div>
 
@@ -105,6 +129,23 @@
     using Luma Labs + mmaudio for seamless integration with the visuals.
   </p>
 
+</div>
+
+<!-- ─── Media Grid 1: video loops ─── -->
+<div class="iyd-grid" style="grid-template-columns: repeat(3, 1fr); --item-ratio: 1.778">
+  <div class="media-item">
+    <video autoplay muted loop playsinline src="assets/Projects/in_your_dreams/in_your_dreams_007.mp4"></video>
+  </div>
+  <div class="media-item">
+    <video autoplay muted loop playsinline src="assets/Projects/in_your_dreams/in_your_dreams_015.mp4"></video>
+  </div>
+  <div class="media-item">
+    <video autoplay muted loop playsinline src="assets/Projects/in_your_dreams/in_your_dreams_018.mp4"></video>
+  </div>
+</div>
+
+<!-- ─── Why Dream ─── -->
+<div class="project-body">
   <h3>WHY DREAM?</h3>
   <p>
     I'm not interested in realism — I'm interested in <em>rupture</em>. These scenes offer viewers a moment
@@ -112,6 +153,16 @@
     tools are being pushed toward hyper-efficiency and commercial gloss, I'm trying to make space for quiet
     surrealism — something slower, unresolved, and personal.
   </p>
+</div>
+
+<!-- ─── Media Grid 3: square pair ─── -->
+<div class="iyd-grid" style="grid-template-columns: repeat(2, 1fr); --item-ratio: 1">
+  <div class="media-item">
+    <video autoplay muted loop playsinline src="assets/Projects/in_your_dreams/in_your_dreams_130.mp4"></video>
+  </div>
+  <div class="media-item">
+    <video autoplay muted loop playsinline src="assets/Projects/in_your_dreams/in_your_dreams_069.mp4"></video>
+  </div>
 </div>
 
 <!-- ─── Footer ─── -->
@@ -130,6 +181,20 @@
   window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 60));
   document.querySelectorAll('.reveal').forEach(el => {
     new IntersectionObserver(([e]) => { if (e.isIntersecting) e.target.classList.add('visible'); }, { threshold: 0.15 }).observe(el);
+  });
+
+  // grid videos: show native controls on hover
+  document.querySelectorAll('.media-grid .media-item, .iyd-grid .media-item').forEach(item => {
+    const vid = item.querySelector('video');
+    if (!vid) return;
+    item.addEventListener('mouseenter', () => { vid.controls = true; });
+    item.addEventListener('mouseleave', () => { vid.controls = false; });
+  });
+
+  // hero video: pause on scroll, resume at top
+  const heroVid = document.getElementById('hero-vid');
+  window.addEventListener('scroll', () => {
+    scrollY > 0 ? heroVid.pause() : heroVid.play();
   });
 </script>
 
