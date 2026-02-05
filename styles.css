@@ -128,14 +128,19 @@ nav.scrolled { background: rgba(10,10,10,0.96); backdrop-filter: blur(6px); }
 .project-list {
   max-width: 1300px;
   margin: 0 auto;
-  position: static;
+  position: relative;
   z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
 .project-row {
   position: static;
   padding: 0 60px;
   cursor: pointer;
+  width: 100%;
 }
 
 /* the link itself is full-width but visually just the title */
