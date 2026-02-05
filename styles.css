@@ -116,6 +116,7 @@ nav.scrolled { background: rgba(10,10,10,0.96); backdrop-filter: blur(6px); }
   justify-content: center;
   padding: 140px 0 120px;
   position: relative;
+  overflow: hidden;
 }
 .projects-header {
   padding: 0 60px;
@@ -132,7 +133,7 @@ nav.scrolled { background: rgba(10,10,10,0.96); backdrop-filter: blur(6px); }
 }
 
 .project-row {
-  position: relative;
+  position: static;
   padding: 0 60px;
   cursor: pointer;
 }
@@ -158,32 +159,23 @@ nav.scrolled { background: rgba(10,10,10,0.96); backdrop-filter: blur(6px); }
   position: relative;
 }
 
-/* Hover effect: italic + underline */
+/* Hover effect: italic only */
 .project-row:hover .project-title {
   font-style: italic;
   letter-spacing: 0.08em;
-}
-.project-row:hover .project-title::after {
-  content: '';
-  position: absolute;
-  bottom: 0.1em;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  background: var(--text);
 }
 
 .project-meta {
   display: none; /* Hidden in this layout style */
 }
 
-/* ─── Full-screen hover preview (image / video) ─── */
+/* ─── Section-contained hover preview (image / video) ─── */
 .project-preview {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   pointer-events: none;
   z-index: 1;
