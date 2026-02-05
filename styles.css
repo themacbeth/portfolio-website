@@ -128,9 +128,8 @@ nav.scrolled { background: rgba(10,10,10,0.96); backdrop-filter: blur(6px); }
 .project-list {
   max-width: 1300px;
   margin: 0 auto;
-  position: relative;
+  position: static;
   z-index: 10;
-  overflow: hidden;
 }
 
 .project-row {
