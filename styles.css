@@ -128,8 +128,9 @@ nav.scrolled { background: rgba(10,10,10,0.96); backdrop-filter: blur(6px); }
 .project-list {
   max-width: 1300px;
   margin: 0 auto;
-  position: static;
+  position: relative;
   z-index: 10;
+  overflow: hidden;
 }
 
 .project-row {
@@ -153,7 +154,7 @@ nav.scrolled { background: rgba(10,10,10,0.96); backdrop-filter: blur(6px); }
   font-size: clamp(48px, 8vw, 100px);
   letter-spacing: 0.05em;
   color: var(--text);
-  transition: font-style 0.3s, letter-spacing 0.3s, text-decoration 0.3s;
+  transition: font-style 0.3s;
   white-space: nowrap;
   display: inline-block;
   position: relative;
@@ -162,7 +163,6 @@ nav.scrolled { background: rgba(10,10,10,0.96); backdrop-filter: blur(6px); }
 /* Hover effect: italic only */
 .project-row:hover .project-title {
   font-style: italic;
-  letter-spacing: 0.08em;
 }
 
 .project-meta {
