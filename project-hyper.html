@@ -22,11 +22,12 @@
 
 <!-- ─── Project Hero ─── -->
 <section class="project-hero">
-  <!-- SWAP: set background-image on the div for a static image, or drop a <video> inside for motion -->
-  <div class="project-hero-bg"></div>
+  <div class="project-hero-bg">
+    <video autoplay muted loop playsinline src="assets/Projects/Hyper/LOGO-1.mp4"></video>
+  </div>
   <div class="project-hero-content">
     <h1 class="project-hero-title">HYPER_</h1>
-    <p class="project-hero-tagline">AI animation · looping motion · hyper-anime</p>
+    <p class="project-hero-tagline">AI looping animation</p>
   </div>
 </section>
 
@@ -39,44 +40,47 @@
     <em>fluid, untethered, and emotionally charged.</em>
   </p>
   <p>
-    There's no narrative, no characters — just the pure sensation of movement and light, evoking a
+    There's no narrative, no characters just the pure sensation of movement and light, evoking a
     hyper-anime aesthetic pushed into the uncanny. These loops inhabit a space where form breaks down
     and the surreal logic of machine vision takes over.
   </p>
 </div>
 
-<!-- ─── Media Grid ─── -->
-<div class="media-grid">
-  <div class="media-item tall">
-    <video autoplay muted loop playsinline src="assets/Projects/Hyper/HYPER_1.mp4"></video>
+<!-- ─── Media Grid 1 ─── -->
+<div class="media-grid" style="grid-template-columns: repeat(2, 1fr)">
+  <div class="media-item" style="aspect-ratio: auto">
+    <video autoplay muted loop playsinline style="object-fit: contain; background: var(--bg)" src="assets/Projects/Hyper/Hyper_1.mp4"></video>
   </div>
-  <div class="media-item">
-    <video autoplay muted loop playsinline src="assets/Projects/Hyper/HYPER_4.mp4"></video>
-  </div>
-  <div class="media-item">
-    <video autoplay muted loop playsinline src="assets/Projects/Hyper/HYPER_Stroll.mp4"></video>
-  </div>
-  <div class="media-item tall">
-    <video autoplay muted loop playsinline src="assets/Projects/Hyper/Hyper-kimono-2_gcg5.mp4"></video>
+  <div class="media-item" style="aspect-ratio: auto">
+    <video autoplay muted loop playsinline style="object-fit: contain; background: var(--bg)" src="assets/Projects/Hyper/Hyper_4.mp4"></video>
   </div>
 </div>
-<p class="media-caption">ComfyUI · AnimateDiff · After Effects · 2023</p>
 
 <!-- ─── Mid copy ─── -->
 <div class="project-body">
-  <blockquote>Just the pure sensation of movement and light.</blockquote>
+  <blockquote>Just the pure HYPER sensation of movement and light.</blockquote>
 
   <h3>PROCESS</h3>
   <p>
     Each animation was generated through a text-to-video pipeline using ComfyUI and AnimateDiff, with
     heavily anime-trained checkpoints and LoRAs guiding the aesthetic. Prompts were designed to provoke
-    strangeness, intensity, and fluidity — <em>embracing the hallucinatory tendencies of the models.</em>
+    strangeness, intensity, and fluidity <em>embracing the hallucinatory tendencies of the models.</em>
   </p>
   <p>
-    After generation, every piece was fine-tuned in After Effects to enhance glow, contrast, and polish.
+    After generation, every piece was fine-tuned in After Effects to enhance glow, contrast, and color correction.
     The results are seamlessly looping fragments of synthetic motion, selected through a rigorous, iterative
     curation process that prioritizes rhythm, silhouette, and visual impact.
   </p>
+</div>
+
+<!-- ─── Media Grid 2 ─── -->
+<div class="media-grid" style="grid-template-columns: repeat(2, 1fr)">
+  <div class="media-item" style="aspect-ratio: auto">
+    <video autoplay muted loop playsinline style="object-fit: contain; background: var(--bg)" src="assets/Projects/Hyper/Hyper_stroll.mp4"></video>
+  </div>
+  <div class="media-item" style="aspect-ratio: auto">
+    <video autoplay muted loop playsinline style="object-fit: contain; background: var(--bg)" src="assets/Projects/Hyper/Hyper_19.mp4"></video>
+  </div>
 </div>
 
 <!-- ─── Footer ─── -->
