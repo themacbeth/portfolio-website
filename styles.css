@@ -189,7 +189,8 @@ nav.scrolled { background: rgba(10,10,10,0.96); backdrop-filter: blur(6px); }
   align-items: center;
   justify-content: center;
 }
-.project-row:hover .project-preview {
+.project-row:hover .project-preview,
+.project-preview.active {
   opacity: 1;
 }
 
@@ -507,7 +508,7 @@ footer {
   .project-row { padding: 0 24px; }
   .project-row a { padding: 10px 0; }
   .project-title { font-size: clamp(28px, 9vw, 48px); }
-  .project-preview { display: none; } /* too cramped on mobile */
+  /* slideshow runs on mobile too */
   .projects-header, .about-strip { padding-left: 24px; padding-right: 24px; }
   .project-body, .media-grid, .media-caption { padding-left: 24px; padding-right: 24px; }
   .project-nav a { padding: 36px 24px; }

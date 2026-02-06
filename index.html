@@ -103,6 +103,42 @@
       if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth' }); }
     });
   });
+
+  // ─── Auto-playing slideshow ───
+  (() => {
+    const rows = document.querySelectorAll('.project-row');
+    const previews = document.querySelectorAll('.project-preview');
+    let current = 0;
+    let paused = false;
+
+    function showSlide(index) {
+      previews.forEach(p => p.classList.remove('active'));
+      previews[index].classList.add('active');
+    }
+
+    function nextSlide() {
+      if (paused) return;
+      current = (current + 1) % previews.length;
+      showSlide(current);
+    }
+
+    // Start slideshow
+    showSlide(0);
+    let timer = setInterval(nextSlide, 3000);
+
+    // Desktop: hover overrides slideshow
+    rows.forEach((row, i) => {
+      row.addEventListener('mouseenter', () => {
+        paused = true;
+        previews.forEach(p => p.classList.remove('active'));
+        previews[i].classList.add('active');
+      });
+      row.addEventListener('mouseleave', () => {
+        paused = false;
+        current = i;
+      });
+    });
+  })();
 </script>
 
 </body>
