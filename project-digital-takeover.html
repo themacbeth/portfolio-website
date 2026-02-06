@@ -14,6 +14,7 @@
 <!-- ─── Nav ─── -->
 <nav id="navbar">
   <a href="index.html" class="logo">MACBETH</a>
+  <button class="nav-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
   <ul class="nav-links">
     <li><a href="index.html#projects">Work</a></li>
     <li><a href="index.html#about-strip">About</a></li>
@@ -37,6 +38,7 @@
   <p>These are reflections of childhood exposure to digital imagery, from early CGI, 8-bit visuals, and gaming. The displays gave the pixels a unique look, vs. hand-drawn cel animation.</p>
   <p>Returning back to these early aesthetics, this time reimagined using new tools: AI + Touchdesigner</p>
   <p>*put on headphones — unmute videos | watch in fullscreen</p>
+  <a href="https://superrare.com/macbethai" target="_blank" rel="noopener noreferrer" class="view-collection">View Collection</a>
 </div>
 
 <!-- ─── Media Grid ─── -->
@@ -78,6 +80,8 @@
 <script>
   const nav = document.getElementById('navbar');
   window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 60));
+  document.querySelector('.nav-toggle').addEventListener('click', () => nav.classList.toggle('nav-open'));
+  document.querySelectorAll('.nav-links a').forEach(a => a.addEventListener('click', () => nav.classList.remove('nav-open')));
 </script>
 </body>
 </html>

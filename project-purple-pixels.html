@@ -14,6 +14,7 @@
 <!-- ─── Nav ─── -->
 <nav id="navbar">
   <a href="index.html" class="logo">MACBETH</a>
+  <button class="nav-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
   <ul class="nav-links">
     <li><a href="index.html#projects">Work</a></li>
     <li><a href="index.html#about-strip">About</a></li>
@@ -42,6 +43,7 @@
     With the help of Arnold render within C4D, I was able to create a dithered pixel shader
     to put on my models.
   </p>
+  <a href="https://objkt.com/collections/KT1FvtXq61AahbEtpF2kk3f9qeKQyiY7ovY9" target="_blank" rel="noopener noreferrer" class="view-collection">View Collection</a>
 </div>
 
 <!-- ─── Media Grid ─── -->
@@ -74,6 +76,8 @@
 <script>
   const nav = document.getElementById('navbar');
   window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 60));
+  document.querySelector('.nav-toggle').addEventListener('click', () => nav.classList.toggle('nav-open'));
+  document.querySelectorAll('.nav-links a').forEach(a => a.addEventListener('click', () => nav.classList.remove('nav-open')));
 </script>
 </body>
 </html>

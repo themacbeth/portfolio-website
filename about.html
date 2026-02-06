@@ -11,6 +11,7 @@
 <!-- ─── Nav ─── -->
 <nav id="navbar">
   <a href="index.html" class="logo">MACBETH</a>
+  <button class="nav-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
   <ul class="nav-links">
     <li><a href="index.html">Work</a></li>
     <li><a href="about.html">About</a></li>
@@ -95,6 +96,8 @@
 <script>
   const nav = document.getElementById('navbar');
   window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 60));
+  document.querySelector('.nav-toggle').addEventListener('click', () => nav.classList.toggle('nav-open'));
+  document.querySelectorAll('.nav-links a').forEach(a => a.addEventListener('click', () => nav.classList.remove('nav-open')));
 </script>
 
 </body>

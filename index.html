@@ -11,6 +11,7 @@
 <!-- ─── Nav ─── -->
 <nav id="navbar">
   <a href="index.html" class="logo">MACBETH</a>
+  <button class="nav-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
   <ul class="nav-links">
     <li><a href="index.html" class="active">Portfolio</a></li>
     <li><a href="about.html">About</a></li>
@@ -151,7 +152,32 @@
         current = i;
       });
     });
+
+    // Mobile: tap a project title to show its preview
+    rows.forEach((row, i) => {
+      row.addEventListener('touchstart', (e) => {
+        paused = true;
+        showSlide(i);
+      }, { passive: true });
+    });
+    // Tap outside project list resumes slideshow
+    document.addEventListener('touchstart', (e) => {
+      if (!e.target.closest('.project-list')) {
+        paused = false;
+      }
+    }, { passive: true });
   })();
+
+  // ─── Hamburger menu toggle ───
+  document.querySelector('.nav-toggle').addEventListener('click', () => {
+    document.getElementById('navbar').classList.toggle('nav-open');
+  });
+  // Close menu when a link is tapped
+  document.querySelectorAll('.nav-links a').forEach(a => {
+    a.addEventListener('click', () => {
+      document.getElementById('navbar').classList.remove('nav-open');
+    });
+  });
 </script>
 
 </body>

@@ -40,6 +40,7 @@
 <!-- ─── Nav ─── -->
 <nav id="navbar">
   <a href="index.html" class="logo">MACBETH</a>
+  <button class="nav-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
   <ul class="nav-links">
     <li><a href="index.html#projects">Work</a></li>
     <li><a href="index.html#about-strip">About</a></li>
@@ -69,6 +70,7 @@
     spending hours on each frame, often with limited power to animate anything beyond a subtle 5-sec water loop.
     There was something powerful about these <em>in-between spaces: dreamlike yet sterile, comforting yet eerie.</em>
   </p>
+  <a href="https://opensea.io/collection/in-your-dreams-by-macbeth-1" target="_blank" rel="noopener noreferrer" class="view-collection">View Collection</a>
 </div>
 
 <!-- ─── Image Grid: 3D stills ─── -->
@@ -179,6 +181,8 @@
 <script>
   const nav = document.getElementById('navbar');
   window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 60));
+  document.querySelector('.nav-toggle').addEventListener('click', () => nav.classList.toggle('nav-open'));
+  document.querySelectorAll('.nav-links a').forEach(a => a.addEventListener('click', () => nav.classList.remove('nav-open')));
   document.querySelectorAll('.reveal').forEach(el => {
     new IntersectionObserver(([e]) => { if (e.isIntersecting) e.target.classList.add('visible'); }, { threshold: 0.15 }).observe(el);
   });

@@ -78,6 +78,34 @@ nav.scrolled { background: rgba(10,10,10,0.96); backdrop-filter: blur(6px); }
 .nav-links a.active { text-decoration: underline; text-underline-offset: 4px; }
 .nav-links a.active::after { display: none; }
 
+/* ─── Hamburger Toggle (hidden on desktop) ─── */
+.nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  z-index: 101;
+}
+.nav-toggle span {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: var(--text);
+  margin: 5px 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+/* Animate to X when open */
+nav.nav-open .nav-toggle span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+nav.nav-open .nav-toggle span:nth-child(2) {
+  opacity: 0;
+}
+nav.nav-open .nav-toggle span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
 /* ─── Shared Utilities ─── */
 .section-label {
   font-size: 11px; font-weight: 300;
@@ -333,6 +361,26 @@ footer {
   color: var(--text); line-height: 1.6;
 }
 
+/* ─── View Collection Button ─── */
+.view-collection {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text);
+  text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.3);
+  padding: 14px 36px;
+  margin-top: 8px;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+.view-collection:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.6);
+}
+
 /* ─── Media Grid (inside project page) ─── */
 .media-grid {
   max-width: 1100px; margin: 60px auto;
@@ -504,15 +552,62 @@ footer {
   .project-title { font-size: clamp(36px, 7vw, 72px); }
 }
 @media (max-width: 600px) {
+  /* ─── Mobile Nav / Hamburger ─── */
   nav { padding: 20px 24px; }
-  .nav-links { gap: 20px; }
+  .nav-toggle { display: flex; flex-direction: column; }
+  .nav-links {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100vh;
+    background: rgba(10,10,10,0.97);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 100;
+  }
+  nav.nav-open .nav-links {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .nav-links a { font-size: 18px; letter-spacing: 0.25em; }
+
+  /* ─── Typography ─── */
+  .logo { font-size: 20px; }
+  .project-title {
+    font-size: clamp(28px, 9vw, 48px);
+    white-space: normal;
+  }
+  .project-body h3 { font-size: 24px; }
+  .project-body p,
+  .about-strip p,
+  .about-text-section p { font-size: 16px; }
+  .project-body blockquote { font-size: 18px; }
+  .project-nav .nav-title { font-size: 20px; }
+
+  /* ─── Spacing ─── */
   .project-row { padding: 0 24px; }
   .project-row a { padding: 10px 0; }
-  .project-title { font-size: clamp(28px, 9vw, 48px); }
-  /* slideshow runs on mobile too */
   .projects-header, .about-strip { padding-left: 24px; padding-right: 24px; }
-  .project-body, .media-grid, .media-caption { padding-left: 24px; padding-right: 24px; }
+  .project-body { padding: 60px 24px; }
+  .media-grid, .media-caption { padding-left: 24px; padding-right: 24px; }
   .project-nav a { padding: 36px 24px; }
+  .about-page-hero { padding: 100px 24px 60px; }
   .about-page-body { padding: 80px 24px; }
   footer { padding: 56px 24px 32px; }
+  .social-links { gap: 24px; }
+
+  /* ─── Hero ─── */
+  .project-hero { min-height: 40vh; padding: 0 24px 60px; }
+  .project-hero-title { font-size: clamp(36px, 10vw, 64px); }
+
+  /* ─── Slideshow previews ─── */
+  .project-preview img,
+  .project-preview video {
+    max-width: 90vw;
+    max-height: 60vh;
+  }
 }
