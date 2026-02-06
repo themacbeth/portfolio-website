@@ -17,59 +17,63 @@
   </ul>
 </nav>
 
+<!-- ─── Slideshow Background (outside all stacking contexts) ─── -->
+<div class="slideshow-bg">
+  <div class="project-preview" data-index="0">
+    <img src="assets/Project_titles/surreal_sky.jpg" alt="SURREAL SKY">
+  </div>
+  <div class="project-preview" data-index="1">
+    <video autoplay muted loop playsinline src="assets/Project_titles/hydro_void .mp4"></video>
+  </div>
+  <div class="project-preview" data-index="2">
+    <video autoplay muted loop playsinline src="assets/Project_titles/in_your_dreams_.mp4"></video>
+  </div>
+  <div class="project-preview" data-index="3">
+    <video autoplay muted loop playsinline src="assets/Project_titles/HYPER_.mp4"></video>
+  </div>
+  <div class="project-preview" data-index="4">
+    <video autoplay muted loop playsinline src="assets/Project_titles/purple_pixel.mp4"></video>
+  </div>
+</div>
+
 <!-- ─── Projects ─── -->
 <section class="projects-section" id="projects">
 
   <div class="project-list">
 
     <!-- ─── PROJECT 1 ─── -->
-    <div class="project-row reveal">
+    <div class="project-row reveal" data-index="0">
       <a href="project-surreal-sky.html">
         <span class="project-title">SURREAL_SKY</span>
       </a>
-      <div class="project-preview">
-        <img src="assets/Project_titles/surreal_sky.jpg" alt="SURREAL SKY">
-      </div>
     </div>
 
     <!-- ─── PROJECT 2 ─── -->
-    <div class="project-row reveal">
+    <div class="project-row reveal" data-index="1">
       <a href="project-hydro-void.html">
         <span class="project-title">HYDRO_VOID</span>
       </a>
-      <div class="project-preview">
-        <video autoplay muted loop playsinline src="assets/Project_titles/hydro_void .mp4"></video>
-      </div>
     </div>
 
     <!-- ─── PROJECT 3 ─── -->
-    <div class="project-row reveal">
+    <div class="project-row reveal" data-index="2">
       <a href="project-in-your-dreams.html">
         <span class="project-title">IN YOUR DREAMS</span>
       </a>
-      <div class="project-preview">
-        <video autoplay muted loop playsinline src="assets/Project_titles/in_your_dreams_.mp4"></video>
-      </div>
     </div>
 
     <!-- ─── PROJECT 4 ─── -->
-    <div class="project-row reveal">
+    <div class="project-row reveal" data-index="3">
       <a href="project-hyper.html">
         <span class="project-title">HYPER_</span>
       </a>
-      <div class="project-preview">
-        <video autoplay muted loop playsinline src="assets/Project_titles/HYPER_.mp4"></video>
-      </div>
     </div>
 
     <!-- ─── PROJECT 5 ─── -->
-    <div class="project-row reveal">
+    <div class="project-row reveal" data-index="4">
       <a href="project-purple-pixels.html">
         <span class="project-title">PURPLE_PIXELS</span>
       </a>
-      <div class="project-preview">
-        <video autoplay muted loop playsinline src="assets/Project_titles/purple_pixel.mp4"></video>
-      </div>
     </div>
 
   </div>
@@ -107,7 +111,7 @@
   // ─── Auto-playing slideshow ───
   (() => {
     const rows = document.querySelectorAll('.project-row');
-    const previews = document.querySelectorAll('.project-preview');
+    const previews = document.querySelectorAll('.slideshow-bg .project-preview');
     let current = 0;
     let paused = false;
 
@@ -124,14 +128,13 @@
 
     // Start slideshow
     showSlide(0);
-    let timer = setInterval(nextSlide, 3000);
+    setInterval(nextSlide, 3000);
 
     // Desktop: hover overrides slideshow
     rows.forEach((row, i) => {
       row.addEventListener('mouseenter', () => {
         paused = true;
-        previews.forEach(p => p.classList.remove('active'));
-        previews[i].classList.add('active');
+        showSlide(i);
       });
       row.addEventListener('mouseleave', () => {
         paused = false;
