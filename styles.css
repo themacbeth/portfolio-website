@@ -156,6 +156,7 @@ nav.scrolled { background: rgba(10,10,10,0.96); backdrop-filter: blur(6px); }
 .project-title {
   font-family: var(--font-display);
   font-size: clamp(48px, 8vw, 100px);
+  font-weight: bold;
   letter-spacing: 0.05em;
   color: var(--text);
   white-space: nowrap;
