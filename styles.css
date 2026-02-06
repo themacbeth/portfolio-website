@@ -150,7 +150,7 @@ nav.scrolled { background: rgba(10,10,10,0.96); backdrop-filter: blur(6px); }
   color: inherit;
   padding: 12px 0;
   position: relative;
-  z-index: 2;
+  z-index: 20;
 }
 
 .project-title {
