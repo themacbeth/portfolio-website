@@ -106,6 +106,9 @@ nav.nav-open .nav-toggle span:nth-child(3) {
   transform: translateY(-7px) rotate(-45deg);
 }
 
+/* ─── Mobile-only nav project links (hidden on desktop) ─── */
+.nav-projects { display: none; }
+
 /* ─── Shared Utilities ─── */
 .section-label {
   font-size: 11px; font-weight: 300;
@@ -574,6 +577,31 @@ footer {
     pointer-events: auto;
   }
   .nav-links a { font-size: 18px; letter-spacing: 0.25em; }
+
+  /* ─── Mobile nav project list ─── */
+  .nav-projects {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    list-style: none;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+  }
+  .nav-projects a {
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 300;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    text-decoration: none;
+    transition: color 0.3s;
+  }
+  .nav-projects a:hover { color: var(--accent); }
+
+  /* ─── Force media grids to stack (override inline styles) ─── */
+  .media-grid { grid-template-columns: 1fr !important; }
 
   /* ─── Typography ─── */
   .logo { font-size: 20px; }
