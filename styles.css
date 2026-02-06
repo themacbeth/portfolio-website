@@ -158,15 +158,15 @@ nav.scrolled { background: rgba(10,10,10,0.96); backdrop-filter: blur(6px); }
   font-size: clamp(48px, 8vw, 100px);
   letter-spacing: 0.05em;
   color: var(--text);
-  transition: font-style 0.3s;
   white-space: nowrap;
   display: inline-block;
   position: relative;
+  transition: transform 0.3s ease;
 }
 
-/* Hover effect: italic only */
+/* Hover effect: slight scale up */
 .project-row:hover .project-title {
-  font-style: italic;
+  transform: scale(1.05);
 }
 
 .project-meta {
