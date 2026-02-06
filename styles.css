@@ -193,18 +193,10 @@ nav.scrolled { background: rgba(10,10,10,0.96); backdrop-filter: blur(6px); }
   opacity: 1;
 }
 
-.project-preview::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 1;
-}
+/* dark overlay removed */
 
 .project-preview img,
 .project-preview video {
-  position: relative;
-  z-index: 2;
   width: 70vw;
   height: 70vh;
   object-fit: contain;
