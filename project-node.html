@@ -8,6 +8,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Bebas+Neue&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<style>
+  /* ─── NODE: show video controls on touch devices ─── */
+  @media (hover: none) {
+    .media-grid .media-item video::-webkit-media-controls { opacity: 1; }
+  }
+</style>
 </head>
 <body>
 
@@ -46,6 +52,7 @@
   <h3>NODE</h3>
   <p>This project is an audio-reactive visual environment built in TouchDesigner that transforms ambient synth pads and subtle rhythmic pulses into evolving fields of light and motion. Designed as a meditative visual journey, the work invites viewers to slow down and get lost inside shifting particle systems that bloom, drift, and reorganize in response to sound. The piece can function as a concise one-minute loop or expand into a longer durational performance, depending on technical constraints such as file size and playback limitations. What is presented here is a sample entry point into a larger, immersive system capable of unfolding over time.</p>
 </div>
+<p class="media-caption" style="margin-top: 0">full-screen + audio</p>
 
 <!-- ─── Media ─── -->
 <div class="media-grid" style="grid-template-columns: 1fr">
@@ -61,15 +68,19 @@
 </div>
 
 <!-- ─── Behind-the-Scenes ─── -->
-<div class="project-body">
-  <h3>BEHIND-THE-SCENES</h3>
-</div>
 <div class="media-grid" style="grid-template-columns: 1fr">
   <div class="media-item">
-    <img src="assets/Projects/NODE/out1.png" alt="NODE behind the scenes">
+    <img src="assets/Projects/NODE/Behind-the-scenes.png" alt="NODE behind the scenes">
   </div>
 </div>
 <p class="media-caption">TouchDesigner</p>
+
+<!-- ─── Final image ─── -->
+<div class="media-grid" style="grid-template-columns: 1fr">
+  <div class="media-item">
+    <img src="assets/Projects/NODE/out2.png" alt="NODE">
+  </div>
+</div>
 
 <!-- ─── Footer ─── -->
 <footer>
