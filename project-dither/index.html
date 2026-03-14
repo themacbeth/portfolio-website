@@ -3,38 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MACBETH — Sound Machines</title>
+<title>DITHER — MACBETH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Bebas+Neue&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: #000;
-    color: #999;
-    font-family: 'Space Mono', monospace;
-    min-height: 100vh;
-    -webkit-font-smoothing: antialiased;
-  }
-
-  header {
-    padding: 60px 40px 20px;
-    border-bottom: 1px solid #1a1a1a;
-  }
-  header h1 {
-    font-size: 11px;
-    letter-spacing: .4em;
-    text-transform: uppercase;
-    color: #555;
-    font-weight: 400;
-  }
-  header a {
-    color: #555;
-    text-decoration: none;
-  }
-  header a:hover { color: #888; }
-
+  /* ─── Gallery-specific styles ─── */
   .collection {
-    padding: 60px 40px 40px;
+    padding: 60px 48px 40px;
   }
   .collection-header {
     display: flex;
@@ -43,22 +20,23 @@
     margin-bottom: 40px;
   }
   .collection-title {
-    font-size: 13px;
-    letter-spacing: .3em;
+    font-size: 11px;
+    letter-spacing: .4em;
     text-transform: uppercase;
-    color: #666;
-    font-weight: 700;
+    color: rgba(255,255,255,0.5);
+    font-weight: 300;
   }
   .collection-count {
     font-size: 11px;
-    color: #333;
+    color: rgba(255,255,255,0.25);
   }
   .collection-desc {
-    font-size: 11px;
-    color: #444;
+    font-size: 13px;
+    color: rgba(255,255,255,0.4);
     max-width: 500px;
-    line-height: 1.6;
+    line-height: 1.7;
     margin-top: 8px;
+    font-weight: 300;
   }
 
   .grid {
@@ -109,33 +87,27 @@
     font-size: 11px;
     letter-spacing: .15em;
     text-transform: uppercase;
-    color: #ccc;
+    color: rgba(255,255,255,0.8);
+    font-weight: 300;
   }
   .card-sub {
     font-size: 10px;
-    color: #666;
+    color: rgba(255,255,255,0.35);
     margin-top: 3px;
+    font-weight: 300;
   }
 
   .divider {
     border: none;
-    border-top: 1px solid #111;
-    margin: 0 40px;
-  }
-
-  footer {
-    padding: 60px 40px;
-    border-top: 1px solid #1a1a1a;
-    font-size: 10px;
-    color: #333;
-    letter-spacing: .1em;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    margin: 0 48px;
   }
 
   /* Fullscreen overlay */
   .overlay {
     position: fixed;
     inset: 0;
-    z-index: 100;
+    z-index: 200;
     background: #000;
     display: none;
   }
@@ -149,31 +121,31 @@
     position: fixed;
     top: 20px;
     right: 24px;
-    z-index: 110;
-    color: #999;
-    font: 12px 'Space Mono', monospace;
+    z-index: 210;
+    color: rgba(255,255,255,0.5);
+    font: 12px var(--font-body);
     letter-spacing: .15em;
     cursor: pointer;
     background: rgba(0,0,0,.6);
-    border: 1px solid #333;
+    border: 1px solid rgba(255,255,255,0.2);
     text-transform: uppercase;
     padding: 10px 16px;
     transition: color .2s, border-color .2s;
     border-radius: 2px;
   }
-  .overlay-close:hover { color: #fff; border-color: #666; }
+  .overlay-close:hover { color: #fff; border-color: rgba(255,255,255,0.5); }
   .overlay-title {
     position: fixed;
     top: 22px;
     left: 24px;
-    z-index: 110;
-    color: #888;
-    font: 12px 'Space Mono', monospace;
+    z-index: 210;
+    color: rgba(255,255,255,0.5);
+    font: 12px var(--font-body);
     letter-spacing: .15em;
     text-transform: uppercase;
     background: rgba(0,0,0,.6);
     padding: 10px 16px;
-    border: 1px solid #222;
+    border: 1px solid rgba(255,255,255,0.12);
     border-radius: 2px;
   }
   .overlay-nav {
@@ -181,33 +153,67 @@
     bottom: 24px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 110;
+    z-index: 210;
     display: flex;
     gap: 4px;
   }
   .overlay-nav button {
-    color: #999;
-    font: 12px 'Space Mono', monospace;
+    color: rgba(255,255,255,0.5);
+    font: 12px var(--font-body);
     background: rgba(0,0,0,.6);
-    border: 1px solid #333;
+    border: 1px solid rgba(255,255,255,0.2);
     cursor: pointer;
     padding: 10px 20px;
     letter-spacing: .1em;
     transition: color .2s, border-color .2s;
     border-radius: 2px;
   }
-  .overlay-nav button:hover { color: #fff; border-color: #666; }
+  .overlay-nav button:hover { color: #fff; border-color: rgba(255,255,255,0.5); }
 
   /* Red accent for red collection */
   .red .card-title { color: #c84030; }
   .red .collection-title { color: #b43028; }
+
+  @media (max-width: 600px) {
+    .collection { padding: 40px 24px 24px; }
+    .divider { margin: 0 24px; }
+  }
 </style>
 </head>
 <body>
 
-<header>
-  <h1><a href="https://macbeth.gallery">macbeth.gallery</a></h1>
-</header>
+<!-- ─── Nav ─── -->
+<nav id="navbar">
+  <a href="../index.html" class="logo">MACBETH</a>
+  <button class="nav-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+  <ul class="nav-links">
+    <li><a href="../index.html#projects">Work</a></li>
+    <li><a href="../index.html#about-strip">About</a></li>
+    <ul class="nav-projects">
+      <li><a href="../project-surreal-sky.html">Surreal Sky</a></li>
+      <li><a href="../project-hydro-void.html">Hydro Void</a></li>
+      <li><a href="../project-in-your-dreams.html">In Your Dreams</a></li>
+      <li><a href="../project-hyper.html">Hyper</a></li>
+      <li><a href="../project-purple-pixels.html">Purple Pixels</a></li>
+      <li><a href="../project-digital-takeover.html">Digital Takeover</a></li>
+      <li><a href="../project-node.html">Node</a></li>
+    </ul>
+  </ul>
+</nav>
+
+<!-- ─── Project Hero ─── -->
+<section class="project-hero">
+  <div class="project-hero-bg"></div>
+  <div class="project-hero-content">
+    <h1 class="project-hero-title">DITHER</h1>
+    <p class="project-hero-tagline">1-bit generative art · sound machines</p>
+  </div>
+</section>
+
+<!-- ─── Intro ─── -->
+<div class="project-body">
+  <p>A collection of generative sound machines rendered in 1-bit dithered black and white. Each piece is a self-contained procedural world paired with ambient sound design. Every machine runs as a 20-second perfect loop with audio built from synthesized drones, noise, and environmental textures.</p>
+</div>
 
 <!-- RED COLLECTION -->
 <section class="collection red" id="red">
@@ -229,14 +235,20 @@
     <div>
       <div class="collection-title">Sound Machines</div>
       <div class="collection-count">9 pieces</div>
-      <div class="collection-desc">1-bit dithered procedural worlds. Organic forms, deep ocean, rain, mycelium, nebulae, galaxies. Black and white halftone with ambient sound design.</div>
+      <div class="collection-desc">1-bit dithered procedural worlds. Organic forms, deep ocean, rain, mycelium, galaxies. Black and white halftone with ambient sound design.</div>
     </div>
   </div>
   <div class="grid" id="white-grid"></div>
 </section>
 
+<!-- ─── Footer ─── -->
 <footer>
-  MACBETH &mdash; 2026
+  <div class="social-links">
+    <a href="https://www.instagram.com/minimal_macbeth/" target="_blank" rel="noopener noreferrer">Instagram</a>
+    <a href="https://x.com/macbethAI" target="_blank" rel="noopener noreferrer">Twitter</a>
+  </div>
+  <div class="footer-logo">MACBETH</div>
+  <p class="footer-copy">&copy; 2026 MACBETH. All rights reserved.</p>
 </footer>
 
 <!-- Fullscreen viewer -->
@@ -251,7 +263,6 @@
 </div>
 
 <script>
-// Piece definitions — no wireframes
 const redPieces = [
   { file: 'drone-clifford.html', title: 'Clifford', sub: 'dithered attractor / C1+Gb1 drone' },
   { file: 'drone-gumowski-mira.html', title: 'Gumowski-Mira', sub: 'dithered attractor / Eb1+A1 resonance' },
@@ -273,7 +284,6 @@ const whitePieces = [
 const allPieces = [...redPieces, ...whitePieces];
 let currentIndex = -1;
 
-// Lazy-load animated iframe thumbnails via IntersectionObserver
 const thumbObserver = new IntersectionObserver((entries) => {
   entries.forEach(entry => {
     const card = entry.target;
@@ -283,7 +293,6 @@ const thumbObserver = new IntersectionObserver((entries) => {
       iframe.src = card.dataset.file + '?mute=1';
       iframe.allow = 'autoplay';
       iframe.loading = 'lazy';
-      // Insert before the info overlay
       card.insertBefore(iframe, card.querySelector('.card-info'));
     }
   });
@@ -309,7 +318,6 @@ function buildGrid(pieces, gridId, isRed) {
   });
 }
 
-// Overlay controls
 const overlay = document.getElementById('overlay');
 const frame = document.getElementById('overlay-frame');
 
@@ -347,7 +355,12 @@ document.addEventListener('keydown', e => {
   if (e.key === 'ArrowRight') navNext();
 });
 
-// Build grids
+// Nav scroll behavior
+const nav = document.getElementById('navbar');
+window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 60));
+document.querySelector('.nav-toggle').addEventListener('click', () => nav.classList.toggle('nav-open'));
+document.querySelectorAll('.nav-links a').forEach(a => a.addEventListener('click', () => nav.classList.remove('nav-open')));
+
 buildGrid(redPieces, 'red-grid', true);
 buildGrid(whitePieces, 'white-grid', false);
 </script>
