@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DITHER — MACBETH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Bebas+Neue&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  .dither-embed {
+    width: 100%;
+    min-height: 100vh;
+    border: none;
+    display: block;
+    background: #000;
+  }
+</style>
+</head>
+<body>
+
+<!-- ─── Nav ─── -->
+<nav id="navbar">
+  <a href="index.html" class="logo">MACBETH</a>
+  <button class="nav-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+  <ul class="nav-links">
+    <li><a href="index.html#projects">Work</a></li>
+    <li><a href="index.html#about-strip">About</a></li>
+    <ul class="nav-projects">
+      <li><a href="project-surreal-sky.html">Surreal Sky</a></li>
+      <li><a href="project-hydro-void.html">Hydro Void</a></li>
+      <li><a href="project-in-your-dreams.html">In Your Dreams</a></li>
+      <li><a href="project-hyper.html">Hyper</a></li>
+      <li><a href="project-purple-pixels.html">Purple Pixels</a></li>
+      <li><a href="project-digital-takeover.html">Digital Takeover</a></li>
+      <li><a href="project-node.html">Node</a></li>
+    </ul>
+  </ul>
+</nav>
+
+<!-- ─── Project Hero ─── -->
+<section class="project-hero">
+  <div class="project-hero-bg"></div>
+  <div class="project-hero-content">
+    <h1 class="project-hero-title">DITHER</h1>
+    <p class="project-hero-tagline">1-bit generative art · sound machines</p>
+  </div>
+</section>
+
+<!-- ─── Intro ─── -->
+<div class="project-body">
+  <h3>DITHER</h3>
+  <p>A collection of generative sound machines rendered in 1-bit dithered black and white. Each piece is a self-contained procedural world — organic forms, attractors, deep ocean, cosmic phenomena — paired with ambient sound design. Every machine runs as a 20-second perfect loop with audio built from synthesized drones, noise, and environmental textures.</p>
+  <a href="project-dither/index.html" class="view-collection">View Collection</a>
+</div>
+
+<!-- ─── Footer ─── -->
+<footer>
+  <div class="social-links">
+    <a href="https://www.instagram.com/minimal_macbeth/" target="_blank" rel="noopener noreferrer">Instagram</a>
+    <a href="https://x.com/macbethAI" target="_blank" rel="noopener noreferrer">Twitter</a>
+  </div>
+  <div class="footer-logo">MACBETH</div>
+  <p class="footer-copy">&copy; 2026 MACBETH. All rights reserved.</p>
+</footer>
+
+<script>
+  const nav = document.getElementById('navbar');
+  window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 60));
+  document.querySelector('.nav-toggle').addEventListener('click', () => nav.classList.toggle('nav-open'));
+  document.querySelectorAll('.nav-links a').forEach(a => a.addEventListener('click', () => nav.classList.remove('nav-open')));
+</script>
+</body>
+</html>

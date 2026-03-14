@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sound Machine — Mycelium</title>
+<style>
+  *{margin:0;padding:0}body{background:#000;overflow:hidden}
+  canvas{display:block;image-rendering:pixelated}
+  #start{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:#000;cursor:pointer}
+  #start span{color:#999;font:13px monospace;opacity:.5}.gone{display:none!important}
+</style>
+</head>
+<body>
+<div id="start"><span>click to begin</span></div>
+<canvas id="c"></canvas>
+<script>
+const THUMB_MODE=new URLSearchParams(location.search).has('mute');
+const C=document.getElementById('c'),X=C.getContext('2d'),DUR=20,DS=3;
+let T=0,on=false;
+const OC=document.createElement('canvas'),OX=OC.getContext('2d',{willReadFrequently:true});
+let ow,oh;
+function sz(){C.width=innerWidth;C.height=innerHeight;ow=Math.floor(C.width/DS);oh=Math.floor(C.height/DS);OC.width=ow;OC.height=oh}
+sz();addEventListener('resize',sz);
+const PI=Math.PI,TWO_PI=PI*2;
+
+const P=new Uint8Array(512);
+(function(){const p=new Uint8Array(256);for(let i=0;i<256;i++)p[i]=i;for(let i=255;i>0;i--){const j=Math.floor(Math.random()*(i+1));[p[i],p[j]]=[p[j],p[i]]}for(let i=0;i<512;i++)P[i]=p[i&255]})();
+function fade(t){return t*t*t*(t*(t*6-15)+10)}function lerp(a,b,t){return a+t*(b-a)}
+function grad(h,x,y){const v=h&3;return((v&1)?-x:x)+((v&2)?-y:y)}
+function perlin(x,y){const xi=Math.floor(x)&255,yi=Math.floor(y)&255,xf=x-Math.floor(x),yf=y-Math.floor(y),u=fade(xf),v=fade(yf);return lerp(lerp(grad(P[P[xi]+yi],xf,yf),grad(P[P[xi+1]+yi],xf-1,yf),u),lerp(grad(P[P[xi]+yi+1],xf,yf-1),grad(P[P[xi+1]+yi+1],xf-1,yf-1),u),v)}
+function fbm(x,y,o){let v=0,a=.5,f=1;for(let i=0;i<o;i++){v+=a*perlin(x*f,y*f);a*=.5;f*=2.1}return v}
+
+// Branching network nodes
+const NUM_NODES=25;const nodes=[];
+for(let i=0;i<NUM_NODES;i++)nodes.push({x:.05+Math.random()*.9,y:.05+Math.random()*.9,phase:Math.random()*TWO_PI,speed:.1+Math.random()*.3,dx:.03+Math.random()*.06,dy:.03+Math.random()*.06});
+// Edges
+const edges=[];
+for(let i=0;i<NUM_NODES;i++){
+  const dists=[];for(let j=0;j<NUM_NODES;j++)if(i!==j){const dx=nodes[i].x-nodes[j].x,dy=nodes[i].y-nodes[j].y;dists.push({j,d:Math.sqrt(dx*dx+dy*dy)})}
+  dists.sort((a,b)=>a.d-b.d);
+  for(let k=0;k<Math.min(3,dists.length);k++)if(dists[k].d<.35)edges.push([i,dists[k].j]);
+}
+
+// AUDIO — earth/soil drone, crackling
+let AC,masterGain,bus,drones=[],noiseGain,noiseFilter,metalFilter,metalGain;
+async function initAudio(){
+  AC=new AudioContext();masterGain=AC.createGain();masterGain.gain.value=0;masterGain.connect(AC.destination);
+  const rev=AC.createConvolver(),rL=AC.sampleRate*7,rB=AC.createBuffer(2,rL,AC.sampleRate);
+  for(let ch=0;ch<2;ch++){const d=rB.getChannelData(ch);for(let i=0;i<rL;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(AC.sampleRate*3))*(.3+.7*Math.exp(-i/(AC.sampleRate*1)))}
+  rev.buffer=rB;
+  const dG=AC.createGain(),wG=AC.createGain();dG.gain.value=.35;wG.gain.value=.65;
+  const dist=AC.createWaveShaper(),cv=new Float32Array(1024);for(let i=0;i<1024;i++)cv[i]=Math.tanh(((i/512)-1)*2);dist.curve=cv;dist.oversample='2x';
+  bus=AC.createGain();bus.gain.value=1;bus.connect(dist);dist.connect(dG);dist.connect(rev);rev.connect(wG);dG.connect(masterGain);wG.connect(masterGain);
+
+  // Sub — E1 earth hum
+  [41.2,41.28].forEach(f=>{const o=AC.createOscillator();o.type='sine';o.frequency.value=f;const g=AC.createGain();g.gain.value=.12;
+  const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=50;lp.Q.value=2;o.connect(lp);lp.connect(g);g.connect(bus);o.start();drones.push({osc:o,gain:g,filter:lp})});
+
+  // Mid — cluster E2+F2+G2 (earthy, modal)
+  [82.41,87.31,98].forEach(f=>{const o=AC.createOscillator();o.type='triangle';o.frequency.value=f;const g=AC.createGain();g.gain.value=.02;
+  const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=150;lp.Q.value=1.5;o.connect(lp);lp.connect(g);g.connect(bus);o.start();drones.push({osc:o,gain:g,filter:lp})});
+
+  // Crackle noise — like breaking twigs
+  const nB=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate),nd=nB.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+  const ns=AC.createBufferSource();ns.buffer=nB;ns.loop=true;
+  noiseFilter=AC.createBiquadFilter();noiseFilter.type='highpass';noiseFilter.frequency.value=2000;noiseFilter.Q.value=.5;
+  noiseGain=AC.createGain();noiseGain.gain.value=.02;ns.connect(noiseFilter);noiseFilter.connect(noiseGain);noiseGain.connect(bus);ns.start();
+
+  // Low rumble noise
+  const ns2=AC.createBufferSource();ns2.buffer=nB;ns2.loop=true;
+  const lnf=AC.createBiquadFilter();lnf.type='lowpass';lnf.frequency.value=200;lnf.Q.value=.3;
+  const lng=AC.createGain();lng.gain.value=.05;ns2.connect(lnf);lnf.connect(lng);lng.connect(bus);ns2.start();
+
+  // Organic resonance — wood/root
+  const ms=AC.createBufferSource();ms.buffer=nB;ms.loop=true;
+  metalFilter=AC.createBiquadFilter();metalFilter.type='bandpass';metalFilter.frequency.value=300;metalFilter.Q.value=25;
+  metalGain=AC.createGain();metalGain.gain.value=.01;ms.connect(metalFilter);metalFilter.connect(metalGain);metalGain.connect(bus);ms.start();
+
+  const l1=AC.createOscillator();l1.type='sine';l1.frequency.value=1/DUR;const l1g=AC.createGain();l1g.gain.value=500;l1.connect(l1g);l1g.connect(noiseFilter.frequency);l1.start();
+  const l2=AC.createOscillator();l2.type='sine';l2.frequency.value=2/DUR;const l2g=AC.createGain();l2g.gain.value=100;l2.connect(l2g);l2g.connect(metalFilter.frequency);l2.start();
+  masterGain.gain.setTargetAtTime(.35,AC.currentTime,1.5);
+}
+function updateAudio(t,dis,env){
+  if(!AC)return;const now=AC.currentTime;
+  const breath=.5+.5*Math.sin(t/DUR*TWO_PI*2);
+  if(noiseGain)noiseGain.gain.setTargetAtTime(.015+breath*.015+dis*.02,now,.1);
+  if(metalGain)metalGain.gain.setTargetAtTime(.008+dis*.015,now,.15);
+  for(let i=0;i<2;i++)if(drones[i]&&drones[i].filter)drones[i].filter.frequency.setTargetAtTime(45+breath*15,now,.25);
+  for(let i=2;i<5;i++)if(drones[i]&&drones[i].filter)drones[i].filter.frequency.setTargetAtTime(130+dis*100,now,.15);
+  if(masterGain)masterGain.gain.setTargetAtTime(.32*env+.03,now,.15);
+}
+
+const B8=[0,32,8,40,2,34,10,42,48,16,56,24,50,18,58,26,12,44,4,36,14,46,6,38,60,28,52,20,62,30,54,22,3,35,11,43,1,33,9,41,51,19,59,27,49,17,57,25,15,47,7,39,13,45,5,37,63,31,55,23,61,29,53,21].map(v=>v/64);
+
+// Slow growth pulses
+function disruption(t){const p=t/DUR*TWO_PI;return .15+.1*Math.sin(p)+.08*Math.sin(p*2+.8)+.05*Math.sin(p*5+2)}
+function envelope(t){const p=t/DUR;if(p<.08)return p/.08;if(p>.92)return(1-p)/.08;return 1}
+
+function getNodePos(i,t){const n=nodes[i],p=t/DUR*TWO_PI;return{x:n.x+Math.sin(p*n.speed+n.phase)*n.dx,y:n.y+Math.cos(p*n.speed*.7+n.phase+1)*n.dy}}
+
+function renderScene(t){
+  const phase=t/DUR,env=envelope(t),dis=disruption(t),p=phase*TWO_PI;
+  const img=OX.createImageData(ow,oh),d=img.data,aspect=ow/oh;
+
+  // Precompute node positions
+  const npos=[];for(let i=0;i<NUM_NODES;i++)npos.push(getNodePos(i,t));
+
+  for(let y=0;y<oh;y++)for(let x=0;x<ow;x++){
+    const nx=x/ow,ny=y/oh;let brightness=0;
+
+    // Soil/earth background texture
+    const soil=fbm(nx*8+5,ny*8+5,5);
+    brightness+=Math.max(0,soil*.08+.03);
+
+    // Network edges — branching hyphae
+    for(const[a,b]of edges){
+      const pa=npos[a],pb=npos[b];
+      const lx=pb.x-pa.x,ly=pb.y-pa.y,len2=lx*lx+ly*ly;
+      if(len2<.001)continue;
+      const tt=Math.max(0,Math.min(1,((nx-pa.x)*lx+(ny-pa.y)*ly)/len2));
+      const px=pa.x+tt*lx,py=pa.y+tt*ly;
+      const dd=Math.sqrt((nx-px)*(nx-px)+((ny-py)*aspect)*((ny-py)*aspect));
+
+      // Wiggling hypha
+      const wiggle=fbm(tt*6+a*2+t*.02,t*.01+b,3)*.015;
+      const width=.006+wiggle+.003*Math.sin(tt*PI*2+p);
+
+      if(dd<width){
+        const edge=(1-dd/width);
+        // Pulsing nutrient flow along the hypha
+        const flow=.5+.5*Math.sin(tt*10-p*2+a);
+        brightness+=edge*.6*(.5+flow*.5);
+      }
+
+      // Secondary thinner branches
+      const bNoise=perlin(tt*15+a*7,t*.03);
+      if(bNoise>.3&&dd<width*3&&dd>width){
+        brightness+=.15*(bNoise-.3)*2*(1-dd/(width*3));
+      }
+    }
+
+    // Nodes — fruiting bodies / junction points
+    for(let i=0;i<NUM_NODES;i++){
+      const np=npos[i];
+      const dx=nx-np.x,dy=(ny-np.y)*aspect;
+      const dd=Math.sqrt(dx*dx+dy*dy);
+      const r=.015+.005*Math.sin(p*2+i);
+      if(dd<r){
+        const glow=Math.exp(-dd*dd/(r*r*.3))*.8;
+        const pulse=.6+.4*Math.sin(p*3+nodes[i].phase);
+        brightness+=glow*pulse;
+      }
+      // Spore halo
+      if(dd<r*4&&dd>r){
+        const halo=Math.exp(-(dd-r)*60)*.2;
+        brightness+=halo;
+      }
+    }
+
+    // Scattered spores
+    const spore=perlin(nx*40+t*.03,ny*40-t*.02);
+    if(spore>.45)brightness+=.2*(spore-.45)*8;
+
+    const vx=(nx-.5)*2,vy=(ny-.5)*2;brightness*=Math.max(0,1-(vx*vx+vy*vy)*.2);
+    brightness=Math.max(0,Math.min(1,brightness*env));
+    const idx=(y*ow+x)*4,v=Math.floor(brightness*255);
+    d[idx]=d[idx+1]=d[idx+2]=v;d[idx+3]=255;
+  }
+  OX.putImageData(img,0,0);applyDither(t,dis);
+  X.imageSmoothingEnabled=false;X.drawImage(OC,0,0,ow,oh,0,0,C.width,C.height);updateAudio(t,dis,env);
+}
+
+function applyDither(time,dis){const img=OX.getImageData(0,0,ow,oh),d=img.data,ph=Math.floor(time*2)%8;
+for(let y=0;y<oh;y++)for(let x=0;x<ow;x++){const i=(y*ow+x)*4,br=d[i]/255,tx=(x+ph)%8,ty=(y+ph)%8;let th=B8[ty*8+tx];if(dis>.2&&(y+Math.floor(time*9))%8<dis*2)th=1-th;d[i]=d[i+1]=d[i+2]=br>th?255:0;d[i+3]=255}OX.putImageData(img,0,0)}
+
+let last=0;function frame(){if(!on)return;requestAnimationFrame(frame);const now=performance.now(),dt=Math.min((now-last)/1000,.05);last=now;T+=dt;if(T>=DUR)T-=DUR;renderScene(T)}
+// Auto-start: try immediately, fall back to click
+async function autoStart() {
+  document.getElementById('start').classList.add('gone');
+  if(!THUMB_MODE) await initAudio();
+  on = true; last = performance.now();
+  frame();
+}
+// If in iframe with allow="autoplay", AudioContext works without gesture
+if (window.self !== window.top) {
+  autoStart();
+} else {
+  // Standalone: try auto, show click overlay if audio blocked
+  autoStart().catch(() => {
+    document.getElementById('start').classList.remove('gone');
+    document.getElementById('start').addEventListener('click', () => autoStart());
+  });
+}
+</script></body></html>

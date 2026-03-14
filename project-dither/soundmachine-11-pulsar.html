@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sound Machine — Pulsar</title>
+<style>
+  *{margin:0;padding:0}body{background:#000;overflow:hidden}
+  canvas{display:block;image-rendering:pixelated}
+  #start{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:#000;cursor:pointer}
+  #start span{color:#999;font:13px monospace;opacity:.5}.gone{display:none!important}
+</style>
+</head>
+<body>
+<div id="start"><span>click to begin</span></div>
+<canvas id="c"></canvas>
+<script>
+const THUMB_MODE=new URLSearchParams(location.search).has('mute');
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+const DUR = 20;
+const DS = 3;
+let on = false, last = 0;
+
+c.width = window.innerWidth;
+c.height = window.innerHeight;
+const ow = Math.floor(c.width / DS);
+const oh = Math.floor(c.height / DS);
+const OC = document.createElement('canvas');
+OC.width = ow;
+OC.height = oh;
+const OX = OC.getContext('2d');
+
+// Perlin noise implementation
+const P = new Uint8Array(512);
+(function(){
+  const p = new Uint8Array(256);
+  for (let i = 0; i < 256; i++) p[i] = i;
+  for (let i = 255; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [p[i], p[j]] = [p[j], p[i]];
+  }
+  for (let i = 0; i < 512; i++) P[i] = p[i & 255];
+})();
+
+function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+function lerp(a, b, t) { return a + t * (b - a); }
+function grad(h, x, y) {
+  const v = h & 3;
+  return ((v & 1) ? -x : x) + ((v & 2) ? -y : y);
+}
+function perlin(x, y) {
+  const xi = Math.floor(x) & 255, yi = Math.floor(y) & 255;
+  const xf = x - Math.floor(x), yf = y - Math.floor(y);
+  const u = fade(xf), v = fade(yf);
+  return lerp(
+    lerp(grad(P[P[xi] + yi], xf, yf), grad(P[P[xi + 1] + yi], xf - 1, yf), u),
+    lerp(grad(P[P[xi] + yi + 1], xf, yf - 1), grad(P[P[xi + 1] + yi + 1], xf - 1, yf - 1), u),
+    v
+  );
+}
+function fbm(x, y, o) {
+  let v = 0, a = 0.5, f = 1;
+  for (let i = 0; i < o; i++) {
+    v += a * perlin(x * f, y * f);
+    a *= 0.5;
+    f *= 2.1;
+  }
+  return v;
+}
+
+// Bayer matrix for dithering
+const B8 = [0,32,8,40,2,34,10,42,48,16,56,24,50,18,58,26,12,44,4,36,14,46,6,38,60,28,52,20,62,30,54,22,3,35,11,43,1,33,9,41,51,19,59,27,49,17,57,25,15,47,7,39,13,45,5,37,63,31,55,23,61,29,53,21].map(v => v / 64);
+
+function applyDither(time) {
+  const img = OX.getImageData(0, 0, ow, oh);
+  const d = img.data;
+  const ph = Math.floor(time * 1.5) % 8;
+  for (let y = 0; y < oh; y++) {
+    for (let x = 0; x < ow; x++) {
+      const i = (y * ow + x) * 4;
+      const br = d[i] / 255;
+      const tx = (x + ph) % 8;
+      const ty = (y + ph) % 8;
+      const th = B8[ty * 8 + tx];
+      d[i] = d[i + 1] = d[i + 2] = br > th ? 255 : 0;
+      d[i + 3] = 255;
+    }
+  }
+  OX.putImageData(img, 0, 0);
+}
+
+function render(time) {
+  // Clear to black
+  OX.fillStyle = '#000';
+  OX.fillRect(0, 0, ow, oh);
+
+  // Center of canvas
+  const cx = ow / 2;
+  const cy = oh / 2;
+  const minDim = Math.min(ow, oh);
+
+  // Normalized time [0, 1) within DUR
+  const t = (time % DUR) / DUR;
+
+  // Phase for rotating beams (2 rotations per DUR for 0.5 cycle period)
+  const beamAngle = t * Math.PI * 2;
+
+  // Clean dark background — get image data for beam rendering
+  const nebImg = OX.getImageData(0, 0, ow, oh);
+  const nebData = nebImg.data;
+
+  // Draw magnetic field lines near the star
+  OX.strokeStyle = '#888';
+  OX.globalAlpha = 0.2;
+  OX.lineWidth = 1;
+  const starRadius = minDim * 0.04;
+  for (let i = 0; i < 6; i++) {
+    const baseAngle = (i / 6) * Math.PI;
+    const ampA = baseAngle + beamAngle * 0.5;
+    OX.beginPath();
+    for (let step = 0; step <= 40; step++) {
+      const s = step / 40;
+      const r = starRadius + s * minDim * 0.15;
+      const a = ampA + Math.sin(s * Math.PI * 3) * 0.4;
+      const px = cx + Math.cos(a) * r;
+      const py = cy + Math.sin(a) * r;
+      if (step === 0) OX.moveTo(px, py);
+      else OX.lineTo(px, py);
+    }
+    OX.stroke();
+  }
+  OX.globalAlpha = 1;
+
+  // Draw radiation beams (two sweeping cones)
+  const beamIntensity = 0.7;
+  const beamWidth = Math.PI / 6;
+  const beamLength = minDim * 0.35;
+
+  for (let beamIdx = 0; beamIdx < 2; beamIdx++) {
+    const beamDir = beamAngle + (beamIdx * Math.PI);
+
+    // Cone shape: draw many radial lines from star outward
+    for (let step = 0; step < beamLength; step++) {
+      const frac = step / beamLength;
+      const beamFade = Math.pow(1 - frac, 1.5) * beamIntensity;
+      const coneWidth = beamWidth * frac;
+
+      // Create cone sweep
+      for (let offset = -coneWidth; offset <= coneWidth; offset += 0.1) {
+        const angle = beamDir + offset;
+        const dist = starRadius + frac * beamLength;
+        const px = cx + Math.cos(angle) * dist;
+        const py = cy + Math.sin(angle) * dist;
+
+        if (px >= 0 && px < ow && py >= 0 && py < oh) {
+          const idx = (Math.floor(py) * ow + Math.floor(px)) * 4;
+          const fadeByOffset = Math.cos(offset / (coneWidth + 0.1)) * 0.5 + 0.5;
+          const brightness = beamFade * fadeByOffset * 255;
+          nebData[idx] = Math.min(nebData[idx] + brightness * 0.8, 255);
+          nebData[idx + 1] = Math.min(nebData[idx + 1] + brightness * 0.7, 255);
+          nebData[idx + 2] = Math.min(nebData[idx + 2] + brightness * 0.6, 255);
+        }
+      }
+    }
+  }
+  OX.putImageData(nebImg, 0, 0);
+
+  // Draw central neutron star with Gaussian glow
+  const starGlowRadius = starRadius * 2.5;
+  for (let dy = -starGlowRadius; dy <= starGlowRadius; dy++) {
+    for (let dx = -starGlowRadius; dx <= starGlowRadius; dx++) {
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const px = cx + dx;
+      const py = cy + dy;
+      if (px >= 0 && px < ow && py >= 0 && py < oh) {
+        const glow = Math.exp(-(dist * dist) / (starRadius * starRadius * 2));
+        const idx = (Math.floor(py) * ow + Math.floor(px)) * 4;
+        const bright = glow * 255;
+        nebData[idx] = Math.min(nebData[idx] + bright, 255);
+        nebData[idx + 1] = Math.min(nebData[idx + 1] + bright * 0.95, 255);
+        nebData[idx + 2] = Math.min(nebData[idx + 2] + bright * 0.85, 255);
+      }
+    }
+  }
+  OX.putImageData(nebImg, 0, 0);
+
+  // Subtle brightness pulse only near the star when beam faces camera
+  const beamBrightness = Math.max(
+    Math.cos(beamAngle) * 0.15,
+    Math.cos(beamAngle + Math.PI) * 0.15
+  );
+
+  const img = OX.getImageData(0, 0, ow, oh);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i] > 0) {
+      const current = d[i] / 255;
+      const brightened = Math.min(current + beamBrightness * 0.1, 1);
+      d[i] = d[i + 1] = d[i + 2] = brightened * 255;
+    }
+  }
+  OX.putImageData(img, 0, 0);
+
+  // Apply 1-bit dither
+  applyDither(time);
+
+  // Scale up to canvas
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(OC, 0, 0, ow, oh, 0, 0, c.width, c.height);
+}
+
+// Audio system
+let audioCtx, masterGain, dryGain, wetGain, convolverNode;
+let subOsc1, subOsc2, midOsc1, midOsc2, noiseOsc1, noiseOsc2, noiseOsc3;
+let subFilter, midFilter, pulseFilter, highpassFilter, windFilter;
+let subLFO, midLFO, noiseLFO, waveshaper;
+
+async function initAudio() {
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  // Master gain with fade-in
+  masterGain = audioCtx.createGain();
+  masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+  masterGain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 2);
+  masterGain.connect(audioCtx.destination);
+
+  // Dry/wet setup
+  dryGain = audioCtx.createGain();
+  dryGain.gain.value = 0.2;
+  dryGain.connect(masterGain);
+
+  wetGain = audioCtx.createGain();
+  wetGain.gain.value = 0.8;
+
+  // Convolver for reverb
+  convolverNode = audioCtx.createConvolver();
+
+  // Create 8-second impulse response
+  const irDur = 8;
+  const irLen = audioCtx.sampleRate * irDur;
+  const irBuf = audioCtx.createBuffer(1, irLen, audioCtx.sampleRate);
+  const irData = irBuf.getChannelData(0);
+  for (let i = 0; i < irLen; i++) {
+    irData[i] = Math.random() * 2 - 1;
+    const envelope = Math.exp(-i / (audioCtx.sampleRate * 0.5));
+    irData[i] *= envelope;
+  }
+  convolverNode.buffer = irBuf;
+  convolverNode.connect(wetGain);
+  wetGain.connect(masterGain);
+
+  // Waveshaper for distortion
+  waveshaper = audioCtx.createWaveShaper();
+  waveshaper.curve = new Float32Array(11);
+  for (let i = -5; i <= 5; i++) {
+    waveshaper.curve[i + 5] = Math.tanh(i * 0.8);
+  }
+  waveshaper.connect(convolverNode);
+
+  // Sub oscillators (A0 + E1 = 27.5Hz + 41.2Hz)
+  subOsc1 = audioCtx.createOscillator();
+  subOsc1.type = 'sine';
+  subOsc1.frequency.value = 27.5;
+  subOsc1.start();
+
+  subOsc2 = audioCtx.createOscillator();
+  subOsc2.type = 'sine';
+  subOsc2.frequency.value = 41.2;
+  subOsc2.start();
+
+  subFilter = audioCtx.createBiquadFilter();
+  subFilter.type = 'lowpass';
+  subFilter.frequency.value = 55;
+  subFilter.connect(waveshaper);
+
+  const subGain = audioCtx.createGain();
+  subGain.gain.value = 0.3;
+  subGain.connect(subFilter);
+  subOsc1.connect(subGain);
+  subOsc2.connect(subGain);
+
+  // Mid oscillators (A1 + E2 = 55Hz + 82.41Hz)
+  midOsc1 = audioCtx.createOscillator();
+  midOsc1.type = 'triangle';
+  midOsc1.frequency.value = 55;
+  midOsc1.start();
+
+  midOsc2 = audioCtx.createOscillator();
+  midOsc2.type = 'triangle';
+  midOsc2.frequency.value = 82.41;
+  midOsc2.start();
+
+  midFilter = audioCtx.createBiquadFilter();
+  midFilter.type = 'bandpass';
+  midFilter.frequency.value = 70;
+  midFilter.Q.value = 0.5;
+  midFilter.connect(waveshaper);
+
+  const midGain = audioCtx.createGain();
+  midGain.gain.value = 0.15;
+  midGain.connect(midFilter);
+  midOsc1.connect(midGain);
+  midOsc2.connect(midGain);
+
+  // Pulse click noise (bandpass at 3500Hz Q=60)
+  const pulseGain = audioCtx.createGain();
+  pulseGain.gain.value = 0;
+  pulseGain.connect(waveshaper);
+
+  pulseFilter = audioCtx.createBiquadFilter();
+  pulseFilter.type = 'bandpass';
+  pulseFilter.frequency.value = 3500;
+  pulseFilter.Q.value = 60;
+  pulseFilter.connect(pulseGain);
+
+  const pulseOsc = audioCtx.createBufferSource();
+  const noiseBuf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.1, audioCtx.sampleRate);
+  const noiseData = noiseBuf.getChannelData(0);
+  for (let i = 0; i < noiseData.length; i++) {
+    noiseData[i] = Math.random() * 2 - 1;
+  }
+  pulseOsc.buffer = noiseBuf;
+  pulseOsc.loop = true;
+  pulseOsc.connect(pulseFilter);
+  pulseOsc.start();
+
+  // Radiation crackle (highpass 5000Hz)
+  noiseOsc1 = audioCtx.createBufferSource();
+  noiseOsc1.buffer = noiseBuf;
+  noiseOsc1.loop = true;
+  noiseOsc1.start();
+
+  highpassFilter = audioCtx.createBiquadFilter();
+  highpassFilter.type = 'highpass';
+  highpassFilter.frequency.value = 5000;
+  highpassFilter.connect(waveshaper);
+
+  const noiseGain1 = audioCtx.createGain();
+  noiseGain1.gain.value = 0.08;
+  noiseGain1.connect(highpassFilter);
+  noiseOsc1.connect(noiseGain1);
+
+  // Wind noise (bandpass 800Hz Q=0.5)
+  noiseOsc2 = audioCtx.createBufferSource();
+  noiseOsc2.buffer = noiseBuf;
+  noiseOsc2.loop = true;
+  noiseOsc2.start();
+
+  windFilter = audioCtx.createBiquadFilter();
+  windFilter.type = 'bandpass';
+  windFilter.frequency.value = 800;
+  windFilter.Q.value = 0.5;
+  windFilter.connect(waveshaper);
+
+  const noiseGain2 = audioCtx.createGain();
+  noiseGain2.gain.value = 0.06;
+  noiseGain2.connect(windFilter);
+  noiseOsc2.connect(noiseGain2);
+
+  // LFOs at 1/DUR
+  const lfoFreq = 1 / DUR;
+
+  subLFO = audioCtx.createOscillator();
+  subLFO.type = 'sine';
+  subLFO.frequency.value = lfoFreq;
+  subLFO.start();
+
+  midLFO = audioCtx.createOscillator();
+  midLFO.type = 'sine';
+  midLFO.frequency.value = lfoFreq;
+  midLFO.start();
+
+  noiseLFO = audioCtx.createOscillator();
+  noiseLFO.type = 'sine';
+  noiseLFO.frequency.value = lfoFreq;
+  noiseLFO.start();
+
+  const subLFOGain = audioCtx.createGain();
+  subLFOGain.gain.value = 5;
+  subLFO.connect(subLFOGain);
+  subLFOGain.connect(subOsc1.frequency);
+  subLFOGain.connect(subOsc2.frequency);
+
+  const midLFOGain = audioCtx.createGain();
+  midLFOGain.gain.value = 3;
+  midLFO.connect(midLFOGain);
+  midLFOGain.connect(midOsc1.frequency);
+  midLFOGain.connect(midOsc2.frequency);
+
+  const noiseLFOGain = audioCtx.createGain();
+  noiseLFOGain.gain.value = 0.3;
+  noiseLFO.connect(noiseLFOGain);
+  noiseLFOGain.connect(noiseGain1.gain);
+  noiseLFOGain.connect(noiseGain2.gain);
+
+  // Disruption synced to beam direction - sharp radio pulses at [0.0, 0.5]
+  const pulseEnvelope = audioCtx.createGain();
+  pulseEnvelope.gain.value = 0;
+  pulseEnvelope.connect(pulseGain);
+
+  // Update pulse envelope each frame based on beam position
+  window.updatePulseEnvelope = function(time) {
+    const t = (time % DUR) / DUR;
+    const pulsePhase = t * 2; // 2 pulses per rotation
+    const nearPulse = Math.min(
+      Math.abs(pulsePhase - Math.floor(pulsePhase)) - 0.5,
+      Math.abs(pulsePhase - (Math.floor(pulsePhase) + 1)) - 0.5
+    );
+    const dist = Math.abs(nearPulse) * 2;
+    const pulse = Math.exp(-dist * DUR * 8);
+    pulseEnvelope.gain.setValueAtTime(pulse * 0.4, audioCtx.currentTime);
+  };
+}
+
+function frame() {
+  if (!on) return;
+  const now = performance.now() / 1000;
+  const elapsed = now - last;
+  last = now;
+
+  render(now);
+  updatePulseEnvelope(now);
+
+  requestAnimationFrame(frame);
+}
+
+async function autoStart() {
+  document.getElementById('start').classList.add('gone');
+  if(!THUMB_MODE) await initAudio();
+  on = true;
+  last = performance.now() / 1000;
+  frame();
+}
+
+if (window.self !== window.top) {
+  autoStart();
+} else {
+  autoStart().catch(() => {
+    document.getElementById('start').classList.remove('gone');
+    document.getElementById('start').addEventListener('click', () => autoStart());
+  });
+}
+</script>
+</body>
+</html>

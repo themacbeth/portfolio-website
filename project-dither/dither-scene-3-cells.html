@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dither Scene — Cells</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #000; overflow: hidden; }
+  canvas { display: block; image-rendering: pixelated; }
+  #start { position: fixed; inset: 0; z-index: 10; display: flex;
+    align-items: center; justify-content: center; background: #000; cursor: pointer; }
+  #start span { color: #999; font: 13px monospace; opacity: 0.5; }
+  .gone { display: none !important; }
+</style>
+</head>
+<body>
+<div id="start"><span>click to begin</span></div>
+<canvas id="c"></canvas>
+<script>
+const THUMB_MODE=new URLSearchParams(location.search).has('mute');
+const C = document.getElementById('c');
+const X = C.getContext('2d');
+const DUR = 20;
+const DS = 3;
+let T = 0, on = false;
+
+const OC = document.createElement('canvas');
+const OX = OC.getContext('2d', { willReadFrequently: true });
+let ow, oh;
+
+function sz() {
+  C.width = innerWidth; C.height = innerHeight;
+  ow = Math.floor(C.width / DS);
+  oh = Math.floor(C.height / DS);
+  OC.width = ow; OC.height = oh;
+}
+sz(); addEventListener('resize', sz);
+
+const PI = Math.PI, TWO_PI = PI * 2;
+
+// Noise
+const P = new Uint8Array(512);
+(function(){const p=new Uint8Array(256);for(let i=0;i<256;i++)p[i]=i;
+for(let i=255;i>0;i--){const j=Math.floor(Math.random()*(i+1));[p[i],p[j]]=[p[j],p[i]];}
+for(let i=0;i<512;i++)P[i]=p[i&255];})();
+function fade(t){return t*t*t*(t*(t*6-15)+10);}
+function lerp(a,b,t){return a+t*(b-a);}
+function grad(h,x,y){const v=h&3;return((v&1)?-x:x)+((v&2)?-y:y);}
+function perlin(x,y){
+  const xi=Math.floor(x)&255,yi=Math.floor(y)&255;
+  const xf=x-Math.floor(x),yf=y-Math.floor(y);
+  const u=fade(xf),v=fade(yf);
+  return lerp(lerp(grad(P[P[xi]+yi],xf,yf),grad(P[P[xi+1]+yi],xf-1,yf),u),
+    lerp(grad(P[P[xi]+yi+1],xf,yf-1),grad(P[P[xi+1]+yi+1],xf-1,yf-1),u),v);
+}
+function fbm(x,y,oct){let v=0,a=.5,f=1;for(let i=0;i<oct;i++){v+=a*perlin(x*f,y*f);a*=.5;f*=2.1;}return v;}
+
+// Voronoi for cell structures
+const NUM_CELLS = 18;
+const cellPts = [];
+for (let i=0;i<NUM_CELLS;i++) {
+  cellPts.push({
+    bx: Math.random(), by: Math.random(),
+    vx: (Math.random()-.5)*.3, vy: (Math.random()-.5)*.3,
+    phase: Math.random()*TWO_PI,
+    speed: .3+Math.random()*.7,
+    size: .5+Math.random()*1,
+  });
+}
+
+function getCellPos(i, t) {
+  const c = cellPts[i];
+  const p = t/DUR*TWO_PI;
+  return {
+    x: c.bx + Math.sin(p*c.speed+c.phase)*c.vx,
+    y: c.by + Math.cos(p*c.speed*.7+c.phase+1)*c.vy,
+  };
+}
+
+// ═══════════════════════════════════════════════
+// AUDIO — microscopic hum
+// ═══════════════════════════════════════════════
+let AC, masterGain, bus, drones=[], noiseGain, noiseFilter, metalFilter, metalGain;
+
+async function initAudio() {
+  AC = new AudioContext();
+  masterGain = AC.createGain(); masterGain.gain.value = 0; masterGain.connect(AC.destination);
+
+  const rev = AC.createConvolver();
+  const rL = AC.sampleRate * 7;
+  const rB = AC.createBuffer(2, rL, AC.sampleRate);
+  for(let ch=0;ch<2;ch++){const d=rB.getChannelData(ch);for(let i=0;i<rL;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(AC.sampleRate*2.8))*(.35+.65*Math.exp(-i/(AC.sampleRate*.8)));}
+  rev.buffer=rB;
+
+  const dryG=AC.createGain();dryG.gain.value=.3;
+  const wetG=AC.createGain();wetG.gain.value=.7;
+  const dist=AC.createWaveShaper();const cv=new Float32Array(1024);
+  for(let i=0;i<1024;i++)cv[i]=Math.tanh(((i/512)-1)*2);dist.curve=cv;dist.oversample='2x';
+  bus=AC.createGain();bus.gain.value=1;
+  bus.connect(dist);dist.connect(dryG);dist.connect(rev);rev.connect(wetG);dryG.connect(masterGain);wetG.connect(masterGain);
+
+  // Sub — F1 pure sine
+  const s1=AC.createOscillator();s1.type='sine';s1.frequency.value=43.65;
+  const s1g=AC.createGain();s1g.gain.value=.16;
+  const s1f=AC.createBiquadFilter();s1f.type='lowpass';s1f.frequency.value=55;s1f.Q.value=2;
+  s1.connect(s1f);s1f.connect(s1g);s1g.connect(bus);s1.start();
+  drones.push({osc:s1,gain:s1g,filter:s1f});
+
+  // Pad — F1+C2 (open 5th) triangle
+  [43.65, 65.41].forEach(f=>{
+    const o=AC.createOscillator();o.type='triangle';o.frequency.value=f;
+    const g=AC.createGain();g.gain.value=.035;
+    const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=100;lp.Q.value=1.5;
+    o.connect(lp);lp.connect(g);g.connect(bus);o.start();
+    drones.push({osc:o,gain:g,filter:lp});
+  });
+
+  // High shimmer — multiple sine tones
+  [523, 659, 784].forEach(f=>{
+    const o=AC.createOscillator();o.type='sine';o.frequency.value=f;
+    const g=AC.createGain();g.gain.value=.003;
+    const bp=AC.createBiquadFilter();bp.type='bandpass';bp.frequency.value=f;bp.Q.value=20;
+    o.connect(bp);bp.connect(g);g.connect(bus);o.start();
+    drones.push({osc:o,gain:g,filter:bp});
+  });
+
+  // Noise — buzzy hum
+  const nB=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);
+  const nd=nB.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+  const ns=AC.createBufferSource();ns.buffer=nB;ns.loop=true;
+  noiseFilter=AC.createBiquadFilter();noiseFilter.type='bandpass';noiseFilter.frequency.value=300;noiseFilter.Q.value=.4;
+  noiseGain=AC.createGain();noiseGain.gain.value=.04;
+  ns.connect(noiseFilter);noiseFilter.connect(noiseGain);noiseGain.connect(bus);ns.start();
+
+  // Resonant click/tick
+  const ms=AC.createBufferSource();ms.buffer=nB;ms.loop=true;
+  metalFilter=AC.createBiquadFilter();metalFilter.type='bandpass';metalFilter.frequency.value=4000;metalFilter.Q.value=70;
+  metalGain=AC.createGain();metalGain.gain.value=.002;
+  ms.connect(metalFilter);metalFilter.connect(metalGain);metalGain.connect(bus);ms.start();
+
+  const l1=AC.createOscillator();l1.type='sine';l1.frequency.value=3/DUR;
+  const l1g=AC.createGain();l1g.gain.value=80;l1.connect(l1g);l1g.connect(noiseFilter.frequency);l1.start();
+  const l2=AC.createOscillator();l2.type='sine';l2.frequency.value=1/DUR;
+  const l2g=AC.createGain();l2g.gain.value=1500;l2.connect(l2g);l2g.connect(metalFilter.frequency);l2.start();
+
+  masterGain.gain.setTargetAtTime(.35,AC.currentTime,1.5);
+}
+
+function updateAudio(t,dis,env){
+  if(!AC)return;const now=AC.currentTime;
+  const breath=.5+.5*Math.sin(t/DUR*TWO_PI*3);
+  if(noiseGain)noiseGain.gain.setTargetAtTime(.03+breath*.03+dis*.04,now,.15);
+  if(metalGain)metalGain.gain.setTargetAtTime(.001+dis*.008+breath*.002,now,.05);
+  for(let i=0;i<3;i++)if(drones[i]&&drones[i].filter)drones[i].filter.frequency.setTargetAtTime(45+breath*30+dis*30,now,.2);
+  // High shimmer reacts to disruption
+  for(let i=3;i<6;i++)if(drones[i])drones[i].gain.gain.setTargetAtTime(.002+dis*.008,now,.05);
+  if(masterGain)masterGain.gain.setTargetAtTime(.3*env+.03,now,.15);
+}
+
+// ═══════════════════════════════════════════════
+// VISUALS — Voronoi cells / microscopic biology
+// ═══════════════════════════════════════════════
+const B8=[0,32,8,40,2,34,10,42,48,16,56,24,50,18,58,26,12,44,4,36,14,46,6,38,60,28,52,20,62,30,54,22,3,35,11,43,1,33,9,41,51,19,59,27,49,17,57,25,15,47,7,39,13,45,5,37,63,31,55,23,61,29,53,21].map(v=>v/64);
+
+// 3 irregular slow pulses
+function disruption(t){
+  const ph=t/DUR;let d=0;
+  for(const b of[.1,.45,.8]){let dist=Math.abs(ph-b);dist=Math.min(dist,1-dist);d+=Math.exp(-dist*DUR*5);}
+  return d;
+}
+function envelope(t){const p=t/DUR;if(p<.08)return p/.08;if(p>.92)return(1-p)/.08;return 1;}
+
+function renderScene(t) {
+  const phase=t/DUR, env=envelope(t), dis=disruption(t);
+
+  const img = OX.createImageData(ow, oh);
+  const d = img.data;
+  const aspect = ow/oh;
+
+  // Precompute cell positions
+  const cpos = [];
+  for (let i=0;i<NUM_CELLS;i++) cpos.push(getCellPos(i, t));
+
+  for (let y=0;y<oh;y++) {
+    for (let x=0;x<ow;x++) {
+      const nx=x/ow, ny=y/oh;
+
+      // Find two closest cell centers (for Voronoi edges)
+      let d1=999, d2=999, closest=-1;
+      for (let i=0;i<NUM_CELLS;i++) {
+        const cp = cpos[i];
+        const dx = nx-cp.x, dy = (ny-cp.y)*aspect;
+        const dd = Math.sqrt(dx*dx+dy*dy);
+        if (dd<d1) { d2=d1; d1=dd; closest=i; }
+        else if (dd<d2) { d2=dd; }
+      }
+
+      let brightness = 0;
+
+      // Cell membrane — bright edge where two cells meet
+      const edgeDist = d2 - d1;
+      const membrane = Math.exp(-edgeDist*edgeDist*8000) * .9;
+      brightness += membrane;
+
+      // Cell interior — organelles and texture
+      if (closest >= 0) {
+        const cp = cpos[closest];
+        const cellDist = d1;
+        const cellR = cellPts[closest].size * .12;
+
+        // Nucleus — bright blob near center
+        const nucleusDist = cellDist / cellR;
+        if (nucleusDist < .4) {
+          const nucleus = Math.exp(-nucleusDist*nucleusDist*15) * .7;
+          brightness += nucleus;
+
+          // Nucleolus — tiny bright dot
+          const nd2 = nucleusDist / .15;
+          brightness += Math.exp(-nd2*nd2*8) * .4;
+        }
+
+        // Internal organelle blobs
+        const orgNoise = fbm(
+          nx*20 + cp.x*5 + t*.01,
+          ny*20 + cp.y*5 + t*.008,
+          4
+        );
+        if (orgNoise > .2 && nucleusDist < 1) {
+          brightness += (orgNoise-.2) * .4 * (1-nucleusDist);
+        }
+
+        // Cytoplasm texture — fine grain
+        const cyto = perlin(nx*40+closest*10, ny*40+closest*10+t*.005);
+        brightness += Math.max(0, cyto) * .15 * (1-nucleusDist*.5);
+
+        // Cell opacity fades at edges
+        if (nucleusDist > .7 && nucleusDist < 1) {
+          brightness *= 1 - (nucleusDist-.7)/.3 * .5;
+        }
+      }
+
+      // Floating particles outside cells
+      const particle = fbm(nx*25+t*.04, ny*25-t*.03, 3);
+      if (particle > .4 && d1 > .08) {
+        brightness += (particle-.4) * .3;
+      }
+
+      // Filaments between cells
+      const filNoise = fbm(nx*8+t*.015, ny*2+t*.01, 5);
+      if (filNoise > .3 && d1 > .04) {
+        brightness += (filNoise-.3) * .15;
+      }
+
+      // Vignette
+      const vx=(nx-.5)*2, vy=(ny-.5)*2;
+      brightness *= Math.max(0, 1-(vx*vx+vy*vy)*.2);
+
+      brightness = Math.max(0, Math.min(1, brightness*env));
+
+      const idx=(y*ow+x)*4;
+      const v = Math.floor(brightness*255);
+      d[idx]=d[idx+1]=d[idx+2]=v;d[idx+3]=255;
+    }
+  }
+
+  OX.putImageData(img,0,0);
+  applyDither(t,dis);
+  X.imageSmoothingEnabled=false;
+  X.drawImage(OC,0,0,ow,oh,0,0,C.width,C.height);
+  updateAudio(t,dis,env);
+}
+
+function applyDither(time,dis){
+  const img=OX.getImageData(0,0,ow,oh);const d=img.data;const ph=Math.floor(time*2)%8;
+  for(let y=0;y<oh;y++)for(let x=0;x<ow;x++){
+    const i=(y*ow+x)*4;const br=d[i]/255;const tx=(x+ph)%8,ty=(y+ph)%8;
+    let th=B8[ty*8+tx];
+    if(dis>.2&&(y+Math.floor(time*11))%7<dis*2)th=1-th;
+    d[i]=d[i+1]=d[i+2]=br>th?255:0;d[i+3]=255;
+  }
+  OX.putImageData(img,0,0);
+}
+
+let last=0;
+function frame(){if(!on)return;requestAnimationFrame(frame);const now=performance.now();const dt=Math.min((now-last)/1000,.05);last=now;T+=dt;if(T>=DUR)T-=DUR;renderScene(T);}
+// Auto-start: try immediately, fall back to click
+async function autoStart() {
+  document.getElementById('start').classList.add('gone');
+  if(!THUMB_MODE) await initAudio();
+  on = true; last = performance.now();
+  frame();
+}
+// If in iframe with allow="autoplay", AudioContext works without gesture
+if (window.self !== window.top) {
+  autoStart();
+} else {
+  // Standalone: try auto, show click overlay if audio blocked
+  autoStart().catch(() => {
+    document.getElementById('start').classList.remove('gone');
+    document.getElementById('start').addEventListener('click', () => autoStart());
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sound Machine — Abyss</title>
+<style>
+  *{margin:0;padding:0}body{background:#000;overflow:hidden}
+  canvas{display:block;image-rendering:pixelated}
+  #start{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:#000;cursor:pointer}
+  #start span{color:#999;font:13px monospace;opacity:.5}.gone{display:none!important}
+</style>
+</head>
+<body>
+<div id="start"><span>click to begin</span></div>
+<canvas id="c"></canvas>
+<script>
+const THUMB_MODE=new URLSearchParams(location.search).has('mute');
+const C=document.getElementById('c'),X=C.getContext('2d'),DUR=20,DS=3;
+let T=0,on=false;
+const OC=document.createElement('canvas'),OX=OC.getContext('2d',{willReadFrequently:true});
+let ow,oh;
+function sz(){C.width=innerWidth;C.height=innerHeight;ow=Math.floor(C.width/DS);oh=Math.floor(C.height/DS);OC.width=ow;OC.height=oh;}
+sz();addEventListener('resize',sz);
+const PI=Math.PI,TWO_PI=PI*2;
+
+// Noise
+const P=new Uint8Array(512);
+(function(){const p=new Uint8Array(256);for(let i=0;i<256;i++)p[i]=i;for(let i=255;i>0;i--){const j=Math.floor(Math.random()*(i+1));[p[i],p[j]]=[p[j],p[i]];}for(let i=0;i<512;i++)P[i]=p[i&255]})();
+function fade(t){return t*t*t*(t*(t*6-15)+10)}
+function lerp(a,b,t){return a+t*(b-a)}
+function grad(h,x,y){const v=h&3;return((v&1)?-x:x)+((v&2)?-y:y)}
+function perlin(x,y){const xi=Math.floor(x)&255,yi=Math.floor(y)&255,xf=x-Math.floor(x),yf=y-Math.floor(y),u=fade(xf),v=fade(yf);return lerp(lerp(grad(P[P[xi]+yi],xf,yf),grad(P[P[xi+1]+yi],xf-1,yf),u),lerp(grad(P[P[xi]+yi+1],xf,yf-1),grad(P[P[xi+1]+yi+1],xf-1,yf-1),u),v)}
+function fbm(x,y,o){let v=0,a=.5,f=1;for(let i=0;i<o;i++){v+=a*perlin(x*f,y*f);a*=.5;f*=2.1}return v}
+
+// AUDIO — deep pressure / sonar pings
+let AC,masterGain,bus,drones=[],noiseGain,noiseFilter,metalFilter,metalGain;
+async function initAudio(){
+  AC=new AudioContext();masterGain=AC.createGain();masterGain.gain.value=0;masterGain.connect(AC.destination);
+  const rev=AC.createConvolver(),rL=AC.sampleRate*11,rB=AC.createBuffer(2,rL,AC.sampleRate);
+  for(let ch=0;ch<2;ch++){const d=rB.getChannelData(ch);for(let i=0;i<rL;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(AC.sampleRate*4.5))*(.2+.8*Math.exp(-i/(AC.sampleRate*1.5)))}
+  rev.buffer=rB;
+  const dG=AC.createGain(),wG=AC.createGain();dG.gain.value=.15;wG.gain.value=.85;
+  const dist=AC.createWaveShaper(),cv=new Float32Array(1024);for(let i=0;i<1024;i++)cv[i]=Math.tanh(((i/512)-1)*1.2);dist.curve=cv;dist.oversample='2x';
+  bus=AC.createGain();bus.gain.value=1;bus.connect(dist);dist.connect(dG);dist.connect(rev);rev.connect(wG);dG.connect(masterGain);wG.connect(masterGain);
+
+  // Sub — pure sine Ab0, barely audible rumble
+  const s=AC.createOscillator();s.type='sine';s.frequency.value=25.96;
+  const sg=AC.createGain();sg.gain.value=.2;const sf=AC.createBiquadFilter();sf.type='lowpass';sf.frequency.value=35;sf.Q.value=1;
+  s.connect(sf);sf.connect(sg);sg.connect(bus);s.start();drones.push({osc:s,gain:sg,filter:sf});
+
+  // Pad — Ab0+Eb1 open 5th, sine
+  [25.96,38.89].forEach(f=>{const o=AC.createOscillator();o.type='sine';o.frequency.value=f;const g=AC.createGain();g.gain.value=.06;
+  const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=60;lp.Q.value=1;o.connect(lp);lp.connect(g);g.connect(bus);o.start();drones.push({osc:o,gain:g,filter:lp})});
+
+  // Sonar ping — high sine burst through narrow bandpass
+  const pingOsc=AC.createOscillator();pingOsc.type='sine';pingOsc.frequency.value=1200;
+  const pingG=AC.createGain();pingG.gain.value=0;const pingF=AC.createBiquadFilter();pingF.type='bandpass';pingF.frequency.value=1200;pingF.Q.value=30;
+  pingOsc.connect(pingF);pingF.connect(pingG);pingG.connect(bus);pingOsc.start();drones.push({osc:pingOsc,gain:pingG,filter:pingF});
+
+  // Water noise
+  const nB=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate),nd=nB.getChannelData(0);for(let i=0;i<nd.length;i++)nd[i]=Math.random()*2-1;
+  const ns=AC.createBufferSource();ns.buffer=nB;ns.loop=true;
+  noiseFilter=AC.createBiquadFilter();noiseFilter.type='lowpass';noiseFilter.frequency.value=250;noiseFilter.Q.value=.3;
+  noiseGain=AC.createGain();noiseGain.gain.value=.07;ns.connect(noiseFilter);noiseFilter.connect(noiseGain);noiseGain.connect(bus);ns.start();
+
+  // Whale-like resonance
+  const ms=AC.createBufferSource();ms.buffer=nB;ms.loop=true;
+  metalFilter=AC.createBiquadFilter();metalFilter.type='bandpass';metalFilter.frequency.value=120;metalFilter.Q.value=50;
+  metalGain=AC.createGain();metalGain.gain.value=.018;ms.connect(metalFilter);metalFilter.connect(metalGain);metalGain.connect(bus);ms.start();
+
+  const l1=AC.createOscillator();l1.type='sine';l1.frequency.value=1/DUR;const l1g=AC.createGain();l1g.gain.value=60;l1.connect(l1g);l1g.connect(noiseFilter.frequency);l1.start();
+  const l2=AC.createOscillator();l2.type='sine';l2.frequency.value=3/DUR;const l2g=AC.createGain();l2g.gain.value=40;l2.connect(l2g);l2g.connect(metalFilter.frequency);l2.start();
+  masterGain.gain.setTargetAtTime(.35,AC.currentTime,2);
+}
+function updateAudio(t,dis,env){
+  if(!AC)return;const now=AC.currentTime;
+  const breath=.5+.5*Math.sin(t/DUR*TWO_PI);
+  if(noiseGain)noiseGain.gain.setTargetAtTime(.05+breath*.04+dis*.03,now,.3);
+  if(metalGain)metalGain.gain.setTargetAtTime(.012+breath*.01,now,.4);
+  // Sonar ping on disruption
+  if(drones[3])drones[3].gain.gain.setTargetAtTime(dis>.5?dis*.015:0,now,.01);
+  for(let i=0;i<3;i++)if(drones[i]&&drones[i].filter)drones[i].filter.frequency.setTargetAtTime(30+breath*20,now,.3);
+  if(masterGain)masterGain.gain.setTargetAtTime(.3*env+.03,now,.2);
+}
+
+// VISUALS — deep ocean bioluminescence
+const B8=[0,32,8,40,2,34,10,42,48,16,56,24,50,18,58,26,12,44,4,36,14,46,6,38,60,28,52,20,62,30,54,22,3,35,11,43,1,33,9,41,51,19,59,27,49,17,57,25,15,47,7,39,13,45,5,37,63,31,55,23,61,29,53,21].map(v=>v/64);
+
+const NUM_JELLY=5;const jellies=[];
+for(let i=0;i<NUM_JELLY;i++)jellies.push({cx:.15+Math.random()*.7,cy:.1+Math.random()*.8,phase:Math.random()*TWO_PI,speed:.2+Math.random()*.6,driftX:.08+Math.random()*.15,driftY:.1+Math.random()*.15,size:.08+Math.random()*.12,tentacles:3+Math.floor(Math.random()*4)});
+
+function disruption(t){const p=t/DUR;let d=0;for(const b of[.3,.8]){let dist=Math.abs(p-b);dist=Math.min(dist,1-dist);d+=Math.exp(-dist*DUR*4)}return d}
+function envelope(t){const p=t/DUR;if(p<.08)return p/.08;if(p>.92)return(1-p)/.08;return 1}
+
+function renderScene(t){
+  const phase=t/DUR,env=envelope(t),dis=disruption(t),p=phase*TWO_PI;
+  const img=OX.createImageData(ow,oh),d=img.data,aspect=ow/oh;
+
+  for(let y=0;y<oh;y++)for(let x=0;x<ow;x++){
+    const nx=x/ow,ny=y/oh;let brightness=0;
+
+    // Water caustics — subtle shifting light patterns
+    const caustic=fbm(nx*6+t*.008,ny*4+t*.006,4);
+    brightness+=Math.max(0,caustic*.08);
+
+    // Depth gradient — darker at bottom
+    brightness*=.8+.2*(1-ny);
+
+    // Particle snow — marine snow falling
+    const snow=fbm(nx*30+t*.02,ny*30+t*.06,2);
+    if(snow>.42)brightness+=.15*(snow-.42)*5;
+
+    // Jellyfish creatures
+    for(let j=0;j<NUM_JELLY;j++){
+      const jl=jellies[j];
+      const jx=jl.cx+Math.sin(p*jl.speed+jl.phase)*jl.driftX;
+      const jy=jl.cy+Math.cos(p*jl.speed*.6+jl.phase+1)*jl.driftY+Math.sin(p*2)*.02;
+      const dx=nx-jx,dy=(ny-jy)*aspect;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+
+      // Bell shape — dome
+      const bellR=jl.size*(1+.15*Math.sin(p*3+j));
+      const bellShape=Math.max(0,1-dist/bellR);
+      if(bellShape>0){
+        // Dome — brighter at edges (rim lighting)
+        const rimLight=Math.exp(-bellShape*3)*.8;
+        const bodyGlow=bellShape*bellShape*.5;
+        const pulse=.7+.3*Math.sin(p*2+j*2);
+        brightness+=((rimLight+bodyGlow)*pulse);
+
+        // Internal organs
+        const orgD=dist/bellR;
+        if(orgD<.3){
+          const org=fbm(nx*20+j*5,ny*20+j*5+t*.01,3);
+          brightness+=Math.max(0,org)*.3*(1-orgD/.3);
+        }
+      }
+
+      // Tentacles — hanging below bell
+      if(ny>jy&&dist<bellR*3){
+        for(let tt=0;tt<jl.tentacles;tt++){
+          const tentAngle=(tt/jl.tentacles)*PI*.8-PI*.4;
+          const tentBaseX=jx+Math.sin(tentAngle)*bellR*.3;
+          const hangLen=(ny-jy);
+          const sway=Math.sin(hangLen*8+p*2+tt*1.5)*.02+Math.sin(hangLen*3+p+tt)*.01;
+          const tentX=tentBaseX+sway+hangLen*Math.sin(tentAngle)*.3;
+          const tentDist=Math.abs(nx-tentX);
+          const tentWidth=.004*(1-hangLen*2);
+          if(tentDist<tentWidth&&tentWidth>0){
+            const fade=Math.exp(-hangLen*4);
+            brightness+=fade*.4*(1-tentDist/tentWidth);
+          }
+        }
+      }
+    }
+
+    // Bioluminescent particles — random bright dots
+    const bioNoise=perlin(nx*50+t*.1,ny*50-t*.05);
+    if(bioNoise>.48)brightness+=.5*(bioNoise-.48)*10;
+
+    // Vignette
+    const vx=(nx-.5)*2,vy=(ny-.5)*2;brightness*=Math.max(0,1-(vx*vx+vy*vy)*.3);
+    brightness=Math.max(0,Math.min(1,brightness*env));
+    const idx=(y*ow+x)*4,v=Math.floor(brightness*255);
+    d[idx]=d[idx+1]=d[idx+2]=v;d[idx+3]=255;
+  }
+  OX.putImageData(img,0,0);applyDither(t,dis);
+  X.imageSmoothingEnabled=false;X.drawImage(OC,0,0,ow,oh,0,0,C.width,C.height);updateAudio(t,dis,env);
+}
+
+function applyDither(time,dis){const img=OX.getImageData(0,0,ow,oh),d=img.data,ph=Math.floor(time*2)%8;
+for(let y=0;y<oh;y++)for(let x=0;x<ow;x++){const i=(y*ow+x)*4,br=d[i]/255,tx=(x+ph)%8,ty=(y+ph)%8;let th=B8[ty*8+tx];if(dis>.2&&(y+Math.floor(time*7))%10<dis*2.5)th=1-th;d[i]=d[i+1]=d[i+2]=br>th?255:0;d[i+3]=255}OX.putImageData(img,0,0)}
+
+let last=0;function frame(){if(!on)return;requestAnimationFrame(frame);const now=performance.now(),dt=Math.min((now-last)/1000,.05);last=now;T+=dt;if(T>=DUR)T-=DUR;renderScene(T)}
+// Auto-start: try immediately, fall back to click
+async function autoStart() {
+  document.getElementById('start').classList.add('gone');
+  if(!THUMB_MODE) await initAudio();
+  on = true; last = performance.now();
+  frame();
+}
+// If in iframe with allow="autoplay", AudioContext works without gesture
+if (window.self !== window.top) {
+  autoStart();
+} else {
+  // Standalone: try auto, show click overlay if audio blocked
+  autoStart().catch(() => {
+    document.getElementById('start').classList.remove('gone');
+    document.getElementById('start').addEventListener('click', () => autoStart());
+  });
+}
+</script></body></html>
