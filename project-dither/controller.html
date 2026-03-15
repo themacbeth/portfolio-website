@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DITHER / WIREFRAME / CRT — Controller</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0c0c10;
+    --surface: #14141a;
+    --surface2: #1a1a22;
+    --border: #2a2a35;
+    --text: #c8c8d0;
+    --text-dim: #6a6a78;
+    --accent: #7b6fff;
+    --accent2: #a78bfa;
+    --accent-dim: rgba(123,111,255,0.15);
+    --panel-w: 340px;
+    --mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 11px;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+  }
+
+  /* ── Canvas area ── */
+  #viewport {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+  }
+
+  canvas#main {
+    display: block;
+    image-rendering: pixelated;
+  }
+
+  #fps-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+  }
+
+  #version-badge {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  /* ── Panel ── */
+  #panel {
+    width: var(--panel-w);
+    height: 100vh;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex-shrink: 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  #panel::-webkit-scrollbar { width: 4px; }
+  #panel::-webkit-scrollbar-track { background: transparent; }
+  #panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── Panel header ── */
+  .panel-header {
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 5;
+  }
+
+  .panel-header h1 {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  .panel-header .dot {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--accent);
+  }
+
+  /* ── Sections ── */
+  .section {
+    border-bottom: 1px solid var(--border);
+    padding: 14px 18px;
+  }
+
+  .section-title {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .section-title::before {
+    content: '▾';
+    font-size: 8px;
+    transition: transform 0.2s;
+  }
+
+  .section.collapsed .section-title::before {
+    transform: rotate(-90deg);
+  }
+
+  .section.collapsed .section-body {
+    display: none;
+  }
+
+  .section-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* ── Control row ── */
+  .ctrl {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ctrl label {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    min-width: 90px;
+    flex-shrink: 0;
+  }
+
+  .ctrl input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .ctrl input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 4px rgba(123,111,255,0.4);
+  }
+
+  .ctrl input[type="range"]::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: var(--accent);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .ctrl .val {
+    font-size: 10px;
+    color: var(--accent2);
+    min-width: 36px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Toggle ── */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .toggle-row label {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+
+  .toggle {
+    position: relative;
+    width: 36px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  .toggle input { display: none; }
+
+  .toggle .track {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 9px;
+    transition: background 0.2s;
+  }
+
+  .toggle input:checked + .track {
+    background: var(--accent);
+  }
+
+  .toggle .knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    pointer-events: none;
+  }
+
+  .toggle input:checked ~ .knob {
+    transform: translateX(18px);
+  }
+
+  /* ── Select ── */
+  .ctrl select {
+    flex: 1;
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 5px 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    cursor: pointer;
+    outline: none;
+  }
+
+  .ctrl select:focus {
+    border-color: var(--accent);
+  }
+
+  /* ── Button row ── */
+  .btn-row {
+    display: flex;
+    gap: 6px;
+  }
+
+  .btn {
+    flex: 1;
+    padding: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 10px;
+    cursor: pointer;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.15s;
+  }
+
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+  /* ── Preset chips ── */
+  .preset-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .chip {
+    padding: 4px 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 9px;
+    color: var(--text-dim);
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.15s;
+  }
+
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+  .chip.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+  /* ── Stats bar ── */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .stat .stat-label {
+    font-size: 9px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+
+  .stat .stat-val {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* ── Separator ── */
+  .sep {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Viewport ── -->
+<div id="viewport">
+  <canvas id="main"></canvas>
+  <div id="fps-badge">-- FPS</div>
+  <div id="version-badge">DITHER CTRL v1.0</div>
+</div>
+
+<!-- ── Control Panel ── -->
+<div id="panel">
+
+  <div class="panel-header">
+    <div class="dot"></div>
+    <h1>Controller</h1>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat">
+      <span class="stat-label">Resolution</span>
+      <span class="stat-val" id="stat-res">--</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Pixels</span>
+      <span class="stat-val" id="stat-px">--</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Scale</span>
+      <span class="stat-val" id="stat-scale">--</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Time</span>
+      <span class="stat-val" id="stat-time">0.00s</span>
+    </div>
+  </div>
+
+  <!-- ═══ SCENE ═══ -->
+  <div class="section">
+    <div class="section-title">Scene</div>
+    <div class="section-body">
+      <div class="ctrl">
+        <label>Mode</label>
+        <select id="scene-mode">
+          <option value="wireframe">Wireframe</option>
+          <option value="blobs">Metablobs</option>
+          <option value="terrain">Terrain</option>
+        </select>
+      </div>
+      <div class="ctrl">
+        <label>Rotation</label>
+        <input type="range" id="rotation-speed" min="0" max="200" value="50">
+        <span class="val" id="rotation-speed-val">0.50</span>
+      </div>
+      <div class="ctrl">
+        <label>Scale</label>
+        <input type="range" id="scene-scale" min="20" max="200" value="100">
+        <span class="val" id="scene-scale-val">1.00</span>
+      </div>
+      <div class="ctrl">
+        <label>Complexity</label>
+        <input type="range" id="complexity" min="1" max="10" value="4">
+        <span class="val" id="complexity-val">4</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ WIREFRAME ═══ -->
+  <div class="section">
+    <div class="section-title">Wireframe</div>
+    <div class="section-body">
+      <div class="ctrl">
+        <label>Shape</label>
+        <select id="wf-shape">
+          <option value="cube">Cube</option>
+          <option value="sphere">Sphere</option>
+          <option value="torus">Torus</option>
+          <option value="icosphere">Icosphere</option>
+          <option value="skull">Skull</option>
+        </select>
+      </div>
+      <div class="ctrl">
+        <label>Line Weight</label>
+        <input type="range" id="wf-weight" min="1" max="40" value="10">
+        <span class="val" id="wf-weight-val">1.0</span>
+      </div>
+      <div class="toggle-row">
+        <label>Vertices</label>
+        <label class="toggle">
+          <input type="checkbox" id="wf-verts" checked>
+          <span class="track"></span>
+          <span class="knob"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <label>Depth Fade</label>
+        <label class="toggle">
+          <input type="checkbox" id="wf-depth" checked>
+          <span class="track"></span>
+          <span class="knob"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <label>Back-face cull</label>
+        <label class="toggle">
+          <input type="checkbox" id="wf-cull">
+          <span class="track"></span>
+          <span class="knob"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ DITHER ═══ -->
+  <div class="section">
+    <div class="section-title">Dither</div>
+    <div class="section-body">
+      <div class="toggle-row">
+        <label>Enable</label>
+        <label class="toggle">
+          <input type="checkbox" id="dither-on" checked>
+          <span class="track"></span>
+          <span class="knob"></span>
+        </label>
+      </div>
+      <div class="ctrl">
+        <label>Algorithm</label>
+        <select id="dither-algo">
+          <option value="bayer8">Bayer 8x8</option>
+          <option value="bayer4">Bayer 4x4</option>
+          <option value="bayer2">Bayer 2x2</option>
+          <option value="halftone">Halftone</option>
+          <option value="noise">Noise</option>
+          <option value="blueNoise">Blue Noise</option>
+        </select>
+      </div>
+      <div class="ctrl">
+        <label>Downsample</label>
+        <input type="range" id="dither-ds" min="1" max="8" value="3" step="1">
+        <span class="val" id="dither-ds-val">3x</span>
+      </div>
+      <div class="ctrl">
+        <label>Threshold</label>
+        <input type="range" id="dither-thresh" min="0" max="100" value="50">
+        <span class="val" id="dither-thresh-val">0.50</span>
+      </div>
+      <div class="ctrl">
+        <label>Brightness</label>
+        <input type="range" id="dither-bright" min="-100" max="100" value="0">
+        <span class="val" id="dither-bright-val">0.00</span>
+      </div>
+      <div class="ctrl">
+        <label>Contrast</label>
+        <input type="range" id="dither-contrast" min="-100" max="100" value="0">
+        <span class="val" id="dither-contrast-val">0.00</span>
+      </div>
+      <div class="toggle-row">
+        <label>Invert</label>
+        <label class="toggle">
+          <input type="checkbox" id="dither-invert">
+          <span class="track"></span>
+          <span class="knob"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <label>Animate</label>
+        <label class="toggle">
+          <input type="checkbox" id="dither-animate" checked>
+          <span class="track"></span>
+          <span class="knob"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CRT ═══ -->
+  <div class="section">
+    <div class="section-title">CRT</div>
+    <div class="section-body">
+      <div class="toggle-row">
+        <label>Enable</label>
+        <label class="toggle">
+          <input type="checkbox" id="crt-on" checked>
+          <span class="track"></span>
+          <span class="knob"></span>
+        </label>
+      </div>
+      <div class="ctrl">
+        <label>Scanlines</label>
+        <input type="range" id="crt-scanlines" min="0" max="100" value="40">
+        <span class="val" id="crt-scanlines-val">0.40</span>
+      </div>
+      <div class="ctrl">
+        <label>Curvature</label>
+        <input type="range" id="crt-curve" min="0" max="100" value="25">
+        <span class="val" id="crt-curve-val">0.25</span>
+      </div>
+      <div class="ctrl">
+        <label>Chroma Shift</label>
+        <input type="range" id="crt-chroma" min="0" max="100" value="30">
+        <span class="val" id="crt-chroma-val">0.30</span>
+      </div>
+      <div class="ctrl">
+        <label>Flicker</label>
+        <input type="range" id="crt-flicker" min="0" max="100" value="15">
+        <span class="val" id="crt-flicker-val">0.15</span>
+      </div>
+      <div class="ctrl">
+        <label>Glow</label>
+        <input type="range" id="crt-glow" min="0" max="100" value="20">
+        <span class="val" id="crt-glow-val">0.20</span>
+      </div>
+      <div class="ctrl">
+        <label>Noise</label>
+        <input type="range" id="crt-noise" min="0" max="100" value="10">
+        <span class="val" id="crt-noise-val">0.10</span>
+      </div>
+      <div class="ctrl">
+        <label>Vignette</label>
+        <input type="range" id="crt-vignette" min="0" max="100" value="50">
+        <span class="val" id="crt-vignette-val">0.50</span>
+      </div>
+      <div class="toggle-row">
+        <label>RGB Sub-pixels</label>
+        <label class="toggle">
+          <input type="checkbox" id="crt-rgb">
+          <span class="track"></span>
+          <span class="knob"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ COLOR ═══ -->
+  <div class="section">
+    <div class="section-title">Color</div>
+    <div class="section-body">
+      <div class="ctrl">
+        <label>Mode</label>
+        <select id="color-mode">
+          <option value="mono">Monochrome</option>
+          <option value="green">Phosphor Green</option>
+          <option value="amber">Amber</option>
+          <option value="blue">Cool Blue</option>
+          <option value="purple" selected>Purple</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      <div class="ctrl" id="custom-color-row" style="display:none;">
+        <label>Foreground</label>
+        <input type="color" id="color-fg" value="#7b6fff" style="flex:1;height:24px;background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;">
+      </div>
+      <div class="ctrl">
+        <label>BG Opacity</label>
+        <input type="range" id="color-bg-alpha" min="0" max="100" value="100">
+        <span class="val" id="color-bg-alpha-val">1.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PRESETS ═══ -->
+  <div class="section">
+    <div class="section-title">Presets</div>
+    <div class="section-body">
+      <div class="preset-row">
+        <div class="chip" data-preset="classic">Classic CRT</div>
+        <div class="chip" data-preset="lofi">Lo-Fi</div>
+        <div class="chip" data-preset="matrix">Matrix</div>
+        <div class="chip active" data-preset="vapor">Vapor</div>
+        <div class="chip" data-preset="harsh">Harsh</div>
+        <div class="chip" data-preset="minimal">Minimal</div>
+        <div class="chip" data-preset="glitch">Glitch</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// CONTROLLER ENGINE
+// ═══════════════════════════════════════════════════════════════
+
+const C = document.getElementById('main');
+const X = C.getContext('2d');
+const OC = document.createElement('canvas');
+const OX = OC.getContext('2d', { willReadFrequently: true });
+// CRT post-process canvas
+const CC = document.createElement('canvas');
+const CX = CC.getContext('2d', { willReadFrequently: true });
+
+let ow, oh, T = 0;
+
+// ── Settings (reactive) ──
+const S = {
+  sceneMode: 'wireframe',
+  rotSpeed: 0.5,
+  sceneScale: 1.0,
+  complexity: 4,
+
+  wfShape: 'cube',
+  wfWeight: 1.0,
+  wfVerts: true,
+  wfDepth: true,
+  wfCull: false,
+
+  ditherOn: true,
+  ditherAlgo: 'bayer8',
+  ditherDS: 3,
+  ditherThresh: 0.5,
+  ditherBright: 0,
+  ditherContrast: 0,
+  ditherInvert: false,
+  ditherAnimate: true,
+
+  crtOn: true,
+  crtScanlines: 0.4,
+  crtCurve: 0.25,
+  crtChroma: 0.3,
+  crtFlicker: 0.15,
+  crtGlow: 0.2,
+  crtNoise: 0.1,
+  crtVignette: 0.5,
+  crtRGB: false,
+
+  colorMode: 'purple',
+  colorFg: [123, 111, 255],
+  colorBgAlpha: 1.0,
+};
+
+const COLOR_MAP = {
+  mono:   [255, 255, 255],
+  green:  [0, 255, 68],
+  amber:  [255, 176, 0],
+  blue:   [80, 180, 255],
+  purple: [123, 111, 255],
+};
+
+function getColor() {
+  if (S.colorMode === 'custom') return S.colorFg;
+  return COLOR_MAP[S.colorMode] || [255,255,255];
+}
+
+// ── Resize ──
+function resize() {
+  C.width = document.getElementById('viewport').clientWidth;
+  C.height = document.getElementById('viewport').clientHeight;
+  ow = Math.floor(C.width / S.ditherDS);
+  oh = Math.floor(C.height / S.ditherDS);
+  OC.width = ow; OC.height = oh;
+  CC.width = C.width; CC.height = C.height;
+  updateStats();
+}
+resize();
+addEventListener('resize', resize);
+
+function updateStats() {
+  document.getElementById('stat-res').textContent = ow + '×' + oh;
+  document.getElementById('stat-px').textContent = (ow * oh).toLocaleString();
+  document.getElementById('stat-scale').textContent = S.ditherDS + 'x';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 3D WIREFRAME ENGINE
+// ═══════════════════════════════════════════════════════════════
+
+function makeCube() {
+  const v = [[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]];
+  const e = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+  const f = [[0,1,2,3],[4,5,6,7],[0,1,5,4],[2,3,7,6],[0,3,7,4],[1,2,6,5]];
+  return { verts: v, edges: e, faces: f };
+}
+
+function makeSphere(res) {
+  const verts = [], edges = [], faces = [];
+  const r = res || 12;
+  const stacks = r, slices = r * 2;
+  for (let i = 0; i <= stacks; i++) {
+    const phi = Math.PI * i / stacks;
+    for (let j = 0; j <= slices; j++) {
+      const theta = 2 * Math.PI * j / slices;
+      verts.push([
+        Math.sin(phi) * Math.cos(theta),
+        Math.cos(phi),
+        Math.sin(phi) * Math.sin(theta)
+      ]);
+    }
+  }
+  for (let i = 0; i < stacks; i++) {
+    for (let j = 0; j < slices; j++) {
+      const a = i * (slices+1) + j;
+      const b = a + slices + 1;
+      edges.push([a, a+1]);
+      edges.push([a, b]);
+      if (i < stacks - 1) faces.push([a, a+1, b+1, b]);
+    }
+  }
+  return { verts, edges, faces };
+}
+
+function makeTorus(R, r, seg1, seg2) {
+  R = R || 1; r = r || 0.4;
+  seg1 = seg1 || 16; seg2 = seg2 || 12;
+  const verts = [], edges = [], faces = [];
+  for (let i = 0; i <= seg1; i++) {
+    const u = 2 * Math.PI * i / seg1;
+    for (let j = 0; j <= seg2; j++) {
+      const v = 2 * Math.PI * j / seg2;
+      verts.push([
+        (R + r * Math.cos(v)) * Math.cos(u),
+        r * Math.sin(v),
+        (R + r * Math.cos(v)) * Math.sin(u)
+      ]);
+    }
+  }
+  for (let i = 0; i < seg1; i++) {
+    for (let j = 0; j < seg2; j++) {
+      const a = i * (seg2+1) + j;
+      const b = a + seg2 + 1;
+      edges.push([a, a+1]);
+      edges.push([a, b]);
+      faces.push([a, a+1, b+1, b]);
+    }
+  }
+  return { verts, edges, faces };
+}
+
+function makeIcosphere() {
+  const t = (1 + Math.sqrt(5)) / 2;
+  const verts = [
+    [-1,t,0],[1,t,0],[-1,-t,0],[1,-t,0],
+    [0,-1,t],[0,1,t],[0,-1,-t],[0,1,-t],
+    [t,0,-1],[t,0,1],[-t,0,-1],[-t,0,1]
+  ].map(v => { const l = Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]); return [v[0]/l,v[1]/l,v[2]/l]; });
+  const faces = [
+    [0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],
+    [1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],
+    [3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],
+    [4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]
+  ];
+  const edgeSet = new Set();
+  const edges = [];
+  faces.forEach(f => {
+    for (let i = 0; i < 3; i++) {
+      const a = Math.min(f[i], f[(i+1)%3]);
+      const b = Math.max(f[i], f[(i+1)%3]);
+      const key = a + ',' + b;
+      if (!edgeSet.has(key)) { edgeSet.add(key); edges.push([a, b]); }
+    }
+  });
+  return { verts, edges, faces };
+}
+
+function makeSkull() {
+  // Stylized skull from vertex data — simplified low-poly
+  const verts = [
+    [0, 1.2, 0],    // top
+    [-0.6, 0.8, 0.4], [0.6, 0.8, 0.4],   // upper sides front
+    [-0.7, 0.3, 0.3], [0.7, 0.3, 0.3],   // mid sides
+    [-0.5, -0.2, 0.5], [0.5, -0.2, 0.5], // cheeks
+    [-0.3, -0.6, 0.4], [0.3, -0.6, 0.4], // jaw
+    [0, -0.8, 0.3],   // chin
+    // eye sockets
+    [-0.3, 0.3, 0.6], [0.3, 0.3, 0.6],
+    [-0.2, 0.1, 0.7], [0.2, 0.1, 0.7],
+    // nose
+    [0, 0, 0.7], [0, -0.15, 0.75],
+    // back
+    [-0.5, 0.8, -0.3], [0.5, 0.8, -0.3],
+    [-0.6, 0.3, -0.2], [0.6, 0.3, -0.2],
+    [0, 1.2, -0.1],   // back top
+    // teeth line
+    [-0.2, -0.45, 0.55],[0.2, -0.45, 0.55],[0, -0.45, 0.6]
+  ];
+  const edges = [
+    [0,1],[0,2],[1,2],[1,3],[2,4],[3,5],[4,6],[5,7],[6,8],[7,9],[8,9],
+    [5,6],[7,8],[3,4],
+    [1,10],[2,11],[10,12],[11,13],[12,14],[13,14],[10,11],
+    [14,15],[15,5],[15,6],
+    [0,20],[20,16],[20,17],[16,1],[17,2],[16,18],[17,19],[18,3],[19,4],[18,19],
+    [5,21],[6,22],[21,23],[22,23],[21,7],[22,8],
+    [12,13]
+  ];
+  return { verts, edges, faces: [] };
+}
+
+function getShape() {
+  const c = Math.max(2, S.complexity);
+  switch(S.wfShape) {
+    case 'sphere': return makeSphere(c + 4);
+    case 'torus': return makeTorus(1, 0.4, c + 8, c + 4);
+    case 'icosphere': return makeIcosphere();
+    case 'skull': return makeSkull();
+    default: return makeCube();
+  }
+}
+
+function project(v, w, h, scale) {
+  const fov = 3;
+  const z = v[2] + fov;
+  const f = scale / z;
+  return [v[0] * f + w / 2, -v[1] * f + h / 2, z];
+}
+
+function rotateY(v, a) {
+  const c = Math.cos(a), s = Math.sin(a);
+  return [v[0]*c + v[2]*s, v[1], -v[0]*s + v[2]*c];
+}
+function rotateX(v, a) {
+  const c = Math.cos(a), s = Math.sin(a);
+  return [v[0], v[1]*c - v[2]*s, v[1]*s + v[2]*c];
+}
+
+function renderWireframe(ctx, w, h, t) {
+  const mesh = getShape();
+  const scale = Math.min(w, h) * 0.35 * S.sceneScale;
+  const ay = t * S.rotSpeed * 2;
+  const ax = Math.sin(t * S.rotSpeed * 0.7) * 0.3 + 0.4;
+
+  const transformed = mesh.verts.map(v => {
+    let p = rotateY(v, ay);
+    p = rotateX(p, ax);
+    return p;
+  });
+
+  const projected = transformed.map(v => project(v, w, h, scale));
+
+  // Depth range for fading
+  let minZ = Infinity, maxZ = -Infinity;
+  projected.forEach(p => { minZ = Math.min(minZ, p[2]); maxZ = Math.max(maxZ, p[2]); });
+  const zRange = maxZ - minZ || 1;
+
+  // Back-face culling check
+  function faceVisible(face) {
+    if (!S.wfCull || face.length < 3) return true;
+    const a = projected[face[0]], b = projected[face[1]], c = projected[face[2]];
+    const cross = (b[0]-a[0])*(c[1]-a[1]) - (b[1]-a[1])*(c[0]-a[0]);
+    return cross < 0;
+  }
+
+  // Draw edges
+  const weight = S.wfWeight;
+  ctx.lineCap = 'round';
+
+  if (S.wfCull && mesh.faces.length > 0) {
+    // Only draw edges belonging to visible faces
+    const visibleEdges = new Set();
+    mesh.faces.forEach(face => {
+      if (faceVisible(face)) {
+        for (let i = 0; i < face.length; i++) {
+          const a = Math.min(face[i], face[(i+1)%face.length]);
+          const b = Math.max(face[i], face[(i+1)%face.length]);
+          visibleEdges.add(a + ',' + b);
+        }
+      }
+    });
+    mesh.edges.forEach(([a, b]) => {
+      const key = Math.min(a,b) + ',' + Math.max(a,b);
+      if (!visibleEdges.has(key)) return;
+      const pa = projected[a], pb = projected[b];
+      let alpha = 1;
+      if (S.wfDepth) {
+        const avgZ = (pa[2] + pb[2]) / 2;
+        alpha = 0.15 + 0.85 * (1 - (avgZ - minZ) / zRange);
+      }
+      ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+      ctx.lineWidth = weight;
+      ctx.beginPath();
+      ctx.moveTo(pa[0], pa[1]);
+      ctx.lineTo(pb[0], pb[1]);
+      ctx.stroke();
+    });
+  } else {
+    mesh.edges.forEach(([a, b]) => {
+      if (a >= projected.length || b >= projected.length) return;
+      const pa = projected[a], pb = projected[b];
+      let alpha = 1;
+      if (S.wfDepth) {
+        const avgZ = (pa[2] + pb[2]) / 2;
+        alpha = 0.15 + 0.85 * (1 - (avgZ - minZ) / zRange);
+      }
+      ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+      ctx.lineWidth = weight;
+      ctx.beginPath();
+      ctx.moveTo(pa[0], pa[1]);
+      ctx.lineTo(pb[0], pb[1]);
+      ctx.stroke();
+    });
+  }
+
+  // Draw vertices
+  if (S.wfVerts) {
+    projected.forEach(p => {
+      let alpha = 1;
+      if (S.wfDepth) alpha = 0.2 + 0.8 * (1 - (p[2] - minZ) / zRange);
+      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+      ctx.fillRect(p[0] - 1, p[1] - 1, 2, 2);
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// METABLOB SCENE
+// ═══════════════════════════════════════════════════════════════
+
+const P = new Uint8Array(512);
+(function(){const p=new Uint8Array(256);for(let i=0;i<256;i++)p[i]=i;
+for(let i=255;i>0;i--){const j=Math.floor(Math.random()*(i+1));[p[i],p[j]]=[p[j],p[i]];}
+for(let i=0;i<512;i++)P[i]=p[i&255];})();
+function fade(t){return t*t*t*(t*(t*6-15)+10);}
+function lerpN(a,b,t){return a+t*(b-a);}
+function grad(h,x,y){const v=h&3;return((v&1)?-x:x)+((v&2)?-y:y);}
+function perlin(x,y){
+  const xi=Math.floor(x)&255,yi=Math.floor(y)&255;
+  const xf=x-Math.floor(x),yf=y-Math.floor(y);
+  const u=fade(xf),v=fade(yf);
+  return lerpN(lerpN(grad(P[P[xi]+yi],xf,yf),grad(P[P[xi+1]+yi],xf-1,yf),u),
+    lerpN(grad(P[P[xi]+yi+1],xf,yf-1),grad(P[P[xi+1]+yi+1],xf-1,yf-1),u),v);
+}
+function fbm(x,y,oct){let v=0,a=0.5,f=1;for(let i=0;i<oct;i++){v+=a*perlin(x*f,y*f);a*=0.5;f*=2.1;}return v;}
+
+const NUM_BLOBS = 6;
+const blobs = [];
+for (let i = 0; i < NUM_BLOBS; i++) {
+  blobs.push({
+    phase: Math.random() * Math.PI * 2,
+    speed: 0.3 + Math.random() * 0.5,
+    orbitX: 0.2 + Math.random() * 0.3,
+    orbitY: 0.15 + Math.random() * 0.25,
+    cx: 0.3 + Math.random() * 0.4,
+    cy: 0.3 + Math.random() * 0.4,
+    radius: 0.06 + Math.random() * 0.1,
+    pulseSpeed: 1 + Math.random() * 2,
+  });
+}
+
+function renderBlobs(ctx, w, h, t) {
+  const TWO_PI = Math.PI * 2;
+  const p = (t * S.rotSpeed) * TWO_PI * 0.05;
+  const img = ctx.createImageData(w, h);
+  const d = img.data;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const nx = x / w, ny = y / h;
+      let field = 0;
+      for (let i = 0; i < NUM_BLOBS; i++) {
+        const b = blobs[i];
+        const bx = b.cx + Math.sin(p * b.speed + b.phase) * b.orbitX;
+        const by = b.cy + Math.cos(p * b.speed * 0.7 + b.phase + 1) * b.orbitY;
+        const r = b.radius * (1 + 0.3 * Math.sin(p * b.pulseSpeed + i));
+        const dx = nx - bx, dy = (ny - by) * (w / h);
+        field += (r * r) / (dx * dx + dy * dy + 0.001);
+      }
+      let brightness = 0;
+      if (field > 2.0) {
+        brightness = Math.min(1, (field - 2.0) * 0.3);
+        const vein = fbm(nx * 8 + t * 0.03, ny * 8 + t * 0.02, 4);
+        brightness *= 0.6 + vein * 0.6;
+      }
+      if (field > 0.5 && field <= 2.0) {
+        brightness = Math.max(brightness, (field - 0.5) / 1.5 * 0.5);
+      }
+      const spore = fbm(nx * 15 + t * 0.05, ny * 15 - t * 0.03, 3);
+      if (spore > 0.35) brightness = Math.max(brightness, (spore - 0.35) * 0.6);
+      const vx = (nx - 0.5) * 2, vy = (ny - 0.5) * 2;
+      brightness *= Math.max(0, 1 - (vx*vx + vy*vy) * 0.3);
+      brightness = Math.max(0, Math.min(1, brightness));
+      const idx = (y * w + x) * 4;
+      const v = Math.floor(brightness * 255);
+      d[idx] = d[idx+1] = d[idx+2] = v; d[idx+3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TERRAIN SCENE
+// ═══════════════════════════════════════════════════════════════
+
+function renderTerrain(ctx, w, h, t) {
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 0.5;
+
+  const rows = 30 + S.complexity * 5;
+  const cols = 40 + S.complexity * 5;
+  const scroll = t * S.rotSpeed * 0.3;
+
+  for (let i = 0; i < rows; i++) {
+    ctx.beginPath();
+    for (let j = 0; j <= cols; j++) {
+      const nx = j / cols;
+      const nz = i / rows;
+      const elev = fbm(nx * 3 + scroll, nz * 3 + scroll * 0.5, S.complexity) * 0.3;
+
+      // perspective projection
+      const depth = 0.5 + nz * 2;
+      const px = (nx - 0.5) * w * 1.5 / depth + w / 2;
+      const py = h * 0.9 - (nz * h * 0.6) / depth - elev * h * 0.8 / depth;
+
+      if (j === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    const alpha = 0.1 + (i / rows) * 0.7;
+    ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+    ctx.stroke();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DITHERING
+// ═══════════════════════════════════════════════════════════════
+
+const B8 = [0,32,8,40,2,34,10,42,48,16,56,24,50,18,58,26,12,44,4,36,14,46,6,38,60,28,52,20,62,30,54,22,
+  3,35,11,43,1,33,9,41,51,19,59,27,49,17,57,25,15,47,7,39,13,45,5,37,63,31,55,23,61,29,53,21].map(v=>v/64);
+const B4 = [0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5].map(v=>v/16);
+const B2 = [0,2,3,1].map(v=>v/4);
+
+// Pre-generate blue noise texture
+const BLUE_SIZE = 64;
+const blueNoise = new Float32Array(BLUE_SIZE * BLUE_SIZE);
+(function generateBlueNoise() {
+  // Simple approximation: start with white noise, apply high-pass
+  for (let i = 0; i < blueNoise.length; i++) blueNoise[i] = Math.random();
+  // A few iterations of void-and-cluster approximation
+  for (let iter = 0; iter < 3; iter++) {
+    const tmp = new Float32Array(blueNoise.length);
+    for (let y = 0; y < BLUE_SIZE; y++) {
+      for (let x = 0; x < BLUE_SIZE; x++) {
+        let sum = 0, count = 0;
+        for (let dy = -2; dy <= 2; dy++) {
+          for (let dx = -2; dx <= 2; dx++) {
+            const nx = (x + dx + BLUE_SIZE) % BLUE_SIZE;
+            const ny = (y + dy + BLUE_SIZE) % BLUE_SIZE;
+            sum += blueNoise[ny * BLUE_SIZE + nx];
+            count++;
+          }
+        }
+        const avg = sum / count;
+        tmp[y * BLUE_SIZE + x] = blueNoise[y * BLUE_SIZE + x] - avg * 0.5 + 0.25;
+      }
+    }
+    // Normalize
+    let mn = Infinity, mx = -Infinity;
+    for (let i = 0; i < tmp.length; i++) { mn = Math.min(mn, tmp[i]); mx = Math.max(mx, tmp[i]); }
+    const range = mx - mn || 1;
+    for (let i = 0; i < blueNoise.length; i++) blueNoise[i] = (tmp[i] - mn) / range;
+  }
+})();
+
+function applyDither(ctx, w, h, t) {
+  if (!S.ditherOn) return;
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  const ph = S.ditherAnimate ? Math.floor(t * 2) % 8 : 0;
+  const bright = S.ditherBright;
+  const contrast = S.ditherContrast;
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      let br = d[i] / 255;
+
+      // Brightness / contrast adjustments
+      br += bright;
+      if (contrast > 0) br = 0.5 + (br - 0.5) * (1 + contrast * 3);
+      else if (contrast < 0) br = 0.5 + (br - 0.5) * (1 + contrast);
+      br = Math.max(0, Math.min(1, br));
+
+      let th;
+      switch (S.ditherAlgo) {
+        case 'bayer8': {
+          const tx = (x + ph) % 8, ty = (y + ph) % 8;
+          th = B8[ty * 8 + tx];
+          break;
+        }
+        case 'bayer4': {
+          const tx = (x + ph) % 4, ty = (y + ph) % 4;
+          th = B4[ty * 4 + tx];
+          break;
+        }
+        case 'bayer2': {
+          const tx = (x + ph) % 2, ty = (y + ph) % 2;
+          th = B2[ty * 2 + tx];
+          break;
+        }
+        case 'halftone': {
+          const cx = (x % 6) - 3, cy = (y % 6) - 3;
+          th = Math.sqrt(cx*cx + cy*cy) / 4.24;
+          break;
+        }
+        case 'noise': {
+          th = Math.random();
+          break;
+        }
+        case 'blueNoise': {
+          const bx = x % BLUE_SIZE, by = y % BLUE_SIZE;
+          th = blueNoise[by * BLUE_SIZE + bx];
+          break;
+        }
+        default:
+          th = 0.5;
+      }
+
+      // Apply threshold offset
+      th = th * (1 - S.ditherThresh * 0.5) + S.ditherThresh * 0.25;
+
+      const on = br > th;
+      const val = S.ditherInvert ? (on ? 0 : 255) : (on ? 255 : 0);
+      d[i] = d[i+1] = d[i+2] = val;
+      d[i+3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CRT POST-PROCESSING
+// ═══════════════════════════════════════════════════════════════
+
+function applyCRT(srcCanvas, dstCtx, w, h, t) {
+  if (!S.crtOn) {
+    dstCtx.drawImage(srcCanvas, 0, 0);
+    return;
+  }
+
+  const src = srcCanvas.getContext('2d').getImageData(0, 0, srcCanvas.width, srcCanvas.height);
+  const sd = src.data;
+  const sw = srcCanvas.width, sh = srcCanvas.height;
+
+  // Draw scaled-up dithered image first
+  CX.imageSmoothingEnabled = false;
+  CX.drawImage(srcCanvas, 0, 0, sw, sh, 0, 0, w, h);
+
+  const img = CX.getImageData(0, 0, w, h);
+  const d = img.data;
+  const col = getColor();
+
+  const flickerVal = 1 - S.crtFlicker * 0.08 * Math.sin(t * 30 + Math.sin(t * 7) * 3);
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+
+      // Barrel distortion (curvature)
+      let sx = x, sy = y;
+      if (S.crtCurve > 0) {
+        const nx = (x / w - 0.5) * 2;
+        const ny = (y / h - 0.5) * 2;
+        const curve = S.crtCurve * 0.15;
+        const r2 = nx * nx + ny * ny;
+        const distort = 1 + r2 * curve;
+        sx = Math.floor(((nx * distort) / 2 + 0.5) * w);
+        sy = Math.floor(((ny * distort) / 2 + 0.5) * h);
+        if (sx < 0 || sx >= w || sy < 0 || sy >= h) {
+          d[i] = d[i+1] = d[i+2] = 0; d[i+3] = 255;
+          continue;
+        }
+      }
+
+      // Base pixel (from curved coordinates)
+      const si = (sy * w + sx) * 4;
+      let r = d[si] / 255, g = d[si+1] / 255, b = d[si+2] / 255;
+
+      // Chromatic aberration
+      if (S.crtChroma > 0) {
+        const shift = Math.floor(S.crtChroma * 3);
+        const ri = (sy * w + Math.max(0, Math.min(w-1, sx - shift))) * 4;
+        const bi = (sy * w + Math.max(0, Math.min(w-1, sx + shift))) * 4;
+        r = d[ri] / 255;
+        b = d[bi] / 255;
+      }
+
+      // Colorize
+      r *= col[0] / 255;
+      g *= col[1] / 255;
+      b *= col[2] / 255;
+
+      // Scanlines
+      if (S.crtScanlines > 0) {
+        const scanFreq = 2;
+        const scanLine = Math.sin(y * Math.PI * scanFreq) * 0.5 + 0.5;
+        const scanMul = 1 - S.crtScanlines * 0.5 * (1 - scanLine);
+        r *= scanMul; g *= scanMul; b *= scanMul;
+      }
+
+      // RGB sub-pixel pattern
+      if (S.crtRGB) {
+        const sub = x % 3;
+        if (sub !== 0) r *= 0.4;
+        if (sub !== 1) g *= 0.4;
+        if (sub !== 2) b *= 0.4;
+      }
+
+      // Noise
+      if (S.crtNoise > 0) {
+        const n = (Math.random() - 0.5) * S.crtNoise * 0.3;
+        r += n; g += n; b += n;
+      }
+
+      // Flicker
+      r *= flickerVal; g *= flickerVal; b *= flickerVal;
+
+      // Vignette
+      if (S.crtVignette > 0) {
+        const vx = (x / w - 0.5) * 2, vy = (y / h - 0.5) * 2;
+        const vig = 1 - (vx*vx + vy*vy) * S.crtVignette * 0.5;
+        r *= vig; g *= vig; b *= vig;
+      }
+
+      // Glow (brighten lit pixels)
+      if (S.crtGlow > 0 && (r + g + b) > 0.3) {
+        const glowAmt = S.crtGlow * 0.15;
+        r += glowAmt; g += glowAmt; b += glowAmt;
+      }
+
+      d[i]   = Math.max(0, Math.min(255, r * 255));
+      d[i+1] = Math.max(0, Math.min(255, g * 255));
+      d[i+2] = Math.max(0, Math.min(255, b * 255));
+      d[i+3] = 255;
+    }
+  }
+
+  CX.putImageData(img, 0, 0);
+
+  // BG alpha
+  dstCtx.fillStyle = `rgba(0,0,0,${S.colorBgAlpha})`;
+  dstCtx.fillRect(0, 0, w, h);
+  dstCtx.drawImage(CC, 0, 0);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN LOOP
+// ═══════════════════════════════════════════════════════════════
+
+let lastTime = 0, fpsFrames = 0, fpsTime = 0, fpsDisplay = 0;
+
+function frame(now) {
+  requestAnimationFrame(frame);
+
+  const dt = Math.min((now - lastTime) / 1000, 0.05);
+  lastTime = now;
+  T += dt;
+
+  // FPS counter
+  fpsFrames++;
+  fpsTime += dt;
+  if (fpsTime >= 0.5) {
+    fpsDisplay = Math.round(fpsFrames / fpsTime);
+    fpsTime = 0; fpsFrames = 0;
+    document.getElementById('fps-badge').textContent = fpsDisplay + ' FPS';
+  }
+
+  document.getElementById('stat-time').textContent = T.toFixed(1) + 's';
+
+  // 1. Render scene to offscreen canvas at low res
+  OX.fillStyle = '#000';
+  OX.fillRect(0, 0, ow, oh);
+
+  switch (S.sceneMode) {
+    case 'wireframe':
+      renderWireframe(OX, ow, oh, T);
+      break;
+    case 'blobs':
+      renderBlobs(OX, ow, oh, T);
+      break;
+    case 'terrain':
+      renderTerrain(OX, ow, oh, T);
+      break;
+  }
+
+  // 2. Apply dithering at low res
+  applyDither(OX, ow, oh, T);
+
+  // 3. Scale up and apply CRT at full res
+  // First draw dithered to temp full-res canvas
+  const tmpC = document.createElement('canvas');
+  tmpC.width = C.width; tmpC.height = C.height;
+  const tmpX = tmpC.getContext('2d');
+  tmpX.imageSmoothingEnabled = false;
+  tmpX.drawImage(OC, 0, 0, ow, oh, 0, 0, C.width, C.height);
+
+  // Apply CRT
+  X.clearRect(0, 0, C.width, C.height);
+  applyCRT(tmpC, X, C.width, C.height, T);
+}
+
+requestAnimationFrame(frame);
+
+// ═══════════════════════════════════════════════════════════════
+// UI BINDINGS
+// ═══════════════════════════════════════════════════════════════
+
+function bindSlider(id, settingKey, scale, fmt) {
+  const el = document.getElementById(id);
+  const valEl = document.getElementById(id + '-val');
+  el.addEventListener('input', () => {
+    S[settingKey] = el.value / (scale || 1);
+    if (valEl) valEl.textContent = fmt ? fmt(S[settingKey]) : S[settingKey].toFixed(2);
+    if (settingKey === 'ditherDS') { S.ditherDS = parseInt(el.value); resize(); if(valEl) valEl.textContent = S.ditherDS + 'x'; }
+  });
+}
+
+function bindToggle(id, settingKey) {
+  document.getElementById(id).addEventListener('change', (e) => { S[settingKey] = e.target.checked; });
+}
+
+function bindSelect(id, settingKey) {
+  document.getElementById(id).addEventListener('change', (e) => { S[settingKey] = e.target.value; });
+}
+
+// Scene
+bindSelect('scene-mode', 'sceneMode');
+bindSlider('rotation-speed', 'rotSpeed', 100);
+bindSlider('scene-scale', 'sceneScale', 100);
+bindSlider('complexity', 'complexity', 1, v => Math.round(v).toString());
+
+// Wireframe
+bindSelect('wf-shape', 'wfShape');
+bindSlider('wf-weight', 'wfWeight', 10);
+bindToggle('wf-verts', 'wfVerts');
+bindToggle('wf-depth', 'wfDepth');
+bindToggle('wf-cull', 'wfCull');
+
+// Dither
+bindToggle('dither-on', 'ditherOn');
+bindSelect('dither-algo', 'ditherAlgo');
+bindSlider('dither-ds', 'ditherDS', 1);
+bindSlider('dither-thresh', 'ditherThresh', 100);
+bindSlider('dither-bright', 'ditherBright', 100);
+bindSlider('dither-contrast', 'ditherContrast', 100);
+bindToggle('dither-invert', 'ditherInvert');
+bindToggle('dither-animate', 'ditherAnimate');
+
+// CRT
+bindToggle('crt-on', 'crtOn');
+bindSlider('crt-scanlines', 'crtScanlines', 100);
+bindSlider('crt-curve', 'crtCurve', 100);
+bindSlider('crt-chroma', 'crtChroma', 100);
+bindSlider('crt-flicker', 'crtFlicker', 100);
+bindSlider('crt-glow', 'crtGlow', 100);
+bindSlider('crt-noise', 'crtNoise', 100);
+bindSlider('crt-vignette', 'crtVignette', 100);
+bindToggle('crt-rgb', 'crtRGB');
+
+// Color
+document.getElementById('color-mode').addEventListener('change', (e) => {
+  S.colorMode = e.target.value;
+  document.getElementById('custom-color-row').style.display = e.target.value === 'custom' ? 'flex' : 'none';
+});
+document.getElementById('color-fg').addEventListener('input', (e) => {
+  const hex = e.target.value;
+  S.colorFg = [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
+});
+bindSlider('color-bg-alpha', 'colorBgAlpha', 100);
+
+// Section collapse
+document.querySelectorAll('.section-title').forEach(el => {
+  el.addEventListener('click', () => el.parentElement.classList.toggle('collapsed'));
+});
+
+// ═══════════════════════════════════════════════════════════════
+// PRESETS
+// ═══════════════════════════════════════════════════════════════
+
+const PRESETS = {
+  classic: {
+    sceneMode:'wireframe', wfShape:'cube', ditherAlgo:'bayer8', ditherDS:3, ditherThresh:0.5,
+    ditherBright:0, ditherContrast:0, ditherInvert:false, ditherAnimate:true,
+    crtOn:true, crtScanlines:0.5, crtCurve:0.35, crtChroma:0.2, crtFlicker:0.2,
+    crtGlow:0.3, crtNoise:0.15, crtVignette:0.6, crtRGB:false,
+    colorMode:'green', colorBgAlpha:1
+  },
+  lofi: {
+    sceneMode:'wireframe', wfShape:'sphere', ditherAlgo:'bayer4', ditherDS:5, ditherThresh:0.4,
+    ditherBright:0, ditherContrast:0, ditherInvert:false, ditherAnimate:false,
+    crtOn:true, crtScanlines:0.3, crtCurve:0.1, crtChroma:0.1, crtFlicker:0.05,
+    crtGlow:0.1, crtNoise:0.2, crtVignette:0.4, crtRGB:false,
+    colorMode:'amber', colorBgAlpha:1
+  },
+  matrix: {
+    sceneMode:'terrain', ditherAlgo:'noise', ditherDS:2, ditherThresh:0.6,
+    ditherBright:0.1, ditherContrast:0.2, ditherInvert:false, ditherAnimate:true,
+    crtOn:true, crtScanlines:0.6, crtCurve:0.15, crtChroma:0.15, crtFlicker:0.1,
+    crtGlow:0.4, crtNoise:0.05, crtVignette:0.5, crtRGB:true,
+    colorMode:'green', colorBgAlpha:1
+  },
+  vapor: {
+    sceneMode:'wireframe', wfShape:'torus', ditherAlgo:'bayer8', ditherDS:3, ditherThresh:0.5,
+    ditherBright:0, ditherContrast:0, ditherInvert:false, ditherAnimate:true,
+    crtOn:true, crtScanlines:0.4, crtCurve:0.25, crtChroma:0.3, crtFlicker:0.15,
+    crtGlow:0.2, crtNoise:0.1, crtVignette:0.5, crtRGB:false,
+    colorMode:'purple', colorBgAlpha:1
+  },
+  harsh: {
+    sceneMode:'wireframe', wfShape:'icosphere', ditherAlgo:'bayer2', ditherDS:4, ditherThresh:0.3,
+    ditherBright:0.2, ditherContrast:0.5, ditherInvert:false, ditherAnimate:true,
+    crtOn:true, crtScanlines:0.8, crtCurve:0.4, crtChroma:0.5, crtFlicker:0.3,
+    crtGlow:0.5, crtNoise:0.3, crtVignette:0.7, crtRGB:true,
+    colorMode:'mono', colorBgAlpha:1
+  },
+  minimal: {
+    sceneMode:'wireframe', wfShape:'cube', ditherAlgo:'blueNoise', ditherDS:2, ditherThresh:0.5,
+    ditherBright:0, ditherContrast:0, ditherInvert:false, ditherAnimate:false,
+    crtOn:false, crtScanlines:0, crtCurve:0, crtChroma:0, crtFlicker:0,
+    crtGlow:0, crtNoise:0, crtVignette:0.3, crtRGB:false,
+    colorMode:'mono', colorBgAlpha:1
+  },
+  glitch: {
+    sceneMode:'blobs', ditherAlgo:'noise', ditherDS:4, ditherThresh:0.35,
+    ditherBright:0.1, ditherContrast:0.3, ditherInvert:false, ditherAnimate:true,
+    crtOn:true, crtScanlines:0.7, crtCurve:0.3, crtChroma:0.6, crtFlicker:0.4,
+    crtGlow:0.3, crtNoise:0.4, crtVignette:0.6, crtRGB:true,
+    colorMode:'blue', colorBgAlpha:1
+  }
+};
+
+function applyPreset(name) {
+  const p = PRESETS[name];
+  if (!p) return;
+
+  // Apply all preset values to settings
+  Object.keys(p).forEach(key => { S[key] = p[key]; });
+
+  // Update all UI elements
+  document.getElementById('scene-mode').value = S.sceneMode;
+  document.getElementById('rotation-speed').value = S.rotSpeed * 100;
+  document.getElementById('rotation-speed-val').textContent = S.rotSpeed.toFixed(2);
+  document.getElementById('scene-scale').value = S.sceneScale * 100;
+  document.getElementById('scene-scale-val').textContent = S.sceneScale.toFixed(2);
+
+  if (S.wfShape) document.getElementById('wf-shape').value = S.wfShape;
+  document.getElementById('wf-verts').checked = S.wfVerts;
+  document.getElementById('wf-depth').checked = S.wfDepth;
+  document.getElementById('wf-cull').checked = S.wfCull;
+
+  document.getElementById('dither-on').checked = S.ditherOn;
+  document.getElementById('dither-algo').value = S.ditherAlgo;
+  document.getElementById('dither-ds').value = S.ditherDS;
+  document.getElementById('dither-ds-val').textContent = S.ditherDS + 'x';
+  document.getElementById('dither-thresh').value = S.ditherThresh * 100;
+  document.getElementById('dither-thresh-val').textContent = S.ditherThresh.toFixed(2);
+  document.getElementById('dither-bright').value = S.ditherBright * 100;
+  document.getElementById('dither-bright-val').textContent = S.ditherBright.toFixed(2);
+  document.getElementById('dither-contrast').value = S.ditherContrast * 100;
+  document.getElementById('dither-contrast-val').textContent = S.ditherContrast.toFixed(2);
+  document.getElementById('dither-invert').checked = S.ditherInvert;
+  document.getElementById('dither-animate').checked = S.ditherAnimate;
+
+  document.getElementById('crt-on').checked = S.crtOn;
+  document.getElementById('crt-scanlines').value = S.crtScanlines * 100;
+  document.getElementById('crt-scanlines-val').textContent = S.crtScanlines.toFixed(2);
+  document.getElementById('crt-curve').value = S.crtCurve * 100;
+  document.getElementById('crt-curve-val').textContent = S.crtCurve.toFixed(2);
+  document.getElementById('crt-chroma').value = S.crtChroma * 100;
+  document.getElementById('crt-chroma-val').textContent = S.crtChroma.toFixed(2);
+  document.getElementById('crt-flicker').value = S.crtFlicker * 100;
+  document.getElementById('crt-flicker-val').textContent = S.crtFlicker.toFixed(2);
+  document.getElementById('crt-glow').value = S.crtGlow * 100;
+  document.getElementById('crt-glow-val').textContent = S.crtGlow.toFixed(2);
+  document.getElementById('crt-noise').value = S.crtNoise * 100;
+  document.getElementById('crt-noise-val').textContent = S.crtNoise.toFixed(2);
+  document.getElementById('crt-vignette').value = S.crtVignette * 100;
+  document.getElementById('crt-vignette-val').textContent = S.crtVignette.toFixed(2);
+  document.getElementById('crt-rgb').checked = S.crtRGB;
+
+  document.getElementById('color-mode').value = S.colorMode;
+  document.getElementById('color-bg-alpha').value = S.colorBgAlpha * 100;
+  document.getElementById('color-bg-alpha-val').textContent = S.colorBgAlpha.toFixed(2);
+
+  // Update chip active state
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  document.querySelector(`.chip[data-preset="${name}"]`)?.classList.add('active');
+
+  resize();
+}
+
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => applyPreset(chip.dataset.preset));
+});
+</script>
+</body>
+</html>
