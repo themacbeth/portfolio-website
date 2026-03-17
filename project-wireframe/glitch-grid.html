@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>WIREFRAME — GLITCH GRID</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #000; overflow: hidden; }
+  canvas { display: block; }
+  #start { position: fixed; inset: 0; z-index: 10; display: flex;
+    align-items: center; justify-content: center; background: #000; cursor: pointer; }
+  #start span { color: #a00; font: 13px monospace; opacity: 0.5; }
+  .gone { display: none !important; }
+</style>
+</head>
+<body>
+<div id="start"><span>click to begin</span></div>
+<canvas id="c"></canvas>
+<script>
+const THUMB = new URLSearchParams(location.search).has('mute');
+const C = document.getElementById('c');
+const X = C.getContext('2d');
+const DUR = 25;
+let T = 0, on = false;
+
+function sz() { C.width = innerWidth; C.height = innerHeight; }
+sz(); addEventListener('resize', sz);
+
+const PI = Math.PI, TWO = PI * 2;
+
+// ═══════════════════════════════════════════
+// AUDIO — digital static with tonal pulses
+// ═══════════════════════════════════════════
+let AC, masterGain;
+
+async function initAudio() {
+  AC = new AudioContext();
+  masterGain = AC.createGain();
+  masterGain.gain.value = 0;
+  masterGain.connect(AC.destination);
+
+  // Base tone
+  const osc = AC.createOscillator();
+  osc.type = 'triangle';
+  osc.frequency.value = 55;
+  const g = AC.createGain();
+  g.gain.value = 0.08;
+  const lp = AC.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 150;
+  osc.connect(lp);
+  lp.connect(g);
+  g.connect(masterGain);
+  osc.start();
+
+  // Static
+  const noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate);
+  const nd = noiseBuf.getChannelData(0);
+  for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+  const nSrc = AC.createBufferSource();
+  nSrc.buffer = noiseBuf;
+  nSrc.loop = true;
+  const bp = AC.createBiquadFilter();
+  bp.type = 'highpass';
+  bp.frequency.value = 4000;
+  const ng = AC.createGain();
+  ng.gain.value = 0.015;
+  nSrc.connect(bp);
+  bp.connect(ng);
+  ng.connect(masterGain);
+  nSrc.start();
+
+  // Pulse click
+  const clickBuf = AC.createBuffer(1, AC.sampleRate * 0.02, AC.sampleRate);
+  const cd = clickBuf.getChannelData(0);
+  for (let i = 0; i < cd.length; i++) cd[i] = (Math.random() * 2 - 1) * Math.exp(-i / (AC.sampleRate * 0.003));
+
+  setInterval(() => {
+    if (!AC || AC.state !== 'running') return;
+    const src = AC.createBufferSource();
+    src.buffer = clickBuf;
+    const cg = AC.createGain();
+    cg.gain.value = 0.04;
+    src.connect(cg);
+    cg.connect(masterGain);
+    src.start();
+  }, 2500);
+
+  masterGain.gain.setTargetAtTime(0.2, AC.currentTime, 2);
+}
+
+// ═══════════════════════════════════════════
+// INFINITE GRID
+// ═══════════════════════════════════════════
+function drawInfiniteGrid(t) {
+  const w = C.width, h = C.height;
+  const vanishY = h * 0.4;
+  const gridSpacing = 60;
+  const scrollZ = t * 100;
+
+  // Horizontal receding lines
+  X.lineWidth = 1;
+  for (let i = 0; i < 40; i++) {
+    const z = ((i * 50 + scrollZ) % 2000);
+    if (z < 1) continue;
+    const scale = 300 / (z + 100);
+    const y = vanishY + scale * 400;
+    if (y > h + 20) continue;
+
+    const brightness = Math.max(0, 1 - z / 2000);
+    const glitchOffset = Math.sin(t * 20 + i * 3.7) > 0.95 ? (Math.random() - 0.5) * 30 : 0;
+
+    X.strokeStyle = `rgba(255,20,15,${(brightness * 0.3).toFixed(3)})`;
+    X.beginPath();
+    X.moveTo(-20 + glitchOffset, y);
+    X.lineTo(w + 20 + glitchOffset, y);
+    X.stroke();
+  }
+
+  // Vertical converging lines
+  const numV = 30;
+  for (let i = -numV; i <= numV; i++) {
+    const xBase = i * gridSpacing;
+    const brightness = 1 - Math.abs(i) / numV;
+
+    X.strokeStyle = `rgba(255,20,15,${(brightness * 0.15).toFixed(3)})`;
+    X.beginPath();
+    X.moveTo(w / 2, vanishY);
+    X.lineTo(w / 2 + xBase * 4, h + 50);
+    X.stroke();
+  }
+
+  // Vanishing point glow
+  const grad = X.createRadialGradient(w/2, vanishY, 0, w/2, vanishY, 80);
+  grad.addColorStop(0, 'rgba(255,30,20,0.08)');
+  grad.addColorStop(1, 'transparent');
+  X.fillStyle = grad;
+  X.fillRect(w/2 - 80, vanishY - 80, 160, 160);
+}
+
+// ═══════════════════════════════════════════
+// GLITCH BLOCKS
+// ═══════════════════════════════════════════
+let blocks = [];
+function updateBlocks(t) {
+  // Spawn new blocks
+  if (Math.random() < 0.08) {
+    blocks.push({
+      x: Math.random() * C.width,
+      y: Math.random() * C.height,
+      w: 10 + Math.random() * 120,
+      h: 2 + Math.random() * 30,
+      life: 0.1 + Math.random() * 0.4,
+      born: t,
+      type: Math.floor(Math.random() * 3)
+    });
+  }
+  blocks = blocks.filter(b => t - b.born < b.life);
+}
+
+function drawBlocks(t) {
+  for (const b of blocks) {
+    const age = (t - b.born) / b.life;
+    const alpha = (1 - age) * 0.3;
+
+    if (b.type === 0) {
+      // Solid red block
+      X.fillStyle = `rgba(255,20,15,${alpha})`;
+      X.fillRect(b.x, b.y, b.w, b.h);
+    } else if (b.type === 1) {
+      // Wireframe block
+      X.strokeStyle = `rgba(255,30,20,${alpha})`;
+      X.lineWidth = 1;
+      X.strokeRect(b.x, b.y, b.w, b.h);
+    } else {
+      // Noise block
+      X.fillStyle = `rgba(255,15,10,${alpha * 0.5})`;
+      for (let i = 0; i < b.w; i += 3) {
+        if (Math.random() > 0.5) {
+          X.fillRect(b.x + i, b.y, 2, b.h);
+        }
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════
+// WIREFRAME TERRAIN
+// ═══════════════════════════════════════════
+function drawTerrain(t) {
+  const w = C.width, h = C.height;
+  const vanishY = h * 0.4;
+  const rows = 20;
+  const cols = 30;
+
+  X.strokeStyle = 'rgba(255,25,15,0.1)';
+  X.lineWidth = 1;
+
+  for (let row = 0; row < rows; row++) {
+    const z = ((row * 100 + t * 80) % 2000);
+    if (z < 1) continue;
+    const scale = 300 / (z + 100);
+    const y = vanishY + scale * 400;
+    if (y > h + 20) continue;
+
+    X.beginPath();
+    let started = false;
+    for (let col = 0; col <= cols; col++) {
+      const xFrac = (col / cols - 0.5) * 2;
+      const xScreen = w / 2 + xFrac * scale * 1500;
+
+      // Terrain height from noise
+      const nx = col * 0.3 + t * 0.2;
+      const nz = row * 0.3 + t * 0.15;
+      const elevation = (Math.sin(nx * 2.1 + nz * 1.3) * Math.cos(nx * 0.7 + nz * 2.8) +
+                          Math.sin(nx * 4.3 + nz * 0.5) * 0.3) * scale * 40;
+
+      const py = y - elevation;
+      if (!started) { X.moveTo(xScreen, py); started = true; }
+      else X.lineTo(xScreen, py);
+    }
+    X.stroke();
+  }
+}
+
+// ═══════════════════════════════════════════
+// DATA STREAM (side columns)
+// ═══════════════════════════════════════════
+function drawDataStream(t) {
+  const w = C.width, h = C.height;
+  X.font = '9px monospace';
+  X.textBaseline = 'top';
+
+  // Left stream
+  const lx = 15;
+  for (let i = 0; i < 30; i++) {
+    const y = ((i * 16 + t * 60) % (h + 20)) - 10;
+    const seed = Math.floor(t * 3) + i * 17;
+    let x = Math.sin(seed * 127.1) * 43758.5453;
+    x = x - Math.floor(x);
+    const hex = Math.floor(x * 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+    const alpha = 0.15 + Math.sin(t * 4 + i) * 0.08;
+    X.fillStyle = `rgba(255,25,15,${alpha})`;
+    X.fillText(`0x${hex}`, lx, y);
+  }
+
+  // Right stream
+  const rx = w - 60;
+  for (let i = 0; i < 30; i++) {
+    const y = ((i * 16 - t * 45) % (h + 20) + h + 20) % (h + 20) - 10;
+    const bits = Array.from({length: 8}, () => Math.random() > 0.5 ? '1' : '0').join('');
+    const alpha = 0.12 + Math.sin(t * 3 + i * 0.7) * 0.06;
+    X.fillStyle = `rgba(255,25,15,${alpha})`;
+    X.fillText(bits, rx, y);
+  }
+}
+
+// ═══════════════════════════════════════════
+// FRAME BORDERS
+// ═══════════════════════════════════════════
+function drawFrameBorders(t) {
+  const w = C.width, h = C.height;
+  const pulse = 0.5 + 0.5 * Math.sin(t * 1.5);
+
+  // Outer frame with gap
+  X.strokeStyle = `rgba(255,25,15,${0.08 + pulse * 0.04})`;
+  X.lineWidth = 1;
+
+  // Top segments
+  const gap = 60;
+  X.beginPath();
+  X.moveTo(0, 15); X.lineTo(w/2 - gap, 15);
+  X.moveTo(w/2 + gap, 15); X.lineTo(w, 15);
+  X.stroke();
+
+  // Bottom segments
+  X.beginPath();
+  X.moveTo(0, h - 15); X.lineTo(w/2 - gap, h - 15);
+  X.moveTo(w/2 + gap, h - 15); X.lineTo(w, h - 15);
+  X.stroke();
+
+  // Side lines
+  X.beginPath();
+  X.moveTo(10, 0); X.lineTo(10, h);
+  X.moveTo(w - 10, 0); X.lineTo(w - 10, h);
+  X.stroke();
+
+  // Center top label
+  X.font = '10px monospace';
+  X.fillStyle = `rgba(255,30,20,${0.3 + pulse * 0.1})`;
+  X.textAlign = 'center';
+  X.fillText('GRID_SECTOR_' + Math.floor(t / 5), w/2, 12);
+  X.textAlign = 'left';
+}
+
+// ═══════════════════════════════════════════
+// HORIZONTAL GLITCH TEARS
+// ═══════════════════════════════════════════
+function drawGlitchTears(t) {
+  const w = C.width, h = C.height;
+  const tearCount = Math.floor(Math.sin(t * 3) > 0.8 ? 5 : 1);
+
+  for (let i = 0; i < tearCount; i++) {
+    const seed = Math.floor(t * 15) + i;
+    let rnd = Math.sin(seed * 78.233) * 43758.5453;
+    rnd = rnd - Math.floor(rnd);
+
+    const y = rnd * h;
+    const tearH = 1 + rnd * 4;
+    const shift = (Math.sin(seed * 12.9898) * 43758.5453 % 1 - 0.5) * 40;
+
+    if (Math.abs(shift) > 5) {
+      const imgData = X.getImageData(0, Math.floor(y), w, Math.ceil(tearH));
+      X.putImageData(imgData, shift, Math.floor(y));
+
+      // Red line at tear edge
+      X.strokeStyle = 'rgba(255,20,15,0.2)';
+      X.beginPath();
+      X.moveTo(0, y); X.lineTo(w, y);
+      X.stroke();
+    }
+  }
+}
+
+// ═══════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════
+function render(t) {
+  const w = C.width, h = C.height;
+
+  X.fillStyle = '#000';
+  X.fillRect(0, 0, w, h);
+
+  drawInfiniteGrid(t);
+  drawTerrain(t);
+  drawDataStream(t);
+  updateBlocks(t);
+  drawBlocks(t);
+  drawFrameBorders(t);
+
+  // Scanlines
+  X.fillStyle = 'rgba(0,0,0,0.12)';
+  for (let y = 0; y < h; y += 2) {
+    X.fillRect(0, y, w, 1);
+  }
+
+  drawGlitchTears(t);
+
+  // Vignette
+  const vg = X.createRadialGradient(w/2, h/2, Math.min(w,h)*0.25, w/2, h/2, Math.max(w,h)*0.7);
+  vg.addColorStop(0, 'transparent');
+  vg.addColorStop(1, 'rgba(0,0,0,0.6)');
+  X.fillStyle = vg;
+  X.fillRect(0, 0, w, h);
+}
+
+let last = 0;
+function frame() {
+  if (!on) return;
+  requestAnimationFrame(frame);
+  const now = performance.now();
+  const d = Math.min((now - last) / 1000, 0.05);
+  last = now;
+  T += d;
+  if (T >= DUR) T -= DUR;
+  render(T);
+}
+
+async function autoStart() {
+  document.getElementById('start').classList.add('gone');
+  if (!THUMB) await initAudio();
+  on = true; last = performance.now();
+  frame();
+}
+
+if (window.self !== window.top) { autoStart(); }
+else { autoStart().catch(() => {
+  document.getElementById('start').classList.remove('gone');
+  document.getElementById('start').addEventListener('click', () => autoStart());
+}); }
+</script>
+</body>
+</html>

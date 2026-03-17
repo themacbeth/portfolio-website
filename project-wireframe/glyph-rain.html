@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>WIREFRAME — GLYPH RAIN</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #000; overflow: hidden; }
+  canvas { display: block; }
+  #start { position: fixed; inset: 0; z-index: 10; display: flex;
+    align-items: center; justify-content: center; background: #000; cursor: pointer; }
+  #start span { color: #a00; font: 13px monospace; opacity: 0.5; }
+  .gone { display: none !important; }
+</style>
+</head>
+<body>
+<div id="start"><span>click to begin</span></div>
+<canvas id="c"></canvas>
+<script>
+const THUMB = new URLSearchParams(location.search).has('mute');
+const C = document.getElementById('c');
+const X = C.getContext('2d');
+const DUR = 25;
+let T = 0, on = false;
+
+function sz() { C.width = innerWidth; C.height = innerHeight; }
+sz(); addEventListener('resize', sz);
+
+const PI = Math.PI, TWO = PI * 2;
+
+// ═══════════════════════════════════════════
+// AUDIO — digital rain ambience
+// ═══════════════════════════════════════════
+let AC, masterGain;
+
+async function initAudio() {
+  AC = new AudioContext();
+  masterGain = AC.createGain();
+  masterGain.gain.value = 0;
+  masterGain.connect(AC.destination);
+
+  // Deep pad
+  [36.71, 38.89, 46.25].forEach(freq => {
+    const osc = AC.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    const g = AC.createGain();
+    g.gain.value = 0.06;
+    osc.connect(g);
+    g.connect(masterGain);
+    osc.start();
+  });
+
+  // Rain-like filtered noise
+  const noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate);
+  const nd = noiseBuf.getChannelData(0);
+  for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+
+  const nSrc = AC.createBufferSource();
+  nSrc.buffer = noiseBuf;
+  nSrc.loop = true;
+  const hp = AC.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.value = 6000;
+  const ng = AC.createGain();
+  ng.gain.value = 0.012;
+  nSrc.connect(hp);
+  hp.connect(ng);
+  ng.connect(masterGain);
+  nSrc.start();
+
+  masterGain.gain.setTargetAtTime(0.2, AC.currentTime, 2);
+}
+
+// ═══════════════════════════════════════════
+// GLYPH SET
+// ═══════════════════════════════════════════
+const glyphs = [];
+// Katakana-like + symbols + greek + box drawing
+for (let i = 0x30A0; i <= 0x30FF; i++) glyphs.push(String.fromCharCode(i));
+'\u0394\u03A3\u03A9\u03B1\u03B2\u03B3\u03B4\u03B5\u03B6\u03B8\u03BB\u03BC\u03C0\u03C3\u03C6\u03C8'.split('').forEach(c => glyphs.push(c));
+'\u2500\u2502\u250C\u2510\u2514\u2518\u251C\u2524\u252C\u2534\u253C\u2588\u2593\u2592\u2591\u25A0\u25B2\u25BC\u25C6\u25CF'.split('').forEach(c => glyphs.push(c));
+'0123456789ABCDEF'.split('').forEach(c => glyphs.push(c));
+
+function randGlyph() { return glyphs[Math.floor(Math.random() * glyphs.length)]; }
+
+// ═══════════════════════════════════════════
+// RAIN COLUMNS
+// ═══════════════════════════════════════════
+const fontSize = 14;
+let columns = [];
+
+function initColumns() {
+  const cols = Math.ceil(C.width / fontSize);
+  columns = [];
+  for (let i = 0; i < cols; i++) {
+    const len = 5 + Math.floor(Math.random() * 25);
+    columns.push({
+      x: i * fontSize,
+      y: Math.random() * -C.height * 2,
+      speed: 40 + Math.random() * 120,
+      chars: Array.from({length: len}, () => randGlyph()),
+      changeRate: 0.01 + Math.random() * 0.04,
+      brightness: 0.3 + Math.random() * 0.7
+    });
+  }
+}
+initColumns();
+addEventListener('resize', () => { sz(); initColumns(); });
+
+function drawRain(t, dt) {
+  for (const col of columns) {
+    col.y += col.speed * dt;
+
+    // Reset when fully off screen
+    if (col.y - col.chars.length * fontSize > C.height) {
+      col.y = -col.chars.length * fontSize - Math.random() * C.height;
+      col.speed = 40 + Math.random() * 120;
+      const len = 5 + Math.floor(Math.random() * 25);
+      col.chars = Array.from({length: len}, () => randGlyph());
+    }
+
+    // Randomly change characters
+    for (let i = 0; i < col.chars.length; i++) {
+      if (Math.random() < col.changeRate) {
+        col.chars[i] = randGlyph();
+      }
+    }
+
+    // Draw characters
+    X.font = `${fontSize}px monospace`;
+    for (let i = 0; i < col.chars.length; i++) {
+      const cy = col.y + i * fontSize;
+      if (cy < -fontSize || cy > C.height + fontSize) continue;
+
+      const headDist = i / col.chars.length;
+      const isHead = i === col.chars.length - 1;
+
+      let alpha;
+      if (isHead) {
+        alpha = col.brightness * 0.9;
+      } else {
+        alpha = col.brightness * (1 - headDist) * 0.4;
+      }
+
+      // Flicker
+      if (Math.random() < 0.02) alpha *= 0.3;
+
+      if (isHead) {
+        // Bright head — slightly brighter red
+        X.fillStyle = `rgba(255,60,40,${alpha})`;
+      } else {
+        X.fillStyle = `rgba(255,20,12,${alpha})`;
+      }
+
+      X.fillText(col.chars[i], col.x, cy);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════
+// GEOMETRIC FRAMES
+// ═══════════════════════════════════════════
+function drawFrames(t) {
+  const w = C.width, h = C.height;
+  const mx = w / 2, my = h / 2;
+
+  // Central diamond
+  const dSize = 80 + Math.sin(t * 0.8) * 15;
+  X.strokeStyle = 'rgba(255,25,15,0.12)';
+  X.lineWidth = 1;
+  X.beginPath();
+  X.moveTo(mx, my - dSize);
+  X.lineTo(mx + dSize, my);
+  X.lineTo(mx, my + dSize);
+  X.lineTo(mx - dSize, my);
+  X.closePath();
+  X.stroke();
+
+  // Inner diamond
+  const dSize2 = dSize * 0.5;
+  X.strokeStyle = 'rgba(255,25,15,0.08)';
+  X.save();
+  X.translate(mx, my);
+  X.rotate(t * 0.2);
+  X.beginPath();
+  X.moveTo(0, -dSize2);
+  X.lineTo(dSize2, 0);
+  X.lineTo(0, dSize2);
+  X.lineTo(-dSize2, 0);
+  X.closePath();
+  X.stroke();
+  X.restore();
+
+  // Corner frames
+  const fSize = 50;
+  const margin = 40;
+  const corners = [
+    [margin, margin],
+    [w - margin - fSize, margin],
+    [margin, h - margin - fSize],
+    [w - margin - fSize, h - margin - fSize]
+  ];
+
+  X.strokeStyle = 'rgba(255,25,15,0.1)';
+  corners.forEach((c, idx) => {
+    X.strokeRect(c[0], c[1], fSize, fSize);
+    // Animated fill
+    const fill = (Math.sin(t * 2 + idx * 1.5) * 0.5 + 0.5);
+    X.fillStyle = `rgba(255,20,15,${fill * 0.05})`;
+    X.fillRect(c[0], c[1], fSize * fill, fSize);
+  });
+
+  // Connecting lines from corners to center
+  X.strokeStyle = 'rgba(255,20,15,0.03)';
+  X.setLineDash([2, 6]);
+  corners.forEach(c => {
+    X.beginPath();
+    X.moveTo(c[0] + fSize/2, c[1] + fSize/2);
+    X.lineTo(mx, my);
+    X.stroke();
+  });
+  X.setLineDash([]);
+
+  // Horizontal scan band
+  const bandY = ((t * 50) % (h + 60)) - 30;
+  const bandGrad = X.createLinearGradient(0, bandY - 15, 0, bandY + 15);
+  bandGrad.addColorStop(0, 'transparent');
+  bandGrad.addColorStop(0.5, 'rgba(255,20,15,0.04)');
+  bandGrad.addColorStop(1, 'transparent');
+  X.fillStyle = bandGrad;
+  X.fillRect(0, bandY - 15, w, 30);
+}
+
+// ═══════════════════════════════════════════
+// STATUS TEXT
+// ═══════════════════════════════════════════
+function drawStatus(t) {
+  const w = C.width, h = C.height;
+
+  X.font = '10px monospace';
+  X.fillStyle = 'rgba(255,35,20,0.35)';
+
+  // Top left
+  X.fillText(`STREAM_${Math.floor(columns.length)} ACTIVE`, 15, 25);
+  X.fillText(`DECODE: ${(Math.sin(t * 0.5) * 50 + 50).toFixed(1)}%`, 15, 40);
+
+  // Top right
+  X.textAlign = 'right';
+  X.fillText(`\u0394T: ${t.toFixed(3)}s`, w - 15, 25);
+  X.fillText(`ENTROPY: ${(Math.sin(t * 0.3) * 30 + 70).toFixed(1)}`, w - 15, 40);
+  X.textAlign = 'left';
+
+  // Bottom center
+  X.textAlign = 'center';
+  X.fillStyle = 'rgba(255,30,20,0.25)';
+  const msgs = ['DECRYPTING', 'PARSING', 'RENDERING', 'ENCODING', 'TRANSMITTING'];
+  const msgIdx = Math.floor(t * 0.3) % msgs.length;
+  const dots = '.'.repeat(Math.floor(t * 3) % 4);
+  X.fillText(`${msgs[msgIdx]}${dots}`, w/2, h - 20);
+  X.textAlign = 'left';
+}
+
+// ═══════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════
+let lastT = 0;
+
+function render(t) {
+  const dt = Math.min(t - lastT, 0.05);
+  if (dt < 0) { lastT = t; return; }
+  lastT = t;
+
+  const w = C.width, h = C.height;
+
+  // Fade trail instead of full clear for ghosting effect
+  X.fillStyle = 'rgba(0,0,0,0.15)';
+  X.fillRect(0, 0, w, h);
+
+  drawRain(t, dt);
+  drawFrames(t);
+  drawStatus(t);
+
+  // Scanlines
+  X.fillStyle = 'rgba(0,0,0,0.08)';
+  for (let y = 0; y < h; y += 2) {
+    X.fillRect(0, y, w, 1);
+  }
+}
+
+let last = 0, realT = 0;
+function frame() {
+  if (!on) return;
+  requestAnimationFrame(frame);
+  const now = performance.now();
+  const d = Math.min((now - last) / 1000, 0.05);
+  last = now;
+  realT += d;
+  T = realT % DUR;
+  render(realT);
+}
+
+async function autoStart() {
+  document.getElementById('start').classList.add('gone');
+  if (!THUMB) await initAudio();
+  on = true; last = performance.now();
+  frame();
+}
+
+if (window.self !== window.top) { autoStart(); }
+else { autoStart().catch(() => {
+  document.getElementById('start').classList.remove('gone');
+  document.getElementById('start').addEventListener('click', () => autoStart());
+}); }
+</script>
+</body>
+</html>

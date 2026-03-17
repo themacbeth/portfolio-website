@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>WIREFRAME — GEOMETRIC SPIRITS</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #000; overflow: hidden; }
+  canvas { display: block; }
+  #start { position: fixed; inset: 0; z-index: 10; display: flex;
+    align-items: center; justify-content: center; background: #000; cursor: pointer; }
+  #start span { color: #a00; font: 13px monospace; opacity: 0.5; }
+  .gone { display: none !important; }
+</style>
+</head>
+<body>
+<div id="start"><span>click to begin</span></div>
+<canvas id="c"></canvas>
+<script>
+const THUMB = new URLSearchParams(location.search).has('mute');
+const C = document.getElementById('c');
+const X = C.getContext('2d');
+const DUR = 30;
+let T = 0, on = false;
+
+function sz() { C.width = innerWidth; C.height = innerHeight; }
+sz(); addEventListener('resize', sz);
+
+const PI = Math.PI, TWO = PI * 2;
+
+// ═══════════════════════════════════════════
+// AUDIO — ethereal drones
+// ═══════════════════════════════════════════
+let AC, masterGain;
+
+async function initAudio() {
+  AC = new AudioContext();
+  masterGain = AC.createGain();
+  masterGain.gain.value = 0;
+  masterGain.connect(AC.destination);
+
+  // Ethereal pad — perfect fifths
+  [65.41, 98.0, 130.81].forEach((freq, i) => {
+    const osc = AC.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    const g = AC.createGain();
+    g.gain.value = 0.05 - i * 0.01;
+    osc.connect(g);
+    g.connect(masterGain);
+    osc.start();
+
+    // Slow vibrato
+    const vib = AC.createOscillator();
+    vib.frequency.value = 0.2 + i * 0.1;
+    const vibG = AC.createGain();
+    vibG.gain.value = 1.5;
+    vib.connect(vibG);
+    vibG.connect(osc.frequency);
+    vib.start();
+  });
+
+  // Breath noise
+  const noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate);
+  const nd = noiseBuf.getChannelData(0);
+  for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+  const nSrc = AC.createBufferSource();
+  nSrc.buffer = noiseBuf;
+  nSrc.loop = true;
+  const bp = AC.createBiquadFilter();
+  bp.type = 'bandpass';
+  bp.frequency.value = 400;
+  bp.Q.value = 1;
+  const ng = AC.createGain();
+  ng.gain.value = 0.008;
+  nSrc.connect(bp);
+  bp.connect(ng);
+  ng.connect(masterGain);
+  nSrc.start();
+
+  // Breathing LFO
+  const lfo = AC.createOscillator();
+  lfo.frequency.value = 0.15;
+  const lfoG = AC.createGain();
+  lfoG.gain.value = 0.006;
+  lfo.connect(lfoG);
+  lfoG.connect(ng.gain);
+  lfo.start();
+
+  masterGain.gain.setTargetAtTime(0.2, AC.currentTime, 2);
+}
+
+// ═══════════════════════════════════════════
+// SACRED GEOMETRY — Metatron's Cube
+// ═══════════════════════════════════════════
+function drawMetatron(t, cx, cy, radius) {
+  const pulse = Math.sin(t * 0.5) * 0.15 + 0.85;
+  const r = radius * pulse;
+
+  // Outer circle
+  X.strokeStyle = 'rgba(255,25,15,0.1)';
+  X.lineWidth = 1;
+  X.beginPath();
+  X.arc(cx, cy, r, 0, TWO);
+  X.stroke();
+
+  // 6 circles on circumference + center
+  const centers = [[cx, cy]];
+  for (let i = 0; i < 6; i++) {
+    const a = i * PI / 3 + t * 0.1;
+    centers.push([cx + Math.cos(a) * r * 0.5, cy + Math.sin(a) * r * 0.5]);
+  }
+  // 6 outer vertices
+  const outer = [];
+  for (let i = 0; i < 6; i++) {
+    const a = i * PI / 3 + t * 0.1;
+    outer.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
+  }
+
+  // Draw circles at each center
+  X.strokeStyle = 'rgba(255,20,15,0.06)';
+  for (const c of centers) {
+    X.beginPath();
+    X.arc(c[0], c[1], r * 0.5, 0, TWO);
+    X.stroke();
+  }
+
+  // Connect all centers to all centers
+  X.strokeStyle = 'rgba(255,25,15,0.05)';
+  for (let i = 0; i < centers.length; i++) {
+    for (let j = i + 1; j < centers.length; j++) {
+      X.beginPath();
+      X.moveTo(centers[i][0], centers[i][1]);
+      X.lineTo(centers[j][0], centers[j][1]);
+      X.stroke();
+    }
+  }
+
+  // Connect to outer vertices
+  X.strokeStyle = 'rgba(255,30,20,0.08)';
+  for (let i = 0; i < outer.length; i++) {
+    for (let j = 0; j < centers.length; j++) {
+      X.beginPath();
+      X.moveTo(outer[i][0], outer[i][1]);
+      X.lineTo(centers[j][0], centers[j][1]);
+      X.stroke();
+    }
+  }
+
+  // Outer hexagon
+  X.strokeStyle = 'rgba(255,30,20,0.12)';
+  X.beginPath();
+  for (let i = 0; i <= 6; i++) {
+    const a = i * PI / 3 + t * 0.1;
+    const px = cx + Math.cos(a) * r;
+    const py = cy + Math.sin(a) * r;
+    if (i === 0) X.moveTo(px, py);
+    else X.lineTo(px, py);
+  }
+  X.stroke();
+
+  // Inner star of David
+  X.strokeStyle = 'rgba(255,35,20,0.1)';
+  for (let tri = 0; tri < 2; tri++) {
+    X.beginPath();
+    for (let i = 0; i <= 3; i++) {
+      const a = (i * 2 + tri) * PI / 3 + t * 0.1;
+      const px = cx + Math.cos(a) * r * 0.58;
+      const py = cy + Math.sin(a) * r * 0.58;
+      if (i === 0) X.moveTo(px, py);
+      else X.lineTo(px, py);
+    }
+    X.stroke();
+  }
+
+  // Vertex dots
+  X.fillStyle = 'rgba(255,40,25,0.3)';
+  for (const c of [...centers, ...outer]) {
+    X.beginPath();
+    X.arc(c[0], c[1], 2, 0, TWO);
+    X.fill();
+  }
+}
+
+// ═══════════════════════════════════════════
+// FLOWER OF LIFE
+// ═══════════════════════════════════════════
+function drawFlowerOfLife(t, cx, cy, radius) {
+  const r = radius * 0.3;
+  const rings = 3;
+
+  X.strokeStyle = 'rgba(255,20,15,0.06)';
+  X.lineWidth = 1;
+
+  // Center circle
+  X.beginPath();
+  X.arc(cx, cy, r, 0, TWO);
+  X.stroke();
+
+  // Expanding rings
+  const drawn = new Set();
+  const queue = [[cx, cy]];
+
+  for (let ring = 0; ring < rings; ring++) {
+    const next = [];
+    for (const [qx, qy] of queue) {
+      for (let i = 0; i < 6; i++) {
+        const a = i * PI / 3 + (ring % 2 === 0 ? 0 : PI / 6);
+        const nx = Math.round((qx + Math.cos(a) * r) * 10) / 10;
+        const ny = Math.round((qy + Math.sin(a) * r) * 10) / 10;
+        const key = `${nx},${ny}`;
+        if (!drawn.has(key)) {
+          drawn.add(key);
+          X.beginPath();
+          X.arc(nx, ny, r, 0, TWO);
+          X.stroke();
+          next.push([nx, ny]);
+        }
+      }
+    }
+    queue.push(...next);
+  }
+}
+
+// ═══════════════════════════════════════════
+// FLOATING SPIRITS (particle entities)
+// ═══════════════════════════════════════════
+const spirits = [];
+for (let i = 0; i < 12; i++) {
+  spirits.push({
+    angle: Math.random() * TWO,
+    radius: 0.15 + Math.random() * 0.3,
+    speed: 0.05 + Math.random() * 0.15,
+    size: 3 + Math.random() * 8,
+    phase: Math.random() * TWO,
+    type: Math.floor(Math.random() * 3),
+    breathRate: 0.5 + Math.random() * 1.5
+  });
+}
+
+function drawSpirits(t) {
+  const w = C.width, h = C.height;
+  const mx = w / 2, my = h / 2;
+  const maxR = Math.min(w, h) * 0.4;
+
+  for (const s of spirits) {
+    s.angle += s.speed * 0.016;
+    const breath = Math.sin(t * s.breathRate + s.phase);
+    const r = s.radius * maxR + breath * 15;
+    const sx = mx + Math.cos(s.angle) * r;
+    const sy = my + Math.sin(s.angle) * r;
+    const alpha = 0.15 + breath * 0.1;
+    const sz = s.size + breath * 2;
+
+    if (s.type === 0) {
+      // Triangle spirit
+      X.strokeStyle = `rgba(255,30,20,${alpha})`;
+      X.beginPath();
+      for (let i = 0; i <= 3; i++) {
+        const a = i * TWO / 3 + t * 0.5;
+        const px = sx + Math.cos(a) * sz;
+        const py = sy + Math.sin(a) * sz;
+        if (i === 0) X.moveTo(px, py);
+        else X.lineTo(px, py);
+      }
+      X.stroke();
+    } else if (s.type === 1) {
+      // Circle spirit
+      X.strokeStyle = `rgba(255,25,15,${alpha})`;
+      X.beginPath();
+      X.arc(sx, sy, sz, 0, TWO);
+      X.stroke();
+      X.fillStyle = `rgba(255,35,20,${alpha * 0.5})`;
+      X.beginPath();
+      X.arc(sx, sy, 1.5, 0, TWO);
+      X.fill();
+    } else {
+      // Diamond spirit
+      X.strokeStyle = `rgba(255,30,20,${alpha})`;
+      X.beginPath();
+      X.moveTo(sx, sy - sz);
+      X.lineTo(sx + sz * 0.7, sy);
+      X.lineTo(sx, sy + sz);
+      X.lineTo(sx - sz * 0.7, sy);
+      X.closePath();
+      X.stroke();
+    }
+
+    // Trail line to center
+    X.strokeStyle = `rgba(255,20,15,${alpha * 0.15})`;
+    X.beginPath();
+    X.moveTo(sx, sy);
+    X.lineTo(mx, my);
+    X.stroke();
+  }
+}
+
+// ═══════════════════════════════════════════
+// RUNIC BORDER
+// ═══════════════════════════════════════════
+function drawRunicBorder(t) {
+  const w = C.width, h = C.height;
+  const runes = '\u16A0\u16A2\u16A6\u16A8\u16B1\u16B7\u16B9\u16BA\u16BE\u16C1\u16C7\u16C8\u16D2\u16D6\u16DA\u16DE\u16DF';
+
+  X.font = '14px monospace';
+  X.fillStyle = 'rgba(255,25,15,0.1)';
+
+  // Top border
+  const spacing = 30;
+  const offset = (t * 10) % spacing;
+  for (let x = -offset; x < w; x += spacing) {
+    const idx = Math.floor(Math.abs(x + t * 5)) % runes.length;
+    const flicker = Math.sin(t * 5 + x * 0.1) > 0.9 ? 0.25 : 0.1;
+    X.fillStyle = `rgba(255,25,15,${flicker})`;
+    X.fillText(runes[idx], x, 22);
+    X.fillText(runes[(idx + 3) % runes.length], x, h - 8);
+  }
+
+  // Side borders
+  for (let y = 30; y < h - 30; y += spacing) {
+    const idx = Math.floor(Math.abs(y + t * 3)) % runes.length;
+    const flicker = Math.sin(t * 4 + y * 0.1) > 0.9 ? 0.2 : 0.08;
+    X.fillStyle = `rgba(255,25,15,${flicker})`;
+    X.fillText(runes[idx], 5, y);
+    X.fillText(runes[(idx + 5) % runes.length], w - 15, y);
+  }
+}
+
+// ═══════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════
+function render(t) {
+  const w = C.width, h = C.height;
+  const mx = w / 2, my = h / 2;
+
+  // Semi-clear for ghosting
+  X.fillStyle = 'rgba(0,0,0,0.08)';
+  X.fillRect(0, 0, w, h);
+
+  // Background pulse
+  const bgPulse = Math.sin(t * 0.3) * 0.02;
+  if (bgPulse > 0) {
+    X.fillStyle = `rgba(255,10,5,${bgPulse})`;
+    X.fillRect(0, 0, w, h);
+  }
+
+  // Sacred geometry - Metatron's Cube
+  const mainR = Math.min(w, h) * 0.28;
+  drawMetatron(t, mx, my, mainR);
+
+  // Flower of life — smaller, offset
+  drawFlowerOfLife(t, mx - mainR * 0.8, my - mainR * 0.6, mainR * 0.5);
+  drawFlowerOfLife(t, mx + mainR * 0.8, my + mainR * 0.6, mainR * 0.4);
+
+  // Floating spirits
+  drawSpirits(t);
+
+  // Runic border
+  drawRunicBorder(t);
+
+  // Center eye/dot
+  const eyePulse = Math.sin(t * 1.5) * 0.5 + 0.5;
+  X.fillStyle = `rgba(255,40,25,${0.3 + eyePulse * 0.3})`;
+  X.beginPath();
+  X.arc(mx, my, 3 + eyePulse * 2, 0, TWO);
+  X.fill();
+
+  // Glow around center
+  const glow = X.createRadialGradient(mx, my, 0, mx, my, 30);
+  glow.addColorStop(0, `rgba(255,30,20,${0.05 + eyePulse * 0.05})`);
+  glow.addColorStop(1, 'transparent');
+  X.fillStyle = glow;
+  X.beginPath();
+  X.arc(mx, my, 30, 0, TWO);
+  X.fill();
+
+  // Status text
+  X.font = '9px monospace';
+  X.fillStyle = 'rgba(255,30,20,0.25)';
+  X.fillText('GEOMETRIC_SPIRITS', 25, h - 30);
+  X.textAlign = 'right';
+  X.fillText(`PHASE: ${(t / DUR * 360).toFixed(1)}\u00B0`, w - 25, h - 30);
+  X.textAlign = 'left';
+
+  // Scanlines (lighter)
+  X.fillStyle = 'rgba(0,0,0,0.06)';
+  for (let y = 0; y < h; y += 3) {
+    X.fillRect(0, y, w, 1);
+  }
+
+  // Vignette
+  const vg = X.createRadialGradient(mx, my, Math.min(w,h)*0.25, mx, my, Math.max(w,h)*0.65);
+  vg.addColorStop(0, 'transparent');
+  vg.addColorStop(1, 'rgba(0,0,0,0.5)');
+  X.fillStyle = vg;
+  X.fillRect(0, 0, w, h);
+}
+
+let last = 0;
+function frame() {
+  if (!on) return;
+  requestAnimationFrame(frame);
+  const now = performance.now();
+  const d = Math.min((now - last) / 1000, 0.05);
+  last = now;
+  T += d;
+  render(T);
+}
+
+async function autoStart() {
+  document.getElementById('start').classList.add('gone');
+  if (!THUMB) await initAudio();
+  on = true; last = performance.now();
+  frame();
+}
+
+if (window.self !== window.top) { autoStart(); }
+else { autoStart().catch(() => {
+  document.getElementById('start').classList.remove('gone');
+  document.getElementById('start').addEventListener('click', () => autoStart());
+}); }
+</script>
+</body>
+</html>

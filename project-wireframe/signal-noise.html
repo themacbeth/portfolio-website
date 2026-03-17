@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>WIREFRAME — SIGNAL NOISE</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #000; overflow: hidden; }
+  canvas { display: block; }
+  #start { position: fixed; inset: 0; z-index: 10; display: flex;
+    align-items: center; justify-content: center; background: #000; cursor: pointer; }
+  #start span { color: #a00; font: 13px monospace; opacity: 0.5; }
+  .gone { display: none !important; }
+</style>
+</head>
+<body>
+<div id="start"><span>click to begin</span></div>
+<canvas id="c"></canvas>
+<script>
+const THUMB = new URLSearchParams(location.search).has('mute');
+const C = document.getElementById('c');
+const X = C.getContext('2d');
+const DUR = 25;
+let T = 0, on = false;
+
+function sz() { C.width = innerWidth; C.height = innerHeight; }
+sz(); addEventListener('resize', sz);
+
+const PI = Math.PI, TWO = PI * 2;
+
+// ═══════════════════════════════════════════
+// AUDIO — signal processing tones
+// ═══════════════════════════════════════════
+let AC, masterGain;
+
+async function initAudio() {
+  AC = new AudioContext();
+  masterGain = AC.createGain();
+  masterGain.gain.value = 0;
+  masterGain.connect(AC.destination);
+
+  // Carrier tone
+  const osc = AC.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.value = 110;
+  const g = AC.createGain();
+  g.gain.value = 0.06;
+  osc.connect(g);
+  g.connect(masterGain);
+  osc.start();
+
+  // AM modulation
+  const mod = AC.createOscillator();
+  mod.frequency.value = 0.3;
+  const modG = AC.createGain();
+  modG.gain.value = 0.03;
+  mod.connect(modG);
+  modG.connect(g.gain);
+  mod.start();
+
+  // Harmonic
+  const osc2 = AC.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.value = 165;
+  const g2 = AC.createGain();
+  g2.gain.value = 0.03;
+  osc2.connect(g2);
+  g2.connect(masterGain);
+  osc2.start();
+
+  // Static
+  const noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate);
+  const nd = noiseBuf.getChannelData(0);
+  for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+  const nSrc = AC.createBufferSource();
+  nSrc.buffer = noiseBuf;
+  nSrc.loop = true;
+  const bp = AC.createBiquadFilter();
+  bp.type = 'bandpass';
+  bp.frequency.value = 1500;
+  bp.Q.value = 2;
+  const ng = AC.createGain();
+  ng.gain.value = 0.01;
+  nSrc.connect(bp);
+  bp.connect(ng);
+  ng.connect(masterGain);
+  nSrc.start();
+
+  masterGain.gain.setTargetAtTime(0.18, AC.currentTime, 2);
+}
+
+// ═══════════════════════════════════════════
+// WAVEFORM DISPLAYS
+// ═══════════════════════════════════════════
+function drawOscilloscope(t, cx, cy, w, h, freq, amp, phase, label) {
+  // Panel background
+  X.fillStyle = 'rgba(255,10,5,0.015)';
+  X.fillRect(cx - w/2, cy - h/2, w, h);
+  X.strokeStyle = 'rgba(255,25,15,0.1)';
+  X.strokeRect(cx - w/2, cy - h/2, w, h);
+
+  // Grid lines
+  X.strokeStyle = 'rgba(255,20,15,0.04)';
+  for (let i = 1; i < 4; i++) {
+    const gx = cx - w/2 + (w * i / 4);
+    X.beginPath();
+    X.moveTo(gx, cy - h/2); X.lineTo(gx, cy + h/2);
+    X.stroke();
+  }
+  for (let i = 1; i < 3; i++) {
+    const gy = cy - h/2 + (h * i / 3);
+    X.beginPath();
+    X.moveTo(cx - w/2, gy); X.lineTo(cx + w/2, gy);
+    X.stroke();
+  }
+
+  // Center line
+  X.strokeStyle = 'rgba(255,20,15,0.06)';
+  X.beginPath();
+  X.moveTo(cx - w/2, cy); X.lineTo(cx + w/2, cy);
+  X.stroke();
+
+  // Waveform
+  X.strokeStyle = 'rgba(255,40,25,0.5)';
+  X.lineWidth = 1.5;
+  X.beginPath();
+  for (let i = 0; i <= w; i++) {
+    const x = cx - w/2 + i;
+    const frac = i / w;
+    let y = Math.sin(frac * freq * TWO + t * 3 + phase) * amp;
+    // Add harmonics
+    y += Math.sin(frac * freq * 2 * TWO + t * 5 + phase * 2) * amp * 0.3;
+    y += Math.sin(frac * freq * 3 * TWO + t * 7 + phase * 3) * amp * 0.1;
+    // Noise
+    y += (Math.sin(i * 47.1 + t * 200) * 0.5) * amp * 0.05;
+
+    if (i === 0) X.moveTo(x, cy + y * h * 0.4);
+    else X.lineTo(x, cy + y * h * 0.4);
+  }
+  X.stroke();
+  X.lineWidth = 1;
+
+  // Glow trace
+  X.strokeStyle = 'rgba(255,30,20,0.15)';
+  X.lineWidth = 3;
+  X.beginPath();
+  for (let i = 0; i <= w; i++) {
+    const x = cx - w/2 + i;
+    const frac = i / w;
+    let y = Math.sin(frac * freq * TWO + t * 3 + phase) * amp;
+    y += Math.sin(frac * freq * 2 * TWO + t * 5 + phase * 2) * amp * 0.3;
+    if (i === 0) X.moveTo(x, cy + y * h * 0.4);
+    else X.lineTo(x, cy + y * h * 0.4);
+  }
+  X.stroke();
+  X.lineWidth = 1;
+
+  // Label
+  X.font = '9px monospace';
+  X.fillStyle = 'rgba(255,30,20,0.35)';
+  X.fillText(label, cx - w/2 + 6, cy - h/2 + 13);
+
+  // Readout
+  X.textAlign = 'right';
+  X.fillText(`${(freq * 110).toFixed(0)}Hz`, cx + w/2 - 6, cy - h/2 + 13);
+  X.textAlign = 'left';
+}
+
+// ═══════════════════════════════════════════
+// SPECTRUM ANALYZER
+// ═══════════════════════════════════════════
+function drawSpectrum(t, cx, cy, w, h) {
+  X.fillStyle = 'rgba(255,10,5,0.015)';
+  X.fillRect(cx - w/2, cy - h/2, w, h);
+  X.strokeStyle = 'rgba(255,25,15,0.1)';
+  X.strokeRect(cx - w/2, cy - h/2, w, h);
+
+  const bars = 64;
+  const barW = w / bars;
+
+  for (let i = 0; i < bars; i++) {
+    // Generate spectrum from multiple sine components
+    let magnitude = 0;
+    magnitude += Math.abs(Math.sin(i * 0.2 + t * 2)) * 0.4;
+    magnitude += Math.abs(Math.sin(i * 0.05 + t * 0.5)) * 0.3;
+    magnitude += Math.abs(Math.sin(i * 0.8 + t * 8)) * 0.1;
+    magnitude += Math.random() * 0.1;
+
+    // Frequency roll-off
+    magnitude *= Math.exp(-i * 0.02);
+    // Low-freq boost
+    if (i < 8) magnitude *= 1.5;
+
+    const barH = magnitude * h * 0.8;
+    const bx = cx - w/2 + i * barW;
+    const by = cy + h/2 - barH;
+
+    // Bar
+    X.fillStyle = `rgba(255,25,15,${0.15 + magnitude * 0.3})`;
+    X.fillRect(bx + 1, by, barW - 2, barH);
+
+    // Peak dot
+    X.fillStyle = `rgba(255,50,30,${0.3 + magnitude * 0.3})`;
+    X.fillRect(bx + 1, by - 2, barW - 2, 2);
+  }
+
+  // Label
+  X.font = '9px monospace';
+  X.fillStyle = 'rgba(255,30,20,0.35)';
+  X.fillText('SPECTRUM', cx - w/2 + 6, cy - h/2 + 13);
+  X.textAlign = 'right';
+  X.fillText('0-22kHz', cx + w/2 - 6, cy - h/2 + 13);
+  X.textAlign = 'left';
+}
+
+// ═══════════════════════════════════════════
+// LISSAJOUS / XY DISPLAY
+// ═══════════════════════════════════════════
+function drawLissajous(t, cx, cy, r) {
+  X.strokeStyle = 'rgba(255,25,15,0.1)';
+  X.beginPath();
+  X.arc(cx, cy, r, 0, TWO);
+  X.stroke();
+
+  // Cross
+  X.strokeStyle = 'rgba(255,20,15,0.04)';
+  X.beginPath();
+  X.moveTo(cx - r, cy); X.lineTo(cx + r, cy);
+  X.moveTo(cx, cy - r); X.lineTo(cx, cy + r);
+  X.stroke();
+
+  // Lissajous curve
+  const freqA = 3 + Math.sin(t * 0.2);
+  const freqB = 2 + Math.cos(t * 0.15);
+  const phaseShift = t * 0.5;
+
+  X.strokeStyle = 'rgba(255,40,25,0.4)';
+  X.lineWidth = 1.5;
+  X.beginPath();
+  for (let i = 0; i <= 500; i++) {
+    const frac = i / 500 * TWO;
+    const lx = cx + Math.sin(freqA * frac + phaseShift) * r * 0.85;
+    const ly = cy + Math.sin(freqB * frac) * r * 0.85;
+    if (i === 0) X.moveTo(lx, ly);
+    else X.lineTo(lx, ly);
+  }
+  X.stroke();
+  X.lineWidth = 1;
+
+  // Glow
+  X.strokeStyle = 'rgba(255,25,15,0.12)';
+  X.lineWidth = 3;
+  X.beginPath();
+  for (let i = 0; i <= 500; i++) {
+    const frac = i / 500 * TWO;
+    const lx = cx + Math.sin(freqA * frac + phaseShift) * r * 0.85;
+    const ly = cy + Math.sin(freqB * frac) * r * 0.85;
+    if (i === 0) X.moveTo(lx, ly);
+    else X.lineTo(lx, ly);
+  }
+  X.stroke();
+  X.lineWidth = 1;
+
+  // Label
+  X.font = '9px monospace';
+  X.fillStyle = 'rgba(255,30,20,0.35)';
+  X.fillText('XY', cx - r + 6, cy - r + 13);
+}
+
+// ═══════════════════════════════════════════
+// DATA READOUT PANEL
+// ═══════════════════════════════════════════
+function drawDataPanel(t, px, py, pw, ph) {
+  X.fillStyle = 'rgba(255,10,5,0.015)';
+  X.fillRect(px, py, pw, ph);
+  X.strokeStyle = 'rgba(255,25,15,0.1)';
+  X.strokeRect(px, py, pw, ph);
+
+  X.font = '9px monospace';
+  X.fillStyle = 'rgba(255,30,20,0.3)';
+
+  const data = [
+    `CARRIER: ${(110 + Math.sin(t * 0.5) * 10).toFixed(2)} Hz`,
+    `MOD_IDX: ${(Math.sin(t * 0.3) * 0.5 + 0.5).toFixed(3)}`,
+    `PHASE: ${((t * 57.3) % 360).toFixed(1)}\u00B0`,
+    `AMPL: ${(Math.sin(t * 0.7) * 0.3 + 0.7).toFixed(3)}`,
+    `SNR: ${(Math.sin(t * 0.4) * 5 + 28).toFixed(1)} dB`,
+    `BW: ${(Math.sin(t * 0.2) * 500 + 2000).toFixed(0)} Hz`,
+    `JITTER: ${(Math.random() * 2).toFixed(3)} ms`,
+    `THD: ${(Math.sin(t * 0.6) * 0.5 + 1).toFixed(2)}%`,
+    `LOCK: ${Math.sin(t * 2) > 0 ? 'YES' : 'NO'}`,
+  ];
+
+  data.forEach((line, i) => {
+    if (line.includes('NO')) X.fillStyle = 'rgba(255,50,30,0.4)';
+    else X.fillStyle = 'rgba(255,30,20,0.3)';
+    X.fillText(line, px + 8, py + 16 + i * 14);
+  });
+}
+
+// ═══════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════
+function render(t) {
+  const w = C.width, h = C.height;
+
+  X.fillStyle = '#000';
+  X.fillRect(0, 0, w, h);
+
+  // Layout panels
+  const margin = 30;
+  const gap = 15;
+
+  // Top half — oscilloscopes
+  const oscW = Math.min(500, (w - margin * 2 - gap) / 2);
+  const oscH = Math.min(180, (h - margin * 2 - gap * 2) / 3);
+
+  drawOscilloscope(t, margin + oscW / 2, margin + oscH / 2, oscW, oscH, 2, 0.8, 0, 'CH_1');
+  drawOscilloscope(t, w - margin - oscW / 2, margin + oscH / 2, oscW, oscH, 3, 0.6, PI / 3, 'CH_2');
+
+  // Middle — spectrum and lissajous
+  const specW = Math.min(500, (w - margin * 2 - gap) * 0.6);
+  const specH = oscH;
+  const lissR = Math.min(specH / 2 - 5, 80);
+
+  drawSpectrum(t, margin + specW / 2, margin + oscH + gap + specH / 2, specW, specH);
+  drawLissajous(t, w - margin - lissR - 30, margin + oscH + gap + specH / 2, lissR);
+
+  // Bottom — data panel and another oscilloscope
+  const dataW = Math.min(200, w * 0.2);
+  const bottomY = margin + (oscH + gap) * 2;
+  const bottomH = Math.min(oscH, h - bottomY - margin);
+
+  drawDataPanel(t, margin, bottomY, dataW, bottomH);
+  drawOscilloscope(t, margin + dataW + gap + (w - margin * 2 - dataW - gap) / 2, bottomY + bottomH / 2,
+    w - margin * 2 - dataW - gap, bottomH, 5, 0.4, t * 0.5, 'CH_3 // MODULATED');
+
+  // Title
+  X.font = '11px monospace';
+  X.fillStyle = 'rgba(255,40,25,0.4)';
+  X.textAlign = 'center';
+  X.fillText('SIGNAL_ANALYSIS // REAL-TIME MONITORING', w / 2, h - 15);
+  X.textAlign = 'left';
+
+  // Scanlines
+  X.fillStyle = 'rgba(0,0,0,0.08)';
+  for (let y = 0; y < h; y += 2) {
+    X.fillRect(0, y, w, 1);
+  }
+
+  // Occasional noise burst
+  if (Math.sin(t * 11.7) > 0.98) {
+    for (let i = 0; i < 20; i++) {
+      const nx = Math.random() * w;
+      const ny = Math.random() * h;
+      X.fillStyle = 'rgba(255,20,15,0.1)';
+      X.fillRect(nx, ny, Math.random() * 40, 1);
+    }
+  }
+}
+
+let last = 0;
+function frame() {
+  if (!on) return;
+  requestAnimationFrame(frame);
+  const now = performance.now();
+  const d = Math.min((now - last) / 1000, 0.05);
+  last = now;
+  T += d;
+  if (T >= DUR) T -= DUR;
+  render(T);
+}
+
+async function autoStart() {
+  document.getElementById('start').classList.add('gone');
+  if (!THUMB) await initAudio();
+  on = true; last = performance.now();
+  frame();
+}
+
+if (window.self !== window.top) { autoStart(); }
+else { autoStart().catch(() => {
+  document.getElementById('start').classList.remove('gone');
+  document.getElementById('start').addEventListener('click', () => autoStart());
+}); }
+</script>
+</body>
+</html>

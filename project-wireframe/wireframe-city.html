@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>WIREFRAME — CITY</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #000; overflow: hidden; }
+  canvas { display: block; }
+  #start { position: fixed; inset: 0; z-index: 10; display: flex;
+    align-items: center; justify-content: center; background: #000; cursor: pointer; }
+  #start span { color: #a00; font: 13px monospace; opacity: 0.5; }
+  .gone { display: none !important; }
+</style>
+</head>
+<body>
+<div id="start"><span>click to begin</span></div>
+<canvas id="c"></canvas>
+<script>
+const THUMB = new URLSearchParams(location.search).has('mute');
+const C = document.getElementById('c');
+const X = C.getContext('2d');
+const DUR = 30;
+let T = 0, on = false;
+
+function sz() { C.width = innerWidth; C.height = innerHeight; }
+sz(); addEventListener('resize', sz);
+
+const PI = Math.PI, TWO = PI * 2;
+
+// ═══════════════════════════════════════════
+// AUDIO — distant city hum
+// ═══════════════════════════════════════════
+let AC, masterGain;
+
+async function initAudio() {
+  AC = new AudioContext();
+  masterGain = AC.createGain();
+  masterGain.gain.value = 0;
+  masterGain.connect(AC.destination);
+
+  // City drone
+  [41.2, 55, 61.74].forEach((freq, i) => {
+    const osc = AC.createOscillator();
+    osc.type = i === 0 ? 'sawtooth' : 'sine';
+    osc.frequency.value = freq;
+    const g = AC.createGain();
+    g.gain.value = i === 0 ? 0.04 : 0.06;
+    const lp = AC.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 100 + i * 30;
+    osc.connect(lp);
+    lp.connect(g);
+    g.connect(masterGain);
+    osc.start();
+  });
+
+  // Wind noise
+  const noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate);
+  const nd = noiseBuf.getChannelData(0);
+  for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+  const nSrc = AC.createBufferSource();
+  nSrc.buffer = noiseBuf;
+  nSrc.loop = true;
+  const bp = AC.createBiquadFilter();
+  bp.type = 'bandpass';
+  bp.frequency.value = 800;
+  bp.Q.value = 0.5;
+  const ng = AC.createGain();
+  ng.gain.value = 0.02;
+  nSrc.connect(bp);
+  bp.connect(ng);
+  ng.connect(masterGain);
+  nSrc.start();
+
+  const lfo = AC.createOscillator();
+  lfo.frequency.value = 0.1;
+  const lfoG = AC.createGain();
+  lfoG.gain.value = 400;
+  lfo.connect(lfoG);
+  lfoG.connect(bp.frequency);
+  lfo.start();
+
+  masterGain.gain.setTargetAtTime(0.2, AC.currentTime, 2);
+}
+
+// ═══════════════════════════════════════════
+// PROCEDURAL BUILDINGS
+// ═══════════════════════════════════════════
+function hash(x, y) {
+  let h = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+  return h - Math.floor(h);
+}
+
+function drawBuilding(bx, bz, baseW, height, camX, camZ, horizon) {
+  const w = C.width, h = C.height;
+  const fov = 400;
+
+  // Building corners in world space
+  const corners3D = [
+    [bx, 0, bz],
+    [bx + baseW, 0, bz],
+    [bx + baseW, 0, bz + baseW],
+    [bx, 0, bz + baseW],
+    [bx, -height, bz],
+    [bx + baseW, -height, bz],
+    [bx + baseW, -height, bz + baseW],
+    [bx, -height, bz + baseW],
+  ];
+
+  // Project to screen
+  const proj = corners3D.map(v => {
+    const rx = v[0] - camX;
+    const rz = v[2] - camZ;
+    if (rz <= 0) return null;
+    const scale = fov / rz;
+    return [w/2 + rx * scale, horizon + v[1] * scale, rz];
+  });
+
+  // Skip if any vertex behind camera
+  if (proj.some(p => p === null)) return;
+
+  // Average depth for alpha
+  const avgZ = proj.reduce((s, p) => s + p[2], 0) / 8;
+  const alpha = Math.max(0.02, Math.min(0.3, 4 / avgZ));
+
+  X.strokeStyle = `rgba(255,25,15,${alpha.toFixed(3)})`;
+  X.lineWidth = 1;
+
+  // Draw faces (only visible ones)
+  const faces = [
+    [0,1,5,4], // front
+    [1,2,6,5], // right
+    [2,3,7,6], // back
+    [3,0,4,7], // left
+    [4,5,6,7], // top
+  ];
+
+  for (const face of faces) {
+    X.beginPath();
+    for (let i = 0; i < face.length; i++) {
+      const p = proj[face[i]];
+      if (i === 0) X.moveTo(p[0], p[1]);
+      else X.lineTo(p[0], p[1]);
+    }
+    X.closePath();
+    X.stroke();
+  }
+
+  // Window grid on front face
+  if (avgZ < 300) {
+    const winAlpha = alpha * 0.4;
+    X.strokeStyle = `rgba(255,20,15,${winAlpha.toFixed(3)})`;
+    const p0 = proj[0], p1 = proj[1], p4 = proj[4], p5 = proj[5];
+
+    const floors = Math.min(12, Math.floor(height / 15));
+    const cols = Math.min(6, Math.floor(baseW / 12));
+
+    for (let f = 0; f < floors; f++) {
+      for (let c = 0; c < cols; c++) {
+        const u0 = (c + 0.2) / cols;
+        const u1 = (c + 0.8) / cols;
+        const v0 = (f + 0.2) / floors;
+        const v1 = (f + 0.8) / floors;
+
+        // Bilinear interpolation
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const wx0 = lerp(lerp(p0[0], p1[0], u0), lerp(p4[0], p5[0], u0), v0);
+        const wy0 = lerp(lerp(p0[1], p1[1], u0), lerp(p4[1], p5[1], u0), v0);
+        const wx1 = lerp(lerp(p0[0], p1[0], u1), lerp(p4[0], p5[0], u1), v1);
+        const wy1 = lerp(lerp(p0[1], p1[1], u1), lerp(p4[1], p5[1], u1), v1);
+
+        // Randomly lit windows
+        const lit = hash(Math.floor(bx) + c, f + Math.floor(T * 0.2)) > 0.6;
+        if (lit) {
+          X.fillStyle = `rgba(255,30,15,${winAlpha * 0.8})`;
+          X.fillRect(wx0, wy0, wx1 - wx0, wy1 - wy0);
+        } else {
+          X.strokeRect(wx0, wy0, wx1 - wx0, wy1 - wy0);
+        }
+      }
+    }
+  }
+}
+
+function drawCity(t) {
+  const w = C.width, h = C.height;
+  const horizon = h * 0.45;
+
+  // Camera moves forward slowly
+  const camX = Math.sin(t * 0.1) * 100;
+  const camZ = t * 30;
+
+  // Ground grid
+  X.strokeStyle = 'rgba(255,20,15,0.04)';
+  X.lineWidth = 1;
+  const gridSize = 80;
+  const gridRange = 15;
+
+  // Grid lines (perspective)
+  for (let i = -gridRange; i <= gridRange; i++) {
+    const worldX = Math.round(camX / gridSize) * gridSize + i * gridSize;
+    const startZ = Math.round(camZ / gridSize) * gridSize;
+
+    for (let j = 1; j < gridRange * 2; j++) {
+      const z = startZ + j * gridSize - camZ;
+      if (z <= 10) continue;
+      const scale = 400 / z;
+      const sx = w/2 + (worldX - camX) * scale;
+      const sy = horizon + 0 * scale;
+
+      const z2 = z + gridSize;
+      const scale2 = 400 / z2;
+      const sx2 = w/2 + (worldX - camX) * scale2;
+      const sy2 = horizon + 0 * scale2;
+
+      if (sx > -50 && sx < w + 50) {
+        X.beginPath();
+        X.moveTo(sx, sy); X.lineTo(sx2, sy2);
+        X.stroke();
+      }
+    }
+  }
+
+  // Draw buildings
+  const buildingRange = 10;
+  const buildings = [];
+
+  for (let gx = -buildingRange; gx <= buildingRange; gx++) {
+    for (let gz = 0; gz < buildingRange * 3; gz++) {
+      const worldGX = Math.round(camX / gridSize) * gridSize + gx * gridSize;
+      const worldGZ = Math.round(camZ / gridSize) * gridSize + gz * gridSize;
+
+      // Use hash to decide if building exists here
+      const h1 = hash(worldGX * 0.01, worldGZ * 0.01);
+      if (h1 < 0.55) continue;
+
+      const bHeight = 30 + hash(worldGX * 0.02, worldGZ * 0.03) * 180;
+      const bWidth = 20 + hash(worldGX * 0.03, worldGZ * 0.02) * 40;
+
+      const relZ = worldGZ - camZ;
+      if (relZ < 10 || relZ > 1500) continue;
+
+      buildings.push({
+        x: worldGX,
+        z: worldGZ,
+        w: bWidth,
+        h: bHeight,
+        depth: relZ
+      });
+    }
+  }
+
+  // Sort back to front
+  buildings.sort((a, b) => b.depth - a.depth);
+
+  for (const b of buildings) {
+    drawBuilding(b.x, b.z, b.w, b.h, camX, camZ, horizon);
+  }
+}
+
+// ═══════════════════════════════════════════
+// SKYLINE OVERLAY
+// ═══════════════════════════════════════════
+function drawOverlay(t) {
+  const w = C.width, h = C.height;
+
+  // Horizon glow
+  const hGrad = X.createLinearGradient(0, h * 0.35, 0, h * 0.55);
+  hGrad.addColorStop(0, 'transparent');
+  hGrad.addColorStop(0.5, 'rgba(255,15,10,0.03)');
+  hGrad.addColorStop(1, 'transparent');
+  X.fillStyle = hGrad;
+  X.fillRect(0, h * 0.35, w, h * 0.2);
+
+  // HUD text
+  X.font = '10px monospace';
+  X.fillStyle = 'rgba(255,35,20,0.35)';
+  X.fillText('CITYSCAPE_GEN', 15, 25);
+  X.fillText(`SECTOR: ${Math.floor(T / 5) + 1}`, 15, 40);
+  X.fillText(`BUILDINGS: ${Math.floor(Math.sin(t * 0.1) * 20 + 60)}`, 15, 55);
+
+  X.textAlign = 'right';
+  X.fillText(`CAM: ${(Math.sin(t * 0.1) * 100).toFixed(1)}, ${(t * 30).toFixed(0)}`, w - 15, 25);
+  X.fillText(`RENDER: 60fps`, w - 15, 40);
+  X.textAlign = 'left';
+
+  // Bottom frame
+  X.strokeStyle = 'rgba(255,25,15,0.08)';
+  X.beginPath();
+  X.moveTo(30, h - 25); X.lineTo(w - 30, h - 25);
+  X.stroke();
+
+  X.font = '9px monospace';
+  X.fillStyle = 'rgba(255,25,15,0.2)';
+  X.textAlign = 'center';
+  X.fillText('PROCEDURAL ARCHITECTURE // INFINITE GRID', w/2, h - 12);
+  X.textAlign = 'left';
+}
+
+// ═══════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════
+function render(t) {
+  const w = C.width, h = C.height;
+
+  X.fillStyle = '#000';
+  X.fillRect(0, 0, w, h);
+
+  drawCity(t);
+  drawOverlay(t);
+
+  // Scanlines
+  X.fillStyle = 'rgba(0,0,0,0.1)';
+  for (let y = 0; y < h; y += 3) {
+    X.fillRect(0, y, w, 1);
+  }
+
+  // Vignette
+  const vg = X.createRadialGradient(w/2, h*0.45, Math.min(w,h)*0.3, w/2, h*0.45, Math.max(w,h)*0.7);
+  vg.addColorStop(0, 'transparent');
+  vg.addColorStop(1, 'rgba(0,0,0,0.5)');
+  X.fillStyle = vg;
+  X.fillRect(0, 0, w, h);
+
+  // Random glitch
+  if (Math.random() < 0.01) {
+    const gy = Math.random() * h;
+    const img = X.getImageData(0, gy, w, 2);
+    X.putImageData(img, (Math.random() - 0.5) * 30, gy);
+  }
+}
+
+let last = 0;
+function frame() {
+  if (!on) return;
+  requestAnimationFrame(frame);
+  const now = performance.now();
+  const d = Math.min((now - last) / 1000, 0.05);
+  last = now;
+  T += d;
+  render(T);
+}
+
+async function autoStart() {
+  document.getElementById('start').classList.add('gone');
+  if (!THUMB) await initAudio();
+  on = true; last = performance.now();
+  frame();
+}
+
+if (window.self !== window.top) { autoStart(); }
+else { autoStart().catch(() => {
+  document.getElementById('start').classList.remove('gone');
+  document.getElementById('start').addEventListener('click', () => autoStart());
+}); }
+</script>
+</body>
+</html>

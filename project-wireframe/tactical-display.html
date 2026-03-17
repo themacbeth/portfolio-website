@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>WIREFRAME — TACTICAL DISPLAY</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #000; overflow: hidden; }
+  canvas { display: block; }
+  #start { position: fixed; inset: 0; z-index: 10; display: flex;
+    align-items: center; justify-content: center; background: #000; cursor: pointer; }
+  #start span { color: #a00; font: 13px monospace; opacity: 0.5; }
+  .gone { display: none !important; }
+</style>
+</head>
+<body>
+<div id="start"><span>click to begin</span></div>
+<canvas id="c"></canvas>
+<script>
+const THUMB = new URLSearchParams(location.search).has('mute');
+const C = document.getElementById('c');
+const X = C.getContext('2d');
+const DUR = 30;
+let T = 0, on = false;
+
+function sz() { C.width = innerWidth; C.height = innerHeight; }
+sz(); addEventListener('resize', sz);
+
+const PI = Math.PI, TWO = PI * 2;
+
+// ═══════════════════════════════════════════
+// AUDIO
+// ═══════════════════════════════════════════
+let AC, masterGain;
+
+async function initAudio() {
+  AC = new AudioContext();
+  masterGain = AC.createGain();
+  masterGain.gain.value = 0;
+  masterGain.connect(AC.destination);
+
+  // Deep rumble
+  const osc1 = AC.createOscillator();
+  osc1.type = 'sine';
+  osc1.frequency.value = 30;
+  const g1 = AC.createGain();
+  g1.gain.value = 0.15;
+  osc1.connect(g1);
+  g1.connect(masterGain);
+  osc1.start();
+
+  // Sweep tone
+  const osc2 = AC.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.value = 200;
+  const g2 = AC.createGain();
+  g2.gain.value = 0.02;
+  const bp = AC.createBiquadFilter();
+  bp.type = 'bandpass';
+  bp.frequency.value = 200;
+  bp.Q.value = 20;
+  osc2.connect(bp);
+  bp.connect(g2);
+  g2.connect(masterGain);
+  osc2.start();
+
+  // Sweep LFO
+  const lfo = AC.createOscillator();
+  lfo.frequency.value = 1 / DUR;
+  const lfoG = AC.createGain();
+  lfoG.gain.value = 300;
+  lfo.connect(lfoG);
+  lfoG.connect(osc2.frequency);
+  lfoG.connect(bp.frequency);
+  lfo.start();
+
+  // Ping sound every ~4 seconds
+  const pingBuf = AC.createBuffer(1, AC.sampleRate * 0.15, AC.sampleRate);
+  const pd = pingBuf.getChannelData(0);
+  for (let i = 0; i < pd.length; i++) {
+    pd[i] = Math.sin(i / AC.sampleRate * TWO * 1200) * Math.exp(-i / (AC.sampleRate * 0.03));
+  }
+
+  setInterval(() => {
+    if (!AC || AC.state !== 'running') return;
+    const src = AC.createBufferSource();
+    src.buffer = pingBuf;
+    const pg = AC.createGain();
+    pg.gain.value = 0.03;
+    src.connect(pg);
+    pg.connect(masterGain);
+    src.start();
+  }, 4000);
+
+  masterGain.gain.setTargetAtTime(0.2, AC.currentTime, 2);
+}
+
+// ═══════════════════════════════════════════
+// RADAR SWEEP
+// ═══════════════════════════════════════════
+function drawRadar(t) {
+  const w = C.width, h = C.height;
+  const cx = w * 0.5, cy = h * 0.5;
+  const maxR = Math.min(w, h) * 0.32;
+  const sweepAngle = t * 1.2;
+
+  // Range rings
+  for (let i = 1; i <= 4; i++) {
+    const r = maxR * i / 4;
+    const alpha = 0.06 + (i === 4 ? 0.04 : 0);
+    X.strokeStyle = `rgba(255,25,15,${alpha})`;
+    X.lineWidth = 1;
+    X.beginPath();
+    X.arc(cx, cy, r, 0, TWO);
+    X.stroke();
+  }
+
+  // Cross lines
+  X.strokeStyle = 'rgba(255,25,15,0.04)';
+  X.beginPath();
+  X.moveTo(cx - maxR, cy); X.lineTo(cx + maxR, cy);
+  X.moveTo(cx, cy - maxR); X.lineTo(cx, cy + maxR);
+  X.stroke();
+
+  // Diagonal lines
+  const diag = maxR * 0.707;
+  X.beginPath();
+  X.moveTo(cx - diag, cy - diag); X.lineTo(cx + diag, cy + diag);
+  X.moveTo(cx - diag, cy + diag); X.lineTo(cx + diag, cy - diag);
+  X.stroke();
+
+  // Sweep beam
+  const grad = X.createConicGradient(sweepAngle, cx, cy);
+  grad.addColorStop(0, 'rgba(255,30,20,0.15)');
+  grad.addColorStop(0.08, 'rgba(255,20,15,0.02)');
+  grad.addColorStop(0.1, 'transparent');
+  grad.addColorStop(1, 'transparent');
+  X.fillStyle = grad;
+  X.beginPath();
+  X.arc(cx, cy, maxR, 0, TWO);
+  X.fill();
+
+  // Sweep line
+  X.strokeStyle = 'rgba(255,40,25,0.5)';
+  X.lineWidth = 1.5;
+  X.beginPath();
+  X.moveTo(cx, cy);
+  X.lineTo(cx + Math.cos(sweepAngle) * maxR, cy + Math.sin(sweepAngle) * maxR);
+  X.stroke();
+
+  // Blips
+  const blipSeed = Math.floor(t * 0.3);
+  for (let i = 0; i < 8; i++) {
+    let rnd = Math.sin(blipSeed * 127.1 + i * 311.7) * 43758.5453;
+    rnd = rnd - Math.floor(rnd);
+    let rnd2 = Math.sin(blipSeed * 269.5 + i * 183.3) * 43758.5453;
+    rnd2 = rnd2 - Math.floor(rnd2);
+
+    const bAngle = rnd * TWO;
+    const bDist = rnd2 * maxR * 0.9;
+    const bx = cx + Math.cos(bAngle) * bDist;
+    const by = cy + Math.sin(bAngle) * bDist;
+
+    // Check if sweep has passed this blip recently
+    let angleDiff = (sweepAngle % TWO) - bAngle;
+    if (angleDiff < 0) angleDiff += TWO;
+    if (angleDiff > TWO) angleDiff -= TWO;
+    const fade = angleDiff < PI ? Math.max(0, 1 - angleDiff / PI) : 0;
+
+    if (fade > 0.01) {
+      X.fillStyle = `rgba(255,40,25,${fade * 0.6})`;
+      X.beginPath();
+      X.arc(bx, by, 2 + fade * 2, 0, TWO);
+      X.fill();
+
+      // Blip label
+      if (fade > 0.3) {
+        X.font = '8px monospace';
+        X.fillStyle = `rgba(255,30,20,${fade * 0.4})`;
+        X.fillText(`T${i + 1}`, bx + 6, by - 4);
+      }
+    }
+  }
+
+  // Range labels
+  X.font = '8px monospace';
+  X.fillStyle = 'rgba(255,25,15,0.2)';
+  for (let i = 1; i <= 4; i++) {
+    X.fillText(`${i * 25}km`, cx + maxR * i / 4 + 4, cy - 4);
+  }
+
+  // Cardinal labels
+  X.textAlign = 'center';
+  X.fillStyle = 'rgba(255,30,20,0.25)';
+  X.fillText('N', cx, cy - maxR - 8);
+  X.fillText('S', cx, cy + maxR + 14);
+  X.textAlign = 'left';
+  X.fillText('W', cx - maxR - 16, cy + 3);
+  X.fillText('E', cx + maxR + 6, cy + 3);
+  X.textAlign = 'left';
+}
+
+// ═══════════════════════════════════════════
+// SIDE PANELS
+// ═══════════════════════════════════════════
+function drawSidePanels(t) {
+  const w = C.width, h = C.height;
+  const panelW = Math.min(160, w * 0.15);
+
+  // Left panel background
+  X.fillStyle = 'rgba(255,10,5,0.02)';
+  X.fillRect(0, 60, panelW, h - 120);
+  X.strokeStyle = 'rgba(255,25,15,0.1)';
+  X.strokeRect(0, 60, panelW, h - 120);
+
+  // Left panel content
+  X.font = '9px monospace';
+  X.fillStyle = 'rgba(255,30,20,0.35)';
+  const leftData = [
+    'RADAR_SYS v3.1',
+    '─────────────',
+    `RNG: ${(Math.sin(t * 0.3) * 50 + 50).toFixed(0)}km`,
+    `BRG: ${(((t * 20) % 360)).toFixed(1)}\u00B0`,
+    `ALT: ${(Math.sin(t * 0.2) * 500 + 2000).toFixed(0)}m`,
+    `SPD: ${(Math.sin(t * 0.4) * 100 + 200).toFixed(0)}kn`,
+    '─────────────',
+    'TARGETS: 8',
+    `TRACK: ${Math.floor(t * 0.5) % 8 + 1}`,
+    `IFF: ${Math.sin(t * 2) > 0 ? 'HOSTILE' : 'UNKNOWN'}`,
+    '─────────────',
+    'FREQ: 2.4GHz',
+    `PWR: ${(Math.sin(t * 0.7) * 10 + 90).toFixed(0)}%`,
+    `SNR: ${(Math.sin(t * 0.5) * 5 + 25).toFixed(1)}dB`,
+  ];
+  leftData.forEach((line, i) => {
+    const blink = line === 'HOSTILE' && Math.sin(t * 8) > 0;
+    if (blink) X.fillStyle = 'rgba(255,50,30,0.6)';
+    X.fillText(line, 10, 85 + i * 15);
+    if (blink) X.fillStyle = 'rgba(255,30,20,0.35)';
+  });
+
+  // Right panel
+  X.fillStyle = 'rgba(255,10,5,0.02)';
+  X.fillRect(w - panelW, 60, panelW, h - 120);
+  X.strokeStyle = 'rgba(255,25,15,0.1)';
+  X.strokeRect(w - panelW, 60, panelW, h - 120);
+
+  // Signal strength bars
+  X.fillStyle = 'rgba(255,30,20,0.3)';
+  X.fillText('SIGNAL_MONITOR', w - panelW + 10, 85);
+
+  for (let i = 0; i < 12; i++) {
+    const barH = (Math.sin(t * 3 + i * 0.8) * 0.5 + 0.5) * 40 + 5;
+    const barX = w - panelW + 10 + i * 12;
+    const barY = 120 + (45 - barH);
+    X.fillStyle = `rgba(255,25,15,${0.15 + barH / 90})`;
+    X.fillRect(barX, barY, 8, barH);
+  }
+
+  // Waveform
+  X.strokeStyle = 'rgba(255,30,20,0.25)';
+  X.lineWidth = 1;
+  X.beginPath();
+  const wfY = 200;
+  for (let i = 0; i < panelW - 20; i++) {
+    const v = Math.sin(i * 0.15 + t * 5) * Math.sin(i * 0.03 + t * 0.5) * 15;
+    const px = w - panelW + 10 + i;
+    if (i === 0) X.moveTo(px, wfY + v);
+    else X.lineTo(px, wfY + v);
+  }
+  X.stroke();
+
+  // Coordinate list
+  X.fillStyle = 'rgba(255,25,15,0.25)';
+  X.font = '8px monospace';
+  for (let i = 0; i < 10; i++) {
+    const lat = (Math.sin(t * 0.1 + i * 1.7) * 45).toFixed(4);
+    const lon = (Math.cos(t * 0.1 + i * 2.3) * 90).toFixed(4);
+    X.fillText(`${lat},${lon}`, w - panelW + 10, 240 + i * 13);
+  }
+}
+
+// ═══════════════════════════════════════════
+// TOP BAR
+// ═══════════════════════════════════════════
+function drawTopBar(t) {
+  const w = C.width;
+
+  X.fillStyle = 'rgba(255,10,5,0.03)';
+  X.fillRect(0, 0, w, 50);
+  X.strokeStyle = 'rgba(255,25,15,0.1)';
+  X.beginPath();
+  X.moveTo(0, 50); X.lineTo(w, 50);
+  X.stroke();
+
+  X.font = '11px monospace';
+  X.fillStyle = 'rgba(255,40,25,0.5)';
+  X.fillText('TACTICAL_DISPLAY', 15, 20);
+
+  X.font = '10px monospace';
+  X.fillStyle = 'rgba(255,30,20,0.3)';
+  X.textAlign = 'right';
+  const sec = Math.floor(t % 60).toString().padStart(2, '0');
+  const min = Math.floor(t / 60).toString().padStart(2, '0');
+  const ms = Math.floor((t % 1) * 100).toString().padStart(2, '0');
+  X.fillText(`${min}:${sec}:${ms} UTC`, w - 15, 20);
+
+  // Status indicators
+  const statuses = ['RADAR', 'COMMS', 'NAV', 'WEAP'];
+  const startX = w / 2 - statuses.length * 40;
+  statuses.forEach((s, i) => {
+    const active = Math.sin(t * 2 + i * 1.5) > -0.3;
+    X.fillStyle = active ? 'rgba(255,40,25,0.5)' : 'rgba(255,20,15,0.15)';
+    X.textAlign = 'center';
+    X.fillText(s, startX + i * 80, 20);
+    // Status dot
+    X.fillStyle = active ? 'rgba(255,50,30,0.7)' : 'rgba(255,20,15,0.2)';
+    X.beginPath();
+    X.arc(startX + i * 80, 32, 2, 0, TWO);
+    X.fill();
+  });
+  X.textAlign = 'left';
+}
+
+// ═══════════════════════════════════════════
+// BOTTOM BAR
+// ═══════════════════════════════════════════
+function drawBottomBar(t) {
+  const w = C.width, h = C.height;
+
+  X.fillStyle = 'rgba(255,10,5,0.03)';
+  X.fillRect(0, h - 40, w, 40);
+  X.strokeStyle = 'rgba(255,25,15,0.1)';
+  X.beginPath();
+  X.moveTo(0, h - 40); X.lineTo(w, h - 40);
+  X.stroke();
+
+  X.font = '9px monospace';
+  X.fillStyle = 'rgba(255,30,20,0.3)';
+
+  const messages = [
+    'SCANNING...', 'LOCK ACQUIRED', 'SIGNAL LOST', 'RECALIBRATING',
+    'SWEEP ACTIVE', 'CONTACT CONFIRMED', 'PATTERN ANALYSIS', 'VECTOR UPDATED'
+  ];
+  const msgIdx = Math.floor(t * 0.4) % messages.length;
+  const blink = Math.sin(t * 6) > 0 ? '\u25CF' : '\u25CB';
+  X.fillText(`${blink} ${messages[msgIdx]}`, 15, h - 18);
+
+  X.textAlign = 'right';
+  X.fillText(`LAT 40.7128\u00B0N  LON 74.0060\u00B0W`, w - 15, h - 18);
+  X.textAlign = 'left';
+}
+
+// ═══════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════
+function render(t) {
+  const w = C.width, h = C.height;
+
+  X.fillStyle = '#000';
+  X.fillRect(0, 0, w, h);
+
+  drawRadar(t);
+  drawSidePanels(t);
+  drawTopBar(t);
+  drawBottomBar(t);
+
+  // Scanlines
+  X.fillStyle = 'rgba(0,0,0,0.1)';
+  for (let y = 0; y < h; y += 3) {
+    X.fillRect(0, y, w, 1);
+  }
+
+  // Occasional full-frame glitch
+  if (Math.sin(t * 17.3) > 0.97) {
+    X.fillStyle = 'rgba(255,15,10,0.03)';
+    X.fillRect(0, 0, w, h);
+    const tearY = Math.random() * h;
+    const img = X.getImageData(0, tearY, w, 3);
+    X.putImageData(img, (Math.random() - 0.5) * 20, tearY);
+  }
+}
+
+let last = 0;
+function frame() {
+  if (!on) return;
+  requestAnimationFrame(frame);
+  const now = performance.now();
+  const d = Math.min((now - last) / 1000, 0.05);
+  last = now;
+  T += d;
+  if (T >= DUR) T -= DUR;
+  render(T);
+}
+
+async function autoStart() {
+  document.getElementById('start').classList.add('gone');
+  if (!THUMB) await initAudio();
+  on = true; last = performance.now();
+  frame();
+}
+
+if (window.self !== window.top) { autoStart(); }
+else { autoStart().catch(() => {
+  document.getElementById('start').classList.remove('gone');
+  document.getElementById('start').addEventListener('click', () => autoStart());
+}); }
+</script>
+</body>
+</html>
