@@ -126,15 +126,15 @@ canvas { display: block; }
 
 <div id="buttons">
   <button class="arc-btn" id="btn-color" onclick="cycleColor()">
-    <span class="btn-counter" id="color-counter">1/3</span>
+    <span class="btn-counter" id="color-counter">ASH</span>
     <span class="btn-label">COLOR</span>
   </button>
   <button class="arc-btn" id="btn-glitch" onclick="cycleGlitch()">
-    <span class="btn-counter" id="glitch-counter">1/10</span>
+    <span class="btn-counter" id="glitch-counter">NONE</span>
     <span class="btn-label">GLITCH</span>
   </button>
   <button class="arc-btn" id="btn-motion" onclick="cycleMotion()">
-    <span class="btn-counter" id="motion-counter">1/10</span>
+    <span class="btn-counter" id="motion-counter">STILL</span>
     <span class="btn-label">MOTION</span>
   </button>
 </div>
@@ -188,7 +188,12 @@ const VESTMENTS = [
 
 const GLITCH_NAMES = [
   'NONE','SCANLINE','H-TEAR','BLOCK','CHROMATIC',
-  'STATIC','DROPOUT','MELT','INVERT-BAND','SHATTER'
+  'STATIC','HOLOGRAM','ECHO','INVERT-BAND','SHATTER'
+];
+
+const MOTION_NAMES = [
+  'STILL','DRIFT','SPIN','BREATHE','SWAY',
+  'ORBIT','TREMOR','PULSE','TUMBLE','PENDULUM'
 ];
 
 // ── PRNG ────────────────────────────────────────────
@@ -254,192 +259,216 @@ function easeInCubic(t) { return t * t * t; }
 function generateMandala(seed) {
   const r = mkRng(seed);
   const strokes = [];
+  const gs = 0.7 + r() * 0.3; // glyph scale
 
-  // Symmetry order
-  const symOrders = [3, 5, 6, 7, 8, 9, 12];
-  const sym = symOrders[Math.floor(r() * symOrders.length)];
-
-  // Ring radii — golden ratio spaced
-  const ringCount = 2 + Math.floor(r() * 4); // 2-5 rings
-  const rings = [];
-  let baseR = 0.15 + r() * 0.1;
-  for (let i = 0; i < ringCount; i++) {
-    rings.push(baseR);
-    baseR *= (1.1 + r() * 0.5);
-    if (baseR > 1.4) break;
-  }
-
-  // ── Central Symbol ──
-  const centralType = Math.floor(r() * 6);
-  if (centralType === 0) {
-    // Dot
-    strokes.push({ t: 'D', x: 0, y: 0, s: 0.02 + r() * 0.02 });
-  } else if (centralType === 1) {
-    // Small circle
-    strokes.push({ t: 'C', x: 0, y: 0, r: 0.04 + r() * 0.04 });
-  } else if (centralType === 2) {
-    // Triangle
-    for (let i = 0; i < 3; i++) {
-      let a1 = (i / 3) * TAU - PI / 2;
-      let a2 = ((i + 1) / 3) * TAU - PI / 2;
-      let cr = 0.06 + r() * 0.04;
-      strokes.push({ t: 'L', x1: Math.cos(a1) * cr, y1: Math.sin(a1) * cr,
-                      x2: Math.cos(a2) * cr, y2: Math.sin(a2) * cr });
-    }
-  } else if (centralType === 3) {
-    // Vesica piscis
-    let vr = 0.06 + r() * 0.03;
-    let vd = vr * 0.6;
-    strokes.push({ t: 'A', x: -vd, y: 0, r: vr, s: -PI / 3, e: PI / 3 });
-    strokes.push({ t: 'A', x: vd, y: 0, r: vr, s: PI - PI / 3, e: PI + PI / 3 });
-  } else if (centralType === 4) {
+  // ── FRAME (outer boundary) ──
+  const ft = Math.floor(r() * 7);
+  if (ft === 0) {
+    strokes.push({ t: 'C', x: 0, y: 0, r: gs });
+  } else if (ft === 1) {
     // Hexagon
     for (let i = 0; i < 6; i++) {
-      let a1 = (i / 6) * TAU;
-      let a2 = ((i + 1) / 6) * TAU;
-      let cr = 0.05 + r() * 0.03;
-      strokes.push({ t: 'L', x1: Math.cos(a1) * cr, y1: Math.sin(a1) * cr,
-                      x2: Math.cos(a2) * cr, y2: Math.sin(a2) * cr });
+      let a1 = (i / 6) * TAU, a2 = ((i + 1) / 6) * TAU;
+      strokes.push({ t: 'L', x1: Math.cos(a1) * gs, y1: Math.sin(a1) * gs,
+                      x2: Math.cos(a2) * gs, y2: Math.sin(a2) * gs });
+    }
+  } else if (ft === 2) {
+    // Diamond
+    strokes.push({ t: 'L', x1: 0, y1: -gs, x2: gs * 0.65, y2: 0 });
+    strokes.push({ t: 'L', x1: gs * 0.65, y1: 0, x2: 0, y2: gs });
+    strokes.push({ t: 'L', x1: 0, y1: gs, x2: -gs * 0.65, y2: 0 });
+    strokes.push({ t: 'L', x1: -gs * 0.65, y1: 0, x2: 0, y2: -gs });
+  } else if (ft === 3) {
+    // Double ring
+    strokes.push({ t: 'C', x: 0, y: 0, r: gs * 0.92 });
+    strokes.push({ t: 'C', x: 0, y: 0, r: gs * 1.04 });
+  } else if (ft === 4) {
+    // Open arcs (top/bottom brackets)
+    strokes.push({ t: 'A', x: 0, y: 0, r: gs, s: -PI * 0.75, e: -PI * 0.25 });
+    strokes.push({ t: 'A', x: 0, y: 0, r: gs, s: PI * 0.25, e: PI * 0.75 });
+  } else if (ft === 5) {
+    // Octagon
+    for (let i = 0; i < 8; i++) {
+      let a1 = (i / 8) * TAU - PI / 8, a2 = ((i + 1) / 8) * TAU - PI / 8;
+      strokes.push({ t: 'L', x1: Math.cos(a1) * gs * 0.95, y1: Math.sin(a1) * gs * 0.95,
+                      x2: Math.cos(a2) * gs * 0.95, y2: Math.sin(a2) * gs * 0.95 });
+    }
+  }
+  // ft === 6: no frame (open glyph)
+
+  // ── CORE STRUCTURE (primary letterform) ──
+  const ct = Math.floor(r() * 10);
+  let sr = gs * 0.55;
+
+  if (ct === 0) {
+    // Vertical stem with serifs
+    strokes.push({ t: 'L', x1: 0, y1: -sr, x2: 0, y2: sr });
+    let sw = sr * 0.3;
+    strokes.push({ t: 'L', x1: -sw, y1: -sr, x2: sw, y2: -sr });
+    strokes.push({ t: 'L', x1: -sw, y1: sr, x2: sw, y2: sr });
+  } else if (ct === 1) {
+    // Asymmetric cross
+    let h = sr * (0.6 + r() * 0.4);
+    strokes.push({ t: 'L', x1: 0, y1: -sr, x2: 0, y2: sr });
+    strokes.push({ t: 'L', x1: -h, y1: -sr * 0.15, x2: h, y2: -sr * 0.15 });
+  } else if (ct === 2) {
+    // Chevron stack
+    let count = 2 + Math.floor(r() * 2);
+    for (let i = 0; i < count; i++) {
+      let y = -sr * 0.4 + i * sr * 0.35;
+      let w = sr * (0.3 + r() * 0.3);
+      strokes.push({ t: 'L', x1: -w, y1: y + sr * 0.15, x2: 0, y2: y - sr * 0.15 });
+      strokes.push({ t: 'L', x1: 0, y1: y - sr * 0.15, x2: w, y2: y + sr * 0.15 });
+    }
+  } else if (ct === 3) {
+    // Trident
+    strokes.push({ t: 'L', x1: 0, y1: sr, x2: 0, y2: -sr * 0.2 });
+    strokes.push({ t: 'L', x1: 0, y1: -sr * 0.2, x2: -sr * 0.4, y2: -sr });
+    strokes.push({ t: 'L', x1: 0, y1: -sr * 0.2, x2: sr * 0.4, y2: -sr });
+    strokes.push({ t: 'L', x1: 0, y1: -sr * 0.2, x2: 0, y2: -sr });
+  } else if (ct === 4) {
+    // Vesica / Eye with axis
+    let vr = sr * 0.5;
+    strokes.push({ t: 'A', x: -vr * 0.4, y: 0, r: vr, s: -PI / 2.5, e: PI / 2.5 });
+    strokes.push({ t: 'A', x: vr * 0.4, y: 0, r: vr, s: PI - PI / 2.5, e: PI + PI / 2.5 });
+    strokes.push({ t: 'D', x: 0, y: 0, s: 0.02 });
+    strokes.push({ t: 'L', x1: 0, y1: -sr, x2: 0, y2: -vr * 0.6 });
+    strokes.push({ t: 'L', x1: 0, y1: vr * 0.6, x2: 0, y2: sr });
+  } else if (ct === 5) {
+    // Gate / portal
+    strokes.push({ t: 'L', x1: -sr * 0.4, y1: sr, x2: -sr * 0.4, y2: -sr * 0.3 });
+    strokes.push({ t: 'L', x1: sr * 0.4, y1: sr, x2: sr * 0.4, y2: -sr * 0.3 });
+    strokes.push({ t: 'A', x: 0, y: -sr * 0.3, r: sr * 0.4, s: PI, e: TAU });
+  } else if (ct === 6) {
+    // Zigzag / lightning
+    let pts = [[-0.25, -0.8], [0.15, -0.3], [-0.1, 0.1], [0.25, 0.8]];
+    for (let i = 0; i < pts.length - 1; i++) {
+      strokes.push({ t: 'L', x1: pts[i][0] * sr, y1: pts[i][1] * sr,
+                      x2: pts[i + 1][0] * sr, y2: pts[i + 1][1] * sr });
+    }
+  } else if (ct === 7) {
+    // Concentric crescents
+    for (let i = 0; i < 3; i++) {
+      let cr = (0.15 + i * 0.18) * gs;
+      let offset = r() * PI;
+      strokes.push({ t: 'A', x: 0, y: 0, r: cr, s: offset, e: offset + PI + r() * 0.5 });
+    }
+  } else if (ct === 8) {
+    // Angular rune
+    let n = 4 + Math.floor(r() * 3);
+    let pts = [];
+    for (let i = 0; i < n; i++) {
+      pts.push([(r() - 0.5) * sr * 1.2, (i / (n - 1) - 0.5) * sr * 2]);
+    }
+    for (let i = 0; i < pts.length - 1; i++) {
+      strokes.push({ t: 'L', x1: pts[i][0], y1: pts[i][1],
+                      x2: pts[i + 1][0], y2: pts[i + 1][1] });
     }
   } else {
-    // Eye / lens
-    let er = 0.07;
-    strokes.push({ t: 'A', x: 0, y: 0, r: er, s: PI * 0.15, e: PI * 0.85 });
-    strokes.push({ t: 'A', x: 0, y: 0, r: er, s: PI * 1.15, e: PI * 1.85 });
-    strokes.push({ t: 'D', x: 0, y: 0, s: 0.015 });
-  }
-
-  // ── Rings (full circles or segmented arcs) ──
-  for (let i = 0; i < rings.length; i++) {
-    let rr = rings[i];
-    if (r() > 0.35) {
-      // Full circle
-      strokes.push({ t: 'C', x: 0, y: 0, r: rr });
-    } else {
-      // Segmented arcs
-      let segs = 2 + Math.floor(r() * 4);
-      let gapFrac = 0.05 + r() * 0.15;
-      for (let s = 0; s < segs; s++) {
-        let sa = (s / segs) * TAU + gapFrac;
-        let ea = ((s + 1) / segs) * TAU - gapFrac;
-        strokes.push({ t: 'A', x: 0, y: 0, r: rr, s: sa, e: ea });
-      }
-    }
-
-    // Tick marks on this ring
-    if (r() > 0.3) {
-      let tickCount = sym * (1 + Math.floor(r() * 3));
-      let tickLen = 0.02 + r() * 0.04;
-      for (let ti = 0; ti < tickCount; ti++) {
-        let a = (ti / tickCount) * TAU;
-        strokes.push({
-          t: 'L',
-          x1: Math.cos(a) * rr,
-          y1: Math.sin(a) * rr,
-          x2: Math.cos(a) * (rr + tickLen),
-          y2: Math.sin(a) * (rr + tickLen)
-        });
-      }
+    // Radial star (low symmetry: 3-5)
+    let n = 3 + Math.floor(r() * 3);
+    for (let i = 0; i < n; i++) {
+      let a = (i / n) * TAU + r() * 0.2;
+      let len = sr * (0.5 + r() * 0.5);
+      strokes.push({ t: 'L', x1: 0, y1: 0,
+                      x2: Math.cos(a) * len, y2: Math.sin(a) * len });
     }
   }
 
-  // ── Radial Spokes ──
-  let spokeStyle = Math.floor(r() * 3);
-  let innerR = rings.length > 0 ? rings[0] : 0.1;
-  let outerR = rings.length > 0 ? rings[rings.length - 1] : 0.8;
-
-  for (let i = 0; i < sym; i++) {
-    let a = (i / sym) * TAU;
-    let startR = (spokeStyle === 0) ? 0 : innerR;
-    let endR = outerR + (r() > 0.5 ? 0.05 + r() * 0.1 : 0);
-
-    if (r() > 0.2) {
-      strokes.push({
-        t: 'L',
-        x1: Math.cos(a) * startR, y1: Math.sin(a) * startR,
-        x2: Math.cos(a) * endR, y2: Math.sin(a) * endR
-      });
-    }
-
-    // Branching spoke
-    if (r() > 0.6 && rings.length > 1) {
-      let midR = rings[Math.floor(r() * rings.length)];
-      let branchAngle = a + (r() - 0.5) * 0.3;
-      let branchR = midR + 0.1 + r() * 0.15;
-      strokes.push({
-        t: 'L',
-        x1: Math.cos(a) * midR, y1: Math.sin(a) * midR,
-        x2: Math.cos(branchAngle) * branchR, y2: Math.sin(branchAngle) * branchR
-      });
-    }
-  }
-
-  // ── Circuit Traces (right-angle paths between nodes) ──
-  let traceCount = 2 + Math.floor(r() * 5);
+  // ── CIRCUIT TRACES (right-angle paths with junction nodes) ──
+  let traceCount = 1 + Math.floor(r() * 4);
   for (let i = 0; i < traceCount; i++) {
-    let ringIdx = Math.floor(r() * rings.length);
-    let rr = rings[ringIdx] || 0.5;
-    let a1 = r() * TAU;
-
-    // Start point on ring
-    let sx = Math.cos(a1) * rr;
-    let sy = Math.sin(a1) * rr;
-
-    // Go horizontal then vertical (or vice versa)
-    let targetRing = rings[Math.min(ringIdx + 1, rings.length - 1)] || rr + 0.15;
-    let a2 = a1 + (r() - 0.5) * (TAU / sym);
-    let ex = Math.cos(a2) * targetRing;
-    let ey = Math.sin(a2) * targetRing;
-
-    // Right-angle path: horizontal to ex, then vertical to ey
+    let sx = (r() - 0.5) * gs * 0.8, sy = (r() - 0.5) * gs * 0.8;
+    let ex = (r() - 0.5) * gs * 0.8, ey = (r() - 0.5) * gs * 0.8;
     if (r() > 0.5) {
-      strokes.push({ t: 'L', x1: sx, y1: sy, x2: ex, y2: sy }); // horizontal
-      strokes.push({ t: 'L', x1: ex, y1: sy, x2: ex, y2: ey }); // vertical
+      strokes.push({ t: 'L', x1: sx, y1: sy, x2: ex, y2: sy });
+      strokes.push({ t: 'L', x1: ex, y1: sy, x2: ex, y2: ey });
     } else {
-      strokes.push({ t: 'L', x1: sx, y1: sy, x2: sx, y2: ey }); // vertical
-      strokes.push({ t: 'L', x1: sx, y1: ey, x2: ex, y2: ey }); // horizontal
+      strokes.push({ t: 'L', x1: sx, y1: sy, x2: sx, y2: ey });
+      strokes.push({ t: 'L', x1: sx, y1: ey, x2: ex, y2: ey });
     }
-
-    // Junction nodes
     strokes.push({ t: 'D', x: sx, y: sy, s: 0.012 });
     strokes.push({ t: 'D', x: ex, y: ey, s: 0.012 });
   }
 
-  // ── Sacred Script (small runic marks between rings) ──
-  if (rings.length >= 2) {
-    let scriptRing = (rings[0] + (rings[1] || rings[0] + 0.2)) / 2;
-    let glyphCount = sym;
-    for (let i = 0; i < glyphCount; i++) {
-      let a = (i / glyphCount) * TAU + TAU / (glyphCount * 2);
-      let gx = Math.cos(a) * scriptRing;
-      let gy = Math.sin(a) * scriptRing;
-      let gs = 0.025 + r() * 0.02;
-
-      // Mini glyph: 2-4 tiny strokes
-      let miniStrokes = 2 + Math.floor(r() * 3);
-      for (let ms = 0; ms < miniStrokes; ms++) {
-        let dx1 = (r() - 0.5) * gs * 2;
-        let dy1 = (r() - 0.5) * gs * 3;
-        let dx2 = (r() - 0.5) * gs * 2;
-        let dy2 = (r() - 0.5) * gs * 3;
-        strokes.push({ t: 'L', x1: gx + dx1, y1: gy + dy1, x2: gx + dx2, y2: gy + dy2 });
+  // ── MODIFIERS ──
+  let modCount = 1 + Math.floor(r() * 3);
+  for (let m = 0; m < modCount; m++) {
+    let mt = Math.floor(r() * 6);
+    if (mt === 0) {
+      // Tick marks on partial ring
+      let ringR = (0.3 + r() * 0.4) * gs;
+      let ticks = 4 + Math.floor(r() * 8);
+      let tl = (0.02 + r() * 0.03) * gs;
+      let startA = r() * TAU, span = PI * 0.5 + r() * PI;
+      for (let t = 0; t < ticks; t++) {
+        let a = startA + (t / ticks) * span;
+        strokes.push({ t: 'L', x1: Math.cos(a) * ringR, y1: Math.sin(a) * ringR,
+                        x2: Math.cos(a) * (ringR + tl), y2: Math.sin(a) * (ringR + tl) });
       }
+    } else if (mt === 1) {
+      // Inner ring or arc
+      let ir = (0.12 + r() * 0.25) * gs;
+      if (r() > 0.5) {
+        strokes.push({ t: 'C', x: 0, y: 0, r: ir });
+      } else {
+        let sa = r() * TAU;
+        strokes.push({ t: 'A', x: 0, y: 0, r: ir, s: sa, e: sa + PI + r() * PI });
+      }
+    } else if (mt === 2) {
+      // Corner brackets (registration marks within glyph)
+      let cb = gs * 0.7, cl = gs * 0.15;
+      strokes.push({ t: 'L', x1: -cb, y1: -cb, x2: -cb + cl, y2: -cb });
+      strokes.push({ t: 'L', x1: -cb, y1: -cb, x2: -cb, y2: -cb + cl });
+      strokes.push({ t: 'L', x1: cb, y1: -cb, x2: cb - cl, y2: -cb });
+      strokes.push({ t: 'L', x1: cb, y1: -cb, x2: cb, y2: -cb + cl });
+      strokes.push({ t: 'L', x1: -cb, y1: cb, x2: -cb + cl, y2: cb });
+      strokes.push({ t: 'L', x1: -cb, y1: cb, x2: -cb, y2: cb - cl });
+      strokes.push({ t: 'L', x1: cb, y1: cb, x2: cb - cl, y2: cb });
+      strokes.push({ t: 'L', x1: cb, y1: cb, x2: cb, y2: cb - cl });
+    } else if (mt === 3) {
+      // Orbital dots
+      let or_ = (0.3 + r() * 0.4) * gs;
+      let dotCount = 2 + Math.floor(r() * 4);
+      for (let d = 0; d < dotCount; d++) {
+        let a = (d / dotCount) * TAU + r() * 0.3;
+        strokes.push({ t: 'D', x: Math.cos(a) * or_, y: Math.sin(a) * or_, s: 0.008 + r() * 0.01 });
+      }
+    } else if (mt === 4) {
+      // Data bus (parallel lines)
+      let bx = (r() - 0.5) * gs * 0.5;
+      let by = (r() - 0.5) * gs * 0.5;
+      let blen = (0.15 + r() * 0.25) * gs;
+      let bdir = r() > 0.5;
+      let count = 2 + Math.floor(r() * 3);
+      let spacing = 0.025 * gs;
+      for (let b = 0; b < count; b++) {
+        let off = (b - (count - 1) / 2) * spacing;
+        if (bdir) {
+          strokes.push({ t: 'L', x1: bx - blen, y1: by + off, x2: bx + blen, y2: by + off });
+        } else {
+          strokes.push({ t: 'L', x1: bx + off, y1: by - blen, x2: bx + off, y2: by + blen });
+        }
+      }
+    } else {
+      // Crossbar at random height
+      let y = (r() - 0.5) * gs * 0.8;
+      let w = (0.2 + r() * 0.4) * gs;
+      strokes.push({ t: 'L', x1: -w, y1: y, x2: w, y2: y });
     }
   }
 
-  // ── Ornamental arcs between spokes ──
-  if (r() > 0.4 && rings.length >= 2) {
-    let ornRing = rings[Math.floor(r() * rings.length)];
-    for (let i = 0; i < sym; i++) {
-      let a1 = (i / sym) * TAU;
-      let a2 = ((i + 0.5) / sym) * TAU;
-      if (r() > 0.5) {
-        // Small decorative arc between spokes
-        let midA = (a1 + a2) / 2;
-        let arcR = 0.03 + r() * 0.04;
-        strokes.push({ t: 'A', x: Math.cos(midA) * ornRing, y: Math.sin(midA) * ornRing,
-                        r: arcR, s: midA - 1, e: midA + 1 });
-      }
+  // ── ACCENTS / DIACRITICS ──
+  let accCount = Math.floor(r() * 3);
+  for (let a = 0; a < accCount; a++) {
+    let ax = (r() - 0.5) * 0.25 * gs;
+    let ay = (r() > 0.5 ? -1 : 1) * (0.75 + r() * 0.25) * gs;
+    if (r() > 0.6) {
+      strokes.push({ t: 'D', x: ax, y: ay, s: 0.008 + r() * 0.012 });
+    } else if (r() > 0.3) {
+      strokes.push({ t: 'L', x1: ax - 0.04 * gs, y1: ay, x2: ax + 0.04 * gs, y2: ay });
+    } else {
+      strokes.push({ t: 'A', x: ax, y: ay, r: 0.03 * gs, s: PI, e: TAU });
     }
   }
 
@@ -763,26 +792,32 @@ function applyGlitch(mode) {
       }
     }
   } else if (mode === 6) {
-    // DROPOUT
-    for (let b = 0; b < 8; b++) {
-      let by = Math.random() * H | 0, bh = 2 + Math.random() * 8 | 0;
-      let val = Math.random() > 0.5 ? 0 : 255;
-      for (let y = by; y < Math.min(by + bh, H); y++) {
-        for (let x = 0; x < W; x++) {
-          let idx = (y * W + x) * 4;
-          px[idx] = val; px[idx + 1] = val; px[idx + 2] = val;
-        }
+    // HOLOGRAM — cyan/magenta color banding with scan lines
+    for (let y = 0; y < H; y++) {
+      let band = Math.sin(y * 0.05 + frame * 0.08) * 0.5 + 0.5;
+      let scanDim = (y % 3 === 0) ? 0.7 : 1.0;
+      for (let x = 0; x < W; x++) {
+        let idx = (y * W + x) * 4;
+        px[idx]     = Math.min(255, px[idx] * (0.5 + band * 0.4) * scanDim) | 0;
+        px[idx + 1] = Math.min(255, px[idx + 1] * (0.7 + band * 0.3) * scanDim) | 0;
+        px[idx + 2] = Math.min(255, (px[idx + 2] + 45 * band) * scanDim) | 0;
       }
     }
   } else if (mode === 7) {
-    // MELT
-    let meltAmt = 3 + Math.sin(frame * 0.03) * 5 | 0;
-    for (let y = H - 1; y >= meltAmt; y--) {
+    // ECHO — temporal offset ghost layered on top
+    let offX = Math.sin(frame * 0.04) * 20 | 0;
+    let offY = Math.cos(frame * 0.03) * 15 | 0;
+    let copy = new Uint8Array(px.length);
+    copy.set(px);
+    for (let y = 0; y < H; y++) {
+      let sy = Math.min(H - 1, Math.max(0, y + offY));
       for (let x = 0; x < W; x++) {
-        if (Math.random() < 0.3) {
-          let to = (y * W + x) * 4, from = ((y - meltAmt) * W + x) * 4;
-          px[to] = px[from]; px[to + 1] = px[from + 1]; px[to + 2] = px[from + 2];
-        }
+        let sx = Math.min(W - 1, Math.max(0, x + offX));
+        let idx = (y * W + x) * 4;
+        let fromIdx = (sy * W + sx) * 4;
+        px[idx]     = Math.min(255, px[idx] + copy[fromIdx] * 0.3) | 0;
+        px[idx + 1] = Math.min(255, px[idx + 1] + copy[fromIdx + 1] * 0.3) | 0;
+        px[idx + 2] = Math.min(255, px[idx + 2] + copy[fromIdx + 2] * 0.3) | 0;
       }
     }
   } else if (mode === 8) {
@@ -956,7 +991,7 @@ function cycleColor() {
   if (!started) return;
   colorMode = (colorMode + 1) % 3;
   flashBtn('btn-color');
-  document.getElementById('color-counter').textContent = (colorMode + 1) + '/3';
+  document.getElementById('color-counter').textContent = VESTMENTS[colorMode].name;
   overrideTimer = 300; // 10 seconds at 30fps
   // Also trigger next mandala
   let next = (currentMandalaIdx + 1) % MANDALAS.length;
@@ -968,7 +1003,7 @@ function cycleGlitch() {
   if (!started) return;
   glitchMode = (glitchMode + 1) % 10;
   flashBtn('btn-glitch');
-  document.getElementById('glitch-counter').textContent = (glitchMode + 1) + '/10';
+  document.getElementById('glitch-counter').textContent = GLITCH_NAMES[glitchMode];
   if (glitchMode === 9) regenerateShatter();
   overrideTimer = 300;
   audioNoiseBurst();
@@ -978,7 +1013,7 @@ function cycleMotion() {
   if (!started) return;
   motionMode = (motionMode + 1) % 10;
   flashBtn('btn-motion');
-  document.getElementById('motion-counter').textContent = (motionMode + 1) + '/10';
+  document.getElementById('motion-counter').textContent = MOTION_NAMES[motionMode];
   overrideTimer = 300;
   audioDelayBump();
 }
@@ -1253,7 +1288,7 @@ function render() {
   ctx.font = '9px monospace';
   ctx.textAlign = 'center';
   ctx.fillText(
-    VESTMENTS[colorMode].name + ' / ' + GLITCH_NAMES[glitchMode] + ' / ' +
+    VESTMENTS[colorMode].name + ' / ' + GLITCH_NAMES[glitchMode] + ' / ' + MOTION_NAMES[motionMode] + ' / ' +
     Math.floor(frame / FPS / 60) + ':' + String(Math.floor(frame / FPS % 60)).padStart(2, '0'),
     CX, H - 25
   );
