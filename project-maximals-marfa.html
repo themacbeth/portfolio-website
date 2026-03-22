@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MAXIMALS MARFA — MACBETH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Bebas+Neue&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+/* ─── Live Visual Embed ─── */
+.live-visual {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/9;
+  max-width: 1200px;
+  margin: 48px auto;
+  padding: 0 24px;
+  box-sizing: border-box;
+}
+.live-visual iframe {
+  width: 100%;
+  height: 100%;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: #060608;
+}
+.live-visual-label {
+  position: absolute;
+  top: 12px;
+  right: 36px;
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.25);
+  pointer-events: none;
+}
+
+/* ─── Art Blocks Preview Grid ─── */
+.ab-grid {
+  max-width: 1200px;
+  margin: 48px auto;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+.ab-grid .ab-item {
+  aspect-ratio: 1;
+  background: #060608;
+  position: relative;
+  overflow: hidden;
+}
+.ab-grid .ab-item canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.ab-grid .ab-item .ab-label {
+  position: absolute;
+  bottom: 6px;
+  left: 8px;
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  color: rgba(255,255,255,0.2);
+  font-family: 'Courier New', monospace;
+  pointer-events: none;
+}
+
+/* ─── Spec Table ─── */
+.spec-table {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 48px;
+}
+.spec-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-weight: 300;
+  letter-spacing: 0.05em;
+}
+.spec-table td {
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  vertical-align: top;
+}
+.spec-table td:first-child {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  width: 140px;
+  padding-top: 14px;
+}
+
+/* ─── Space Mockup ─── */
+.space-mockup {
+  position: relative;
+  max-width: 1200px;
+  margin: 80px auto 24px;
+  padding: 0 24px;
+}
+.space-mockup-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/10;
+  background: #080604;
+  border: 1px solid rgba(255,255,255,0.05);
+  overflow: hidden;
+}
+.space-mockup-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+/* Dim vignette overlay to simulate dark room viewing */
+.space-mockup-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.5) 100%);
+  pointer-events: none;
+}
+.space-mockup-label {
+  position: absolute;
+  top: 14px;
+  right: 38px;
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.2);
+  pointer-events: none;
+  z-index: 2;
+}
+.space-mockup-caption {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px 24px 0;
+  font-size: 11px;
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.25);
+}
+
+@media (max-width: 900px) {
+  .ab-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 600px) {
+  .ab-grid { grid-template-columns: repeat(2, 1fr); }
+  .spec-table { padding: 0 24px; }
+  .spec-table td:first-child { width: 100px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ─── Nav ─── -->
+<nav id="navbar">
+  <a href="index.html" class="logo">MACBETH</a>
+  <button class="nav-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
+  <ul class="nav-links">
+    <li><a href="index.html#projects">Work</a></li>
+    <li><a href="about.html">About</a></li>
+    <ul class="nav-projects">
+      <li><a href="project-surreal-sky.html">Surreal Sky</a></li>
+      <li><a href="project-hydro-void.html">Hydro Void</a></li>
+      <li><a href="project-in-your-dreams.html">In Your Dreams</a></li>
+      <li><a href="project-hyper.html">Hyper</a></li>
+      <li><a href="project-purple-pixels.html">Purple Pixels</a></li>
+      <li><a href="project-digital-takeover.html">Digital Takeover</a></li>
+      <li><a href="project-maximals-marfa.html">Maximals Marfa</a></li>
+    </ul>
+  </ul>
+</nav>
+
+<!-- ─── Project Hero ─── -->
+<section class="project-hero">
+  <div class="project-hero-bg" style="background:#060608;"></div>
+  <div class="project-hero-content">
+    <p class="section-label">Generative Art · Installation · Sacred Circuit</p>
+    <h1 class="project-hero-title">MAXIMALS MARFA</h1>
+    <p class="project-hero-tagline">sacred iconography fused with machine consciousness</p>
+  </div>
+</section>
+
+<!-- ─── Intro ─── -->
+<div class="project-body">
+  <h3>THE RITUAL</h3>
+  <p>
+    A 5-minute generative audiovisual ceremony. Sacred geometry meets circuit-board architecture —
+    concentric ring systems, radial spokes, right-angle traces connecting nodes, and futuristic
+    script inscribed between mandala layers. Every element is alive, displaced by Perlin noise,
+    breathing with the drone.
+  </p>
+  <p>
+    The experience progresses through five phases — Genesis, Inscription, Procession, Rapture, Still —
+    building from a single point to maximum complexity, then deconstructing back to silence. Three arcade
+    buttons allow override, but the piece is self-sufficient. It witnesses itself.
+  </p>
+</div>
+
+<!-- ─── Live Visual ─── -->
+<div class="live-visual">
+  <span class="live-visual-label">live · interactive</span>
+  <iframe src="assets/Projects/maximals_marfa/experience.html" allow="autoplay" loading="lazy"></iframe>
+</div>
+<p class="media-caption">p5.js · Web Audio API · Bayer Dithering · 2026</p>
+
+<!-- ─── Process ─── -->
+<div class="project-body">
+  <blockquote>Chrome Maximals. Circuit-board faces. Holographic vestments. Belief and machinery have already fused.</blockquote>
+
+  <h3>MARFA INSTALLATION</h3>
+  <p>
+    Designed for a gallery space in Marfa, Texas — a 2m × 2m LED wall with a laser projector firing
+    over the audience. Three jumbo illuminated dome buttons on a pedestal in the center of the room.
+    The constraint of three buttons makes it feel like a public instrument. Each press is a small act
+    of worship in a techno-religious order.
+  </p>
+</div>
+
+<!-- ─── Hardware Spec ─── -->
+<div class="spec-table">
+  <table>
+    <tr><td>LED Wall</td><td>Canbest RS Series P2.6 — 768×384, 7680Hz refresh</td></tr>
+    <tr><td>Laser</td><td>Diode 3000 Nova — ShowNET protocol</td></tr>
+    <tr><td>Controller</td><td>Custom arcade console — 3× jumbo dome illuminated buttons, Teensy MIDI USB</td></tr>
+    <tr><td>Signal</td><td>TouchDesigner — NDI/ShowNET output</td></tr>
+    <tr><td>Venue</td><td>Marfa gallery — plaster walls, acoustic baffles, concrete floor, ~9m × 7.5m × 4.2m</td></tr>
+  </table>
+</div>
+
+<!-- ─── Space Mockup ─── -->
+<div class="space-mockup">
+  <span class="space-mockup-label">3d mockup · drag to orbit</span>
+  <div class="space-mockup-frame">
+    <iframe src="assets/Projects/maximals_marfa/space-mockup.html" loading="lazy"></iframe>
+  </div>
+</div>
+<p class="space-mockup-caption">Marfa gallery — dimly lit installation space with LED wall, laser projector, and arcade console</p>
+
+<!-- ─── Art Blocks Section ─── -->
+<div class="project-body">
+  <h3>ART BLOCKS — 360 SACRED SCRIPTS</h3>
+  <p>
+    Each mint is a unique, hash-deterministic sacred script. The same hash always produces the
+    same mandala — same symmetry order, same ring configuration, same circuit traces, same
+    inscriptions. 360 pieces. Pure JavaScript, no dependencies, on-chain ready.
+  </p>
+  <p>
+    Traits are drawn from the lore — Station, Inscription, Rite, Vestment, Temperament, Witness,
+    Halo, Veil. The code is the sacred text. ~12% of mints contain a hidden inscription that
+    reveals after sustained viewing.
+  </p>
+</div>
+
+<!-- ─── Art Blocks Preview Grid (generated by script) ─── -->
+<div class="ab-grid" id="ab-grid"></div>
+<p class="media-caption">Preview — 16 of 360 unique outputs</p>
+
+<!-- ─── Prev / Next ─── -->
+<nav class="project-nav">
+  <a href="project-node.html">
+    <span class="nav-dir">← Previous</span>
+    <span class="nav-title">NODE</span>
+  </a>
+  <a href="project-surreal-sky.html">
+    <span class="nav-dir">Next →</span>
+    <span class="nav-title">SURREAL SKY</span>
+  </a>
+</nav>
+
+<!-- ─── Footer ─── -->
+<footer>
+  <div class="social-links">
+    <a href="https://www.instagram.com/minimal_macbeth/" target="_blank" rel="noopener noreferrer">Instagram</a>
+    <a href="https://x.com/macbethAI" target="_blank" rel="noopener noreferrer">Twitter</a>
+  </div>
+  <div class="footer-logo">MACBETH</div>
+  <p class="footer-copy">&copy; 2026 MACBETH. All rights reserved.</p>
+</footer>
+
+<script>
+// ─── Nav ───
+const nav = document.getElementById('navbar');
+window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 60));
+document.querySelector('.nav-toggle').addEventListener('click', () => nav.classList.toggle('nav-open'));
+document.querySelectorAll('.nav-links a').forEach(a => a.addEventListener('click', () => nav.classList.remove('nav-open')));
+
+// ═══════════════════════════════════════════════════
+// ART BLOCKS PREVIEW GENERATOR
+// Renders 16 unique mandala thumbnails into the grid
+// ═══════════════════════════════════════════════════
+
+const PI = Math.PI, TAU = PI * 2;
+
+function mkRng(seed) {
+  let s = seed | 0;
+  return function() {
+    s = s + 0x6D2B79F5 | 0;
+    let t = Math.imul(s ^ s >>> 15, 1 | s);
+    t ^= t + Math.imul(t ^ t >>> 7, 61 | t);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// Vestments
+const VESTMENTS = [
+  { fg: '#e4e1da', bg: '#060608' },
+  { fg: '#0e0e10', bg: '#e4e1da' },
+  { fg: '#dab03e', bg: '#060608' },
+];
+
+function generateAndDrawMandala(canvas, seed) {
+  const r = mkRng(seed);
+  const ctx = canvas.getContext('2d');
+  const sz = canvas.width;
+  const cx = sz / 2, cy = sz / 2;
+  const sc = sz * 0.35;
+
+  // Pick vestment
+  const vest = VESTMENTS[Math.floor(r() * 3)];
+  ctx.fillStyle = vest.bg;
+  ctx.fillRect(0, 0, sz, sz);
+  ctx.strokeStyle = vest.fg;
+  ctx.fillStyle = vest.fg;
+  ctx.lineWidth = 1;
+  ctx.lineCap = 'round';
+
+  const symOrders = [3, 5, 6, 7, 8, 9, 12];
+  const sym = symOrders[Math.floor(r() * symOrders.length)];
+
+  // Rings
+  const ringCount = 2 + Math.floor(r() * 4);
+  const rings = [];
+  let baseR = 0.15 + r() * 0.1;
+  for (let i = 0; i < ringCount; i++) {
+    rings.push(baseR);
+    baseR *= (1.1 + r() * 0.5);
+    if (baseR > 1.4) break;
+  }
+
+  // Central symbol
+  const ct = Math.floor(r() * 5);
+  if (ct === 0) {
+    ctx.beginPath(); ctx.arc(cx, cy, 0.03 * sc, 0, TAU); ctx.fill();
+  } else if (ct === 1) {
+    ctx.beginPath(); ctx.arc(cx, cy, 0.06 * sc, 0, TAU); ctx.stroke();
+  } else if (ct === 2) {
+    ctx.beginPath();
+    for (let i = 0; i < 3; i++) {
+      let a = (i / 3) * TAU - PI / 2;
+      let cr = 0.07 * sc;
+      ctx[i === 0 ? 'moveTo' : 'lineTo'](cx + Math.cos(a) * cr, cy + Math.sin(a) * cr);
+    }
+    ctx.closePath(); ctx.stroke();
+  } else if (ct === 3) {
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      let a = (i / 6) * TAU;
+      let cr = 0.06 * sc;
+      ctx[i === 0 ? 'moveTo' : 'lineTo'](cx + Math.cos(a) * cr, cy + Math.sin(a) * cr);
+    }
+    ctx.closePath(); ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.arc(cx, cy, 0.015 * sc, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy, 0.05 * sc, 0, TAU); ctx.stroke();
+  }
+
+  // Draw rings
+  for (let rr of rings) {
+    if (r() > 0.35) {
+      ctx.beginPath(); ctx.arc(cx, cy, rr * sc, 0, TAU); ctx.stroke();
+    } else {
+      let segs = 2 + Math.floor(r() * 4);
+      let gf = 0.05 + r() * 0.15;
+      for (let s = 0; s < segs; s++) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, rr * sc, (s / segs) * TAU + gf, ((s + 1) / segs) * TAU - gf);
+        ctx.stroke();
+      }
+    }
+
+    // Ticks
+    if (r() > 0.3) {
+      let tc = sym * (1 + Math.floor(r() * 3));
+      let tl = (0.02 + r() * 0.04) * sc;
+      for (let ti = 0; ti < tc; ti++) {
+        let a = (ti / tc) * TAU;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(a) * rr * sc, cy + Math.sin(a) * rr * sc);
+        ctx.lineTo(cx + Math.cos(a) * (rr * sc + tl), cy + Math.sin(a) * (rr * sc + tl));
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Spokes
+  let innerR = rings[0] || 0.1;
+  let outerR = rings[rings.length - 1] || 0.8;
+  for (let i = 0; i < sym; i++) {
+    let a = (i / sym) * TAU;
+    if (r() > 0.2) {
+      let sr = (r() > 0.5 ? 0 : innerR) * sc;
+      let er = (outerR + (r() > 0.5 ? r() * 0.1 : 0)) * sc;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * sr, cy + Math.sin(a) * sr);
+      ctx.lineTo(cx + Math.cos(a) * er, cy + Math.sin(a) * er);
+      ctx.stroke();
+    }
+  }
+
+  // Circuit traces
+  let traceCount = 2 + Math.floor(r() * 5);
+  for (let i = 0; i < traceCount; i++) {
+    let ri = Math.floor(r() * rings.length);
+    let rr = rings[ri] || 0.5;
+    let a1 = r() * TAU;
+    let sx = cx + Math.cos(a1) * rr * sc;
+    let sy = cy + Math.sin(a1) * rr * sc;
+    let tr = (rings[Math.min(ri + 1, rings.length - 1)] || rr + 0.15) * sc;
+    let a2 = a1 + (r() - 0.5) * (TAU / sym);
+    let ex = cx + Math.cos(a2) * tr;
+    let ey = cy + Math.sin(a2) * tr;
+
+    if (r() > 0.5) {
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, sy); ctx.lineTo(ex, ey); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, ey); ctx.lineTo(ex, ey); ctx.stroke();
+    }
+    // Nodes
+    ctx.beginPath(); ctx.arc(sx, sy, 2, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(ex, ey, 2, 0, TAU); ctx.fill();
+  }
+
+  // Script marks
+  if (rings.length >= 2) {
+    let sr = ((rings[0] + (rings[1] || rings[0] + 0.2)) / 2) * sc;
+    for (let i = 0; i < sym; i++) {
+      let a = (i / sym) * TAU + TAU / (sym * 2);
+      let gx = cx + Math.cos(a) * sr;
+      let gy = cy + Math.sin(a) * sr;
+      let gs = (0.02 + r() * 0.015) * sc;
+      for (let ms = 0; ms < 2 + Math.floor(r() * 2); ms++) {
+        ctx.beginPath();
+        ctx.moveTo(gx + (r() - 0.5) * gs * 2, gy + (r() - 0.5) * gs * 3);
+        ctx.lineTo(gx + (r() - 0.5) * gs * 2, gy + (r() - 0.5) * gs * 3);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Registration marks
+  ctx.strokeStyle = vest.fg;
+  ctx.globalAlpha = 0.15;
+  ctx.lineWidth = 0.5;
+  let mi = 8, ml = 6;
+  ctx.beginPath();
+  ctx.moveTo(mi + ml, mi); ctx.lineTo(mi, mi); ctx.lineTo(mi, mi + ml);
+  ctx.moveTo(sz - mi - ml, mi); ctx.lineTo(sz - mi, mi); ctx.lineTo(sz - mi, mi + ml);
+  ctx.moveTo(mi + ml, sz - mi); ctx.lineTo(mi, sz - mi); ctx.lineTo(mi, sz - mi - ml);
+  ctx.moveTo(sz - mi - ml, sz - mi); ctx.lineTo(sz - mi, sz - mi); ctx.lineTo(sz - mi, sz - mi - ml);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+// Generate 16 previews
+const grid = document.getElementById('ab-grid');
+const previewSeeds = [
+  7919, 4201, 1337, 8623, 2953, 6151, 3571, 9281,
+  1117, 5437, 7331, 2089, 4649, 8101, 6277, 3697
+];
+
+previewSeeds.forEach((seed, i) => {
+  const item = document.createElement('div');
+  item.className = 'ab-item';
+
+  const c = document.createElement('canvas');
+  c.width = 400;
+  c.height = 400;
+  item.appendChild(c);
+
+  const label = document.createElement('div');
+  label.className = 'ab-label';
+  label.textContent = '#' + String(i + 1).padStart(3, '0') + ' / 360';
+  item.appendChild(label);
+
+  grid.appendChild(item);
+  generateAndDrawMandala(c, seed);
+});
+</script>
+</body>
+</html>

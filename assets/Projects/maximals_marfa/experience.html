@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAXIMALS — MARFA</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #060608; }
+canvas { display: block; }
+
+#overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: #060608; z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+#overlay span {
+  font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 4px;
+  color: rgba(228,225,218,0.4); text-transform: uppercase;
+}
+
+#buttons {
+  position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 28px; z-index: 100;
+}
+
+.arc-btn {
+  width: 76px; height: 76px; border-radius: 50%; border: none; cursor: pointer;
+  position: relative; outline: none;
+  box-shadow:
+    0 4px 14px rgba(0,0,0,0.7),
+    inset 0 -6px 14px rgba(0,0,0,0.4),
+    inset 0 6px 14px rgba(255,255,255,0.12);
+  transition: transform 0.08s, box-shadow 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.arc-btn:active {
+  transform: scale(0.90) translateY(3px);
+  box-shadow:
+    0 1px 4px rgba(0,0,0,0.7),
+    inset 0 -2px 6px rgba(0,0,0,0.5),
+    inset 0 2px 6px rgba(255,255,255,0.08);
+}
+.arc-btn::after {
+  content: ''; position: absolute; top: 11%; left: 18%; width: 36%; height: 24%;
+  border-radius: 50%; background: rgba(255,255,255,0.22);
+  filter: blur(5px); pointer-events: none;
+}
+.arc-btn.flash { animation: btnFlash 0.3s ease-out; }
+@keyframes btnFlash {
+  0% { box-shadow: 0 0 40px var(--glow), 0 0 80px var(--glow), 0 4px 14px rgba(0,0,0,0.7); transform: scale(1.12); }
+  100% { box-shadow: 0 4px 14px rgba(0,0,0,0.7), inset 0 -6px 14px rgba(0,0,0,0.4), inset 0 6px 14px rgba(255,255,255,0.12); transform: scale(1); }
+}
+
+#btn-color {
+  background: radial-gradient(circle at 38% 33%, #fff 0%, #ccc 25%, #888 50%, #444 75%, #222 100%);
+  --glow: rgba(255,255,255,0.4);
+  border: 2px solid rgba(255,255,255,0.1);
+}
+#btn-glitch {
+  background: radial-gradient(circle at 38% 33%, #ff4444, #cc0000 40%, #660000);
+  --glow: rgba(255,50,50,0.5);
+}
+#btn-motion {
+  background: radial-gradient(circle at 38% 33%, #44aaff, #0066dd 40%, #003388);
+  --glow: rgba(50,120,255,0.5);
+}
+
+.btn-label {
+  position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
+  font-family: 'Courier New', monospace; font-size: 8px; letter-spacing: 2px;
+  color: rgba(255,255,255,0.3); pointer-events: none; white-space: nowrap;
+  text-transform: uppercase;
+}
+.btn-counter {
+  position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+  font-family: 'Courier New', monospace; font-size: 9px;
+  color: rgba(255,255,255,0.2); pointer-events: none;
+}
+
+#phase-label {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+  font-family: 'Courier New', monospace; font-size: 9px; letter-spacing: 3px;
+  color: rgba(228,225,218,0.25); z-index: 100; text-transform: uppercase;
+  pointer-events: none;
+}
+
+#audio-toggle {
+  position: fixed; top: 20px; right: 24px; z-index: 100;
+  background: none; border: 1px solid rgba(228,225,218,0.15); cursor: pointer;
+  font-family: 'Courier New', monospace; font-size: 8px; letter-spacing: 2px;
+  color: rgba(228,225,218,0.35); padding: 6px 12px; text-transform: uppercase;
+  transition: border-color 0.2s, color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+#audio-toggle:hover { border-color: rgba(228,225,218,0.35); color: rgba(228,225,218,0.55); }
+#audio-toggle.muted { color: rgba(228,225,218,0.15); border-color: rgba(228,225,218,0.08); }
+
+#audio-credit {
+  position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%);
+  font-family: 'Courier New', monospace; font-size: 8px; letter-spacing: 1.5px;
+  color: rgba(228,225,218,0.18); z-index: 100; pointer-events: none;
+  font-style: italic;
+}
+
+#time-bar {
+  position: fixed; bottom: 0; left: 0; height: 1px; z-index: 100;
+  background: rgba(228,225,218,0.15); pointer-events: none;
+}
+
+@media (max-width: 600px) {
+  .arc-btn { width: 62px; height: 62px; }
+  #buttons { gap: 18px; bottom: 30px; }
+}
+</style>
+</head>
+<body>
+
+<div id="overlay" onclick="initExperience()"><span>tap to witness</span></div>
+
+<div id="phase-label"></div>
+<div id="time-bar"></div>
+<button id="audio-toggle" onclick="toggleAudio()">AUDIO ON</button>
+<div id="audio-credit">audio by FEVER RAY for preview purposes only</div>
+
+<div id="buttons">
+  <button class="arc-btn" id="btn-color" onclick="cycleColor()">
+    <span class="btn-counter" id="color-counter">1/3</span>
+    <span class="btn-label">COLOR</span>
+  </button>
+  <button class="arc-btn" id="btn-glitch" onclick="cycleGlitch()">
+    <span class="btn-counter" id="glitch-counter">1/10</span>
+    <span class="btn-label">GLITCH</span>
+  </button>
+  <button class="arc-btn" id="btn-motion" onclick="cycleMotion()">
+    <span class="btn-counter" id="motion-counter">1/10</span>
+    <span class="btn-label">MOTION</span>
+  </button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// MAXIMALS — MARFA : SACRED CIRCUIT
+// 5-minute structured audiovisual experience
+// ═══════════════════════════════════════════════════════
+
+const PI = Math.PI;
+const TAU = PI * 2;
+const PHI = (1 + Math.sqrt(5)) / 2; // golden ratio
+
+// ── CANVAS ──────────────────────────────────────────
+const canvas = document.createElement('canvas');
+const ctx = canvas.getContext('2d');
+document.body.prepend(canvas);
+
+let W, H, CX, CY, SC;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  CX = W / 2;
+  CY = H / 2;
+  SC = Math.min(W, H) * 0.38;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── STATE ───────────────────────────────────────────
+let started = false;
+let frame = 0;
+const FPS = 30;
+const TOTAL_FRAMES = 9000; // 5 minutes
+const PHASE_FRAMES = [900, 1800, 2700, 2250, 1350]; // genesis, inscription, procession, rapture, still
+const PHASE_NAMES = ['GENESIS', 'INSCRIPTION', 'PROCESSION', 'RAPTURE', 'STILL'];
+const PHASE_STARTS = [];
+{ let s = 0; for (let p of PHASE_FRAMES) { PHASE_STARTS.push(s); s += p; } }
+
+let colorMode = 0;
+let glitchMode = 0;
+let motionMode = 0;
+let overrideTimer = 0;
+
+const VESTMENTS = [
+  { fg: [228, 225, 218], bg: [6, 6, 8], name: 'ASH' },
+  { fg: [14, 14, 16], bg: [228, 225, 218], name: 'BONE' },
+  { fg: [218, 176, 62], bg: [6, 6, 8], name: 'GILT' },
+];
+
+const GLITCH_NAMES = [
+  'NONE','SCANLINE','H-TEAR','BLOCK','CHROMATIC',
+  'STATIC','DROPOUT','MELT','INVERT-BAND','SHATTER'
+];
+
+// ── PRNG ────────────────────────────────────────────
+function mkRng(seed) {
+  let s = seed | 0;
+  return function() {
+    s = s + 0x6D2B79F5 | 0;
+    let t = Math.imul(s ^ s >>> 15, 1 | s);
+    t ^= t + Math.imul(t ^ t >>> 7, 61 | t);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// ── PERLIN NOISE (seeded) ───────────────────────────
+const PERM = new Uint8Array(512);
+{
+  let rng = mkRng(7919);
+  let p = new Uint8Array(256);
+  for (let i = 0; i < 256; i++) p[i] = i;
+  for (let i = 255; i > 0; i--) {
+    let j = Math.floor(rng() * (i + 1));
+    [p[i], p[j]] = [p[j], p[i]];
+  }
+  for (let i = 0; i < 512; i++) PERM[i] = p[i & 255];
+}
+
+function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function grad(hash, x, y) {
+  let h = hash & 3;
+  let u = h < 2 ? x : y;
+  let v = h < 2 ? y : x;
+  return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
+}
+
+function noise2d(x, y) {
+  let xi = Math.floor(x) & 255, yi = Math.floor(y) & 255;
+  let xf = x - Math.floor(x), yf = y - Math.floor(y);
+  let u = fade(xf), v = fade(yf);
+  let aa = PERM[PERM[xi] + yi], ab = PERM[PERM[xi] + yi + 1];
+  let ba = PERM[PERM[xi + 1] + yi], bb = PERM[PERM[xi + 1] + yi + 1];
+  return lerp(
+    lerp(grad(aa, xf, yf), grad(ba, xf - 1, yf), u),
+    lerp(grad(ab, xf, yf - 1), grad(bb, xf - 1, yf - 1), u),
+    v
+  );
+}
+
+// ── EASING ──────────────────────────────────────────
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+function easeInCubic(t) { return t * t * t; }
+
+// ═══════════════════════════════════════════════════════
+// MANDALA GLYPH GENERATOR
+// ═══════════════════════════════════════════════════════
+
+// Stroke types: L(ine), A(rc), C(ircle), D(ot), T(ick)
+// All coordinates normalized to [-1.5, 1.5] range
+
+function generateMandala(seed) {
+  const r = mkRng(seed);
+  const strokes = [];
+
+  // Symmetry order
+  const symOrders = [3, 5, 6, 7, 8, 9, 12];
+  const sym = symOrders[Math.floor(r() * symOrders.length)];
+
+  // Ring radii — golden ratio spaced
+  const ringCount = 2 + Math.floor(r() * 4); // 2-5 rings
+  const rings = [];
+  let baseR = 0.15 + r() * 0.1;
+  for (let i = 0; i < ringCount; i++) {
+    rings.push(baseR);
+    baseR *= (1.1 + r() * 0.5);
+    if (baseR > 1.4) break;
+  }
+
+  // ── Central Symbol ──
+  const centralType = Math.floor(r() * 6);
+  if (centralType === 0) {
+    // Dot
+    strokes.push({ t: 'D', x: 0, y: 0, s: 0.02 + r() * 0.02 });
+  } else if (centralType === 1) {
+    // Small circle
+    strokes.push({ t: 'C', x: 0, y: 0, r: 0.04 + r() * 0.04 });
+  } else if (centralType === 2) {
+    // Triangle
+    for (let i = 0; i < 3; i++) {
+      let a1 = (i / 3) * TAU - PI / 2;
+      let a2 = ((i + 1) / 3) * TAU - PI / 2;
+      let cr = 0.06 + r() * 0.04;
+      strokes.push({ t: 'L', x1: Math.cos(a1) * cr, y1: Math.sin(a1) * cr,
+                      x2: Math.cos(a2) * cr, y2: Math.sin(a2) * cr });
+    }
+  } else if (centralType === 3) {
+    // Vesica piscis
+    let vr = 0.06 + r() * 0.03;
+    let vd = vr * 0.6;
+    strokes.push({ t: 'A', x: -vd, y: 0, r: vr, s: -PI / 3, e: PI / 3 });
+    strokes.push({ t: 'A', x: vd, y: 0, r: vr, s: PI - PI / 3, e: PI + PI / 3 });
+  } else if (centralType === 4) {
+    // Hexagon
+    for (let i = 0; i < 6; i++) {
+      let a1 = (i / 6) * TAU;
+      let a2 = ((i + 1) / 6) * TAU;
+      let cr = 0.05 + r() * 0.03;
+      strokes.push({ t: 'L', x1: Math.cos(a1) * cr, y1: Math.sin(a1) * cr,
+                      x2: Math.cos(a2) * cr, y2: Math.sin(a2) * cr });
+    }
+  } else {
+    // Eye / lens
+    let er = 0.07;
+    strokes.push({ t: 'A', x: 0, y: 0, r: er, s: PI * 0.15, e: PI * 0.85 });
+    strokes.push({ t: 'A', x: 0, y: 0, r: er, s: PI * 1.15, e: PI * 1.85 });
+    strokes.push({ t: 'D', x: 0, y: 0, s: 0.015 });
+  }
+
+  // ── Rings (full circles or segmented arcs) ──
+  for (let i = 0; i < rings.length; i++) {
+    let rr = rings[i];
+    if (r() > 0.35) {
+      // Full circle
+      strokes.push({ t: 'C', x: 0, y: 0, r: rr });
+    } else {
+      // Segmented arcs
+      let segs = 2 + Math.floor(r() * 4);
+      let gapFrac = 0.05 + r() * 0.15;
+      for (let s = 0; s < segs; s++) {
+        let sa = (s / segs) * TAU + gapFrac;
+        let ea = ((s + 1) / segs) * TAU - gapFrac;
+        strokes.push({ t: 'A', x: 0, y: 0, r: rr, s: sa, e: ea });
+      }
+    }
+
+    // Tick marks on this ring
+    if (r() > 0.3) {
+      let tickCount = sym * (1 + Math.floor(r() * 3));
+      let tickLen = 0.02 + r() * 0.04;
+      for (let ti = 0; ti < tickCount; ti++) {
+        let a = (ti / tickCount) * TAU;
+        strokes.push({
+          t: 'L',
+          x1: Math.cos(a) * rr,
+          y1: Math.sin(a) * rr,
+          x2: Math.cos(a) * (rr + tickLen),
+          y2: Math.sin(a) * (rr + tickLen)
+        });
+      }
+    }
+  }
+
+  // ── Radial Spokes ──
+  let spokeStyle = Math.floor(r() * 3);
+  let innerR = rings.length > 0 ? rings[0] : 0.1;
+  let outerR = rings.length > 0 ? rings[rings.length - 1] : 0.8;
+
+  for (let i = 0; i < sym; i++) {
+    let a = (i / sym) * TAU;
+    let startR = (spokeStyle === 0) ? 0 : innerR;
+    let endR = outerR + (r() > 0.5 ? 0.05 + r() * 0.1 : 0);
+
+    if (r() > 0.2) {
+      strokes.push({
+        t: 'L',
+        x1: Math.cos(a) * startR, y1: Math.sin(a) * startR,
+        x2: Math.cos(a) * endR, y2: Math.sin(a) * endR
+      });
+    }
+
+    // Branching spoke
+    if (r() > 0.6 && rings.length > 1) {
+      let midR = rings[Math.floor(r() * rings.length)];
+      let branchAngle = a + (r() - 0.5) * 0.3;
+      let branchR = midR + 0.1 + r() * 0.15;
+      strokes.push({
+        t: 'L',
+        x1: Math.cos(a) * midR, y1: Math.sin(a) * midR,
+        x2: Math.cos(branchAngle) * branchR, y2: Math.sin(branchAngle) * branchR
+      });
+    }
+  }
+
+  // ── Circuit Traces (right-angle paths between nodes) ──
+  let traceCount = 2 + Math.floor(r() * 5);
+  for (let i = 0; i < traceCount; i++) {
+    let ringIdx = Math.floor(r() * rings.length);
+    let rr = rings[ringIdx] || 0.5;
+    let a1 = r() * TAU;
+
+    // Start point on ring
+    let sx = Math.cos(a1) * rr;
+    let sy = Math.sin(a1) * rr;
+
+    // Go horizontal then vertical (or vice versa)
+    let targetRing = rings[Math.min(ringIdx + 1, rings.length - 1)] || rr + 0.15;
+    let a2 = a1 + (r() - 0.5) * (TAU / sym);
+    let ex = Math.cos(a2) * targetRing;
+    let ey = Math.sin(a2) * targetRing;
+
+    // Right-angle path: horizontal to ex, then vertical to ey
+    if (r() > 0.5) {
+      strokes.push({ t: 'L', x1: sx, y1: sy, x2: ex, y2: sy }); // horizontal
+      strokes.push({ t: 'L', x1: ex, y1: sy, x2: ex, y2: ey }); // vertical
+    } else {
+      strokes.push({ t: 'L', x1: sx, y1: sy, x2: sx, y2: ey }); // vertical
+      strokes.push({ t: 'L', x1: sx, y1: ey, x2: ex, y2: ey }); // horizontal
+    }
+
+    // Junction nodes
+    strokes.push({ t: 'D', x: sx, y: sy, s: 0.012 });
+    strokes.push({ t: 'D', x: ex, y: ey, s: 0.012 });
+  }
+
+  // ── Sacred Script (small runic marks between rings) ──
+  if (rings.length >= 2) {
+    let scriptRing = (rings[0] + (rings[1] || rings[0] + 0.2)) / 2;
+    let glyphCount = sym;
+    for (let i = 0; i < glyphCount; i++) {
+      let a = (i / glyphCount) * TAU + TAU / (glyphCount * 2);
+      let gx = Math.cos(a) * scriptRing;
+      let gy = Math.sin(a) * scriptRing;
+      let gs = 0.025 + r() * 0.02;
+
+      // Mini glyph: 2-4 tiny strokes
+      let miniStrokes = 2 + Math.floor(r() * 3);
+      for (let ms = 0; ms < miniStrokes; ms++) {
+        let dx1 = (r() - 0.5) * gs * 2;
+        let dy1 = (r() - 0.5) * gs * 3;
+        let dx2 = (r() - 0.5) * gs * 2;
+        let dy2 = (r() - 0.5) * gs * 3;
+        strokes.push({ t: 'L', x1: gx + dx1, y1: gy + dy1, x2: gx + dx2, y2: gy + dy2 });
+      }
+    }
+  }
+
+  // ── Ornamental arcs between spokes ──
+  if (r() > 0.4 && rings.length >= 2) {
+    let ornRing = rings[Math.floor(r() * rings.length)];
+    for (let i = 0; i < sym; i++) {
+      let a1 = (i / sym) * TAU;
+      let a2 = ((i + 0.5) / sym) * TAU;
+      if (r() > 0.5) {
+        // Small decorative arc between spokes
+        let midA = (a1 + a2) / 2;
+        let arcR = 0.03 + r() * 0.04;
+        strokes.push({ t: 'A', x: Math.cos(midA) * ornRing, y: Math.sin(midA) * ornRing,
+                        r: arcR, s: midA - 1, e: midA + 1 });
+      }
+    }
+  }
+
+  return strokes;
+}
+
+// Generate 8 distinct mandalas
+const MANDALAS = [];
+const MANDALA_SEEDS = [7919, 4201, 1337, 8623, 2953, 6151, 3571, 9281];
+for (let seed of MANDALA_SEEDS) {
+  MANDALAS.push(generateMandala(seed));
+}
+
+// ═══════════════════════════════════════════════════════
+// STROKE RENDERING WITH DRAW-ON
+// ═══════════════════════════════════════════════════════
+
+function drawStroke(s, cx, cy, sc, drawOn, col, weight) {
+  if (drawOn <= 0) return;
+  ctx.strokeStyle = col;
+  ctx.fillStyle = col;
+  ctx.lineWidth = weight;
+  ctx.lineCap = 'round';
+
+  switch (s.t) {
+    case 'L': {
+      let x1 = cx + s.x1 * sc, y1 = cy + s.y1 * sc;
+      let x2 = cx + s.x2 * sc, y2 = cy + s.y2 * sc;
+      // Partial draw
+      let ex = x1 + (x2 - x1) * drawOn;
+      let ey = y1 + (y2 - y1) * drawOn;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+      break;
+    }
+    case 'C': {
+      let endAngle = TAU * drawOn;
+      ctx.beginPath();
+      ctx.arc(cx + s.x * sc, cy + s.y * sc, s.r * sc, 0, endAngle);
+      ctx.stroke();
+      break;
+    }
+    case 'A': {
+      let span = s.e - s.s;
+      let endA = s.s + span * drawOn;
+      ctx.beginPath();
+      ctx.arc(cx + s.x * sc, cy + s.y * sc, s.r * sc, s.s, endA);
+      ctx.stroke();
+      break;
+    }
+    case 'D': {
+      if (drawOn < 0.5) return;
+      let sz = s.s * sc * Math.min(1, (drawOn - 0.5) * 2);
+      ctx.beginPath();
+      ctx.arc(cx + s.x * sc, cy + s.y * sc, sz, 0, TAU);
+      ctx.fill();
+      break;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// MORPH ENGINE
+// ═══════════════════════════════════════════════════════
+
+function padStrokes(a, b) {
+  // Make both arrays same length by adding zero-size strokes
+  let maxLen = Math.max(a.length, b.length);
+  let pa = a.slice(), pb = b.slice();
+  while (pa.length < maxLen) {
+    // Add a collapsed version of a stroke from the other set
+    let ref = pb[pa.length % pb.length];
+    pa.push(collapseStroke(ref));
+  }
+  while (pb.length < maxLen) {
+    let ref = pa[pb.length % pa.length];
+    pb.push(collapseStroke(ref));
+  }
+  return [pa, pb];
+}
+
+function collapseStroke(s) {
+  // Return a zero-size version of this stroke at its center
+  switch (s.t) {
+    case 'L': {
+      let mx = (s.x1 + s.x2) / 2, my = (s.y1 + s.y2) / 2;
+      return { t: 'L', x1: mx, y1: my, x2: mx, y2: my };
+    }
+    case 'C': return { t: 'C', x: s.x, y: s.y, r: 0 };
+    case 'A': return { t: 'A', x: s.x, y: s.y, r: 0, s: (s.s + s.e) / 2, e: (s.s + s.e) / 2 };
+    case 'D': return { t: 'D', x: s.x, y: s.y, s: 0 };
+    default: return { ...s };
+  }
+}
+
+function lerpStroke(a, b, t) {
+  // Use the target type once we're past halfway
+  let type = t < 0.5 ? a.t : b.t;
+  let result = { t: type };
+
+  // Lerp all numeric properties
+  let keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  keys.delete('t');
+  for (let k of keys) {
+    let va = a[k] !== undefined ? a[k] : (b[k] || 0);
+    let vb = b[k] !== undefined ? b[k] : (a[k] || 0);
+    result[k] = va + (vb - va) * t;
+  }
+  return result;
+}
+
+// ═══════════════════════════════════════════════════════
+// MORPH STATE
+// ═══════════════════════════════════════════════════════
+
+let currentMandalaIdx = 0;
+let targetMandalaIdx = 0;
+let morphT = 1; // 0 = start of morph, 1 = complete
+let morphDuration = 600; // frames
+let morphPaddedA = null;
+let morphPaddedB = null;
+
+function startMorph(targetIdx, duration) {
+  if (targetIdx === currentMandalaIdx && morphT >= 1) return;
+  targetMandalaIdx = targetIdx;
+  morphDuration = duration || 600;
+  morphT = 0;
+  let [pa, pb] = padStrokes(MANDALAS[currentMandalaIdx], MANDALAS[targetMandalaIdx]);
+  morphPaddedA = pa;
+  morphPaddedB = pb;
+}
+
+function getMorphedStrokes() {
+  if (morphT >= 1) return MANDALAS[currentMandalaIdx];
+  let t = easeInOutCubic(morphT);
+  let result = [];
+  for (let i = 0; i < morphPaddedA.length; i++) {
+    result.push(lerpStroke(morphPaddedA[i], morphPaddedB[i], t));
+  }
+  return result;
+}
+
+// ═══════════════════════════════════════════════════════
+// DRAW-ON STATE (for constructive/deconstructive animation)
+// ═══════════════════════════════════════════════════════
+
+let globalDrawOn = 0; // 0 = nothing visible, 1 = fully drawn
+let drawOnTarget = 0;
+let drawOnSpeed = 0.002; // per frame
+
+// ═══════════════════════════════════════════════════════
+// CIRCUIT DEBRIS PARTICLES
+// ═══════════════════════════════════════════════════════
+
+const DEBRIS_COUNT = 120;
+const debris = [];
+for (let i = 0; i < DEBRIS_COUNT; i++) {
+  debris.push({
+    x: (Math.random() - 0.5) * 2,
+    y: (Math.random() - 0.5) * 2,
+    vx: (Math.random() - 0.5) * 0.002,
+    vy: (Math.random() - 0.5) * 0.002,
+    len: 0.01 + Math.random() * 0.03,
+    angle: Math.random() * TAU,
+    life: Math.random(),
+  });
+}
+
+function updateDebris(intensity) {
+  for (let d of debris) {
+    let nx = noise2d(d.x * 2 + frame * 0.001, d.y * 2) * 0.001 * intensity;
+    let ny = noise2d(d.x * 2, d.y * 2 + frame * 0.001) * 0.001 * intensity;
+    d.vx += nx;
+    d.vy += ny;
+    d.vx *= 0.98;
+    d.vy *= 0.98;
+    d.x += d.vx;
+    d.y += d.vy;
+    d.angle += 0.005;
+
+    // Wrap
+    if (d.x < -1.5) d.x = 1.5;
+    if (d.x > 1.5) d.x = -1.5;
+    if (d.y < -1.5) d.y = 1.5;
+    if (d.y > 1.5) d.y = -1.5;
+  }
+}
+
+function drawDebris(col, intensity) {
+  ctx.strokeStyle = col;
+  ctx.lineWidth = 0.5;
+  for (let d of debris) {
+    if (Math.random() > intensity) continue;
+    let x = CX + d.x * SC;
+    let y = CY + d.y * SC;
+    let dx = Math.cos(d.angle) * d.len * SC;
+    let dy = Math.sin(d.angle) * d.len * SC;
+    ctx.beginPath();
+    ctx.moveTo(x - dx, y - dy);
+    ctx.lineTo(x + dx, y + dy);
+    ctx.stroke();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// BAYER DITHER
+// ═══════════════════════════════════════════════════════
+
+const BAYER4 = [
+  [0, 8, 2, 10],
+  [12, 4, 14, 6],
+  [3, 11, 1, 9],
+  [15, 7, 13, 5]
+];
+
+function applyDither(amt) {
+  let imageData = ctx.getImageData(0, 0, W, H);
+  let px = imageData.data;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let idx = (y * W + x) * 4;
+      let bv = BAYER4[y & 3][x & 3] / 16.0;
+      for (let c = 0; c < 3; c++) {
+        let v = px[idx + c] / 255.0;
+        px[idx + c] = (v + bv * amt > 0.5)
+          ? Math.min(255, px[idx + c] + 30)
+          : Math.max(0, px[idx + c] - 45);
+      }
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
+// ═══════════════════════════════════════════════════════
+// GLITCH EFFECTS
+// ═══════════════════════════════════════════════════════
+
+let shatterShards = [];
+function regenerateShatter() {
+  shatterShards = [];
+  for (let i = 0; i < 12; i++) {
+    shatterShards.push({
+      x: (Math.random() - 0.5) * 200,
+      y: (Math.random() - 0.5) * 200,
+      rot: (Math.random() - 0.5) * 0.5,
+      sx: Math.random() * 0.3 + 0.1,
+      sy: Math.random() * 0.3 + 0.1,
+    });
+  }
+}
+regenerateShatter();
+
+function applyGlitch(mode) {
+  if (mode === 0) return;
+  let imageData = ctx.getImageData(0, 0, W, H);
+  let px = imageData.data;
+
+  if (mode === 1) {
+    // SCANLINE
+    for (let y = 0; y < H; y++) {
+      let mult = (y & 1) === 0 ? 0.65 : 1.0;
+      if (y % 6 === 0) mult = 1.3;
+      for (let x = 0; x < W; x++) {
+        let idx = (y * W + x) * 4;
+        px[idx] = Math.min(255, px[idx] * mult | 0);
+        px[idx + 1] = Math.min(255, px[idx + 1] * mult | 0);
+        px[idx + 2] = Math.min(255, px[idx + 2] * mult | 0);
+      }
+    }
+  } else if (mode === 2) {
+    // H-TEAR
+    for (let y = 0; y < H; y++) {
+      if (Math.random() < 0.12) {
+        let shift = (Math.random() - 0.5) * 80 | 0;
+        for (let x = W - 1; x >= Math.abs(shift); x--) {
+          let to = (y * W + x) * 4, from = (y * W + ((x - shift + W) % W)) * 4;
+          px[to] = px[from]; px[to + 1] = px[from + 1]; px[to + 2] = px[from + 2];
+        }
+      }
+    }
+  } else if (mode === 3) {
+    // BLOCK
+    for (let b = 0; b < 5; b++) {
+      let by = Math.random() * H | 0, bh = 10 + Math.random() * 60 | 0;
+      let shift = (Math.random() - 0.5) * 150 | 0;
+      for (let y = by; y < Math.min(by + bh, H); y++) {
+        for (let x = 0; x < W; x++) {
+          let sx = (x + shift + W) % W;
+          let to = (y * W + x) * 4, from = (y * W + sx) * 4;
+          px[to] = px[from]; px[to + 1] = px[from + 1]; px[to + 2] = px[from + 2];
+        }
+      }
+    }
+  } else if (mode === 4) {
+    // CHROMATIC
+    let splitX = 4 + Math.sin(frame * 0.05) * 6 | 0;
+    let copy = new Uint8Array(px.length);
+    copy.set(px);
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        let idx = (y * W + x) * 4;
+        let rx = Math.min(W - 1, Math.max(0, x + splitX));
+        let bx = Math.min(W - 1, Math.max(0, x - splitX));
+        px[idx] = copy[(y * W + rx) * 4];
+        px[idx + 2] = copy[(y * W + bx) * 4 + 2];
+      }
+    }
+  } else if (mode === 5) {
+    // STATIC
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        if (Math.random() < 0.15) {
+          let idx = (y * W + x) * 4;
+          let n = Math.random() * 100 | 0;
+          px[idx] = Math.min(255, px[idx] + n);
+          px[idx + 1] = Math.min(255, px[idx + 1] + n);
+          px[idx + 2] = Math.min(255, px[idx + 2] + n);
+        }
+      }
+    }
+  } else if (mode === 6) {
+    // DROPOUT
+    for (let b = 0; b < 8; b++) {
+      let by = Math.random() * H | 0, bh = 2 + Math.random() * 8 | 0;
+      let val = Math.random() > 0.5 ? 0 : 255;
+      for (let y = by; y < Math.min(by + bh, H); y++) {
+        for (let x = 0; x < W; x++) {
+          let idx = (y * W + x) * 4;
+          px[idx] = val; px[idx + 1] = val; px[idx + 2] = val;
+        }
+      }
+    }
+  } else if (mode === 7) {
+    // MELT
+    let meltAmt = 3 + Math.sin(frame * 0.03) * 5 | 0;
+    for (let y = H - 1; y >= meltAmt; y--) {
+      for (let x = 0; x < W; x++) {
+        if (Math.random() < 0.3) {
+          let to = (y * W + x) * 4, from = ((y - meltAmt) * W + x) * 4;
+          px[to] = px[from]; px[to + 1] = px[from + 1]; px[to + 2] = px[from + 2];
+        }
+      }
+    }
+  } else if (mode === 8) {
+    // INVERT-BAND
+    let bandCount = 3 + Math.sin(frame * 0.04) * 3 | 0;
+    for (let b = 0; b < bandCount; b++) {
+      let by = ((Math.sin(frame * 0.02 + b * 1.7) * 0.5 + 0.5) * H) | 0;
+      let bh = 15 + Math.random() * 40 | 0;
+      for (let y = by; y < Math.min(by + bh, H); y++) {
+        for (let x = 0; x < W; x++) {
+          let idx = (y * W + x) * 4;
+          px[idx] = 255 - px[idx]; px[idx + 1] = 255 - px[idx + 1]; px[idx + 2] = 255 - px[idx + 2];
+        }
+      }
+    }
+  } else if (mode === 9) {
+    // SHATTER
+    let copy = new Uint8Array(px.length);
+    copy.set(px);
+    for (let shard of shatterShards) {
+      let sx = (W / 2 + shard.x) | 0;
+      let sy = (H / 2 + shard.y) | 0;
+      let sw = (shard.sx * W) | 0;
+      let sh = (shard.sy * H) | 0;
+      let ox = Math.sin(frame * 0.04 + shard.rot * 10) * 15 | 0;
+      let oy = Math.cos(frame * 0.03 + shard.rot * 7) * 10 | 0;
+      for (let y = sy; y < Math.min(sy + sh, H); y++) {
+        for (let x = sx; x < Math.min(sx + sw, W); x++) {
+          if (x >= 0 && y >= 0) {
+            let fromX = Math.min(W - 1, Math.max(0, x + ox));
+            let fromY = Math.min(H - 1, Math.max(0, y + oy));
+            let to = (y * W + x) * 4, from = (fromY * W + fromX) * 4;
+            px[to] = copy[from]; px[to + 1] = copy[from + 1]; px[to + 2] = copy[from + 2];
+          }
+        }
+      }
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+}
+
+// ═══════════════════════════════════════════════════════
+// REGISTRATION MARKS
+// ═══════════════════════════════════════════════════════
+
+function drawRegistration(col) {
+  ctx.strokeStyle = col;
+  ctx.lineWidth = 0.5;
+  let mi = 40, ml = 18;
+
+  // Corner brackets
+  ctx.beginPath();
+  ctx.moveTo(mi + ml, mi); ctx.lineTo(mi, mi); ctx.lineTo(mi, mi + ml);
+  ctx.moveTo(W - mi - ml, mi); ctx.lineTo(W - mi, mi); ctx.lineTo(W - mi, mi + ml);
+  ctx.moveTo(mi + ml, H - mi); ctx.lineTo(mi, H - mi); ctx.lineTo(mi, H - mi - ml);
+  ctx.moveTo(W - mi - ml, H - mi); ctx.lineTo(W - mi, H - mi); ctx.lineTo(W - mi, H - mi - ml);
+  ctx.stroke();
+
+  // Crosshair
+  ctx.beginPath();
+  ctx.moveTo(CX - 10, CY); ctx.lineTo(CX + 10, CY);
+  ctx.moveTo(CX, CY - 10); ctx.lineTo(CX, CY + 10);
+  ctx.stroke();
+}
+
+// ═══════════════════════════════════════════════════════
+// AUDIO ENGINE — MP3 playback + frequency analysis
+// ═══════════════════════════════════════════════════════
+
+let audioCtx, muteGain;
+let audioElement, audioSource, analyser;
+let freqData, freqDataLen;
+let audioMuted = false;
+
+// Smoothed audio bands (0-1 range)
+let audioBands = { kick: 0, low: 0, mid: 0, high: 0, overall: 0 };
+// Smoothing factor (lower = smoother)
+let bandSmooth = 0.15;
+
+function initAudio() {
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  // Mute gate
+  muteGain = audioCtx.createGain();
+  muteGain.gain.value = 1;
+  muteGain.connect(audioCtx.destination);
+
+  // Audio element for mp3
+  audioElement = new Audio('coconut.mp3');
+  audioElement.crossOrigin = 'anonymous';
+  audioElement.loop = true;
+
+  audioSource = audioCtx.createMediaElementSource(audioElement);
+
+  // Analyser for frequency data
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 1024;
+  analyser.smoothingTimeConstant = 0.8;
+  freqDataLen = analyser.frequencyBinCount; // 512
+  freqData = new Uint8Array(freqDataLen);
+
+  // Route: source → analyser → mute → output
+  audioSource.connect(analyser);
+  analyser.connect(muteGain);
+
+  audioElement.play();
+}
+
+function toggleAudio() {
+  if (!audioCtx) return;
+  audioMuted = !audioMuted;
+  let t = audioCtx.currentTime;
+  muteGain.gain.linearRampToValueAtTime(audioMuted ? 0 : 1, t + 0.1);
+  let btn = document.getElementById('audio-toggle');
+  btn.textContent = audioMuted ? 'AUDIO OFF' : 'AUDIO ON';
+  btn.classList.toggle('muted', audioMuted);
+}
+
+// Analyse frequency bands each frame
+function analyseAudio() {
+  if (!analyser) return;
+  analyser.getByteFrequencyData(freqData);
+
+  // Bin resolution: sampleRate / fftSize ≈ 44100/1024 ≈ 43Hz per bin
+  // kick: bins 0-2 (0-130Hz)
+  // low:  bins 3-9 (130-430Hz)
+  // mid:  bins 10-46 (430-2000Hz)
+  // high: bins 47-120 (2000-5200Hz)
+
+  let kick = 0, low = 0, mid = 0, high = 0;
+
+  for (let i = 0; i <= 2; i++) kick += freqData[i];
+  kick = kick / (3 * 255);
+
+  for (let i = 3; i <= 9; i++) low += freqData[i];
+  low = low / (7 * 255);
+
+  for (let i = 10; i <= 46; i++) mid += freqData[i];
+  mid = mid / (37 * 255);
+
+  for (let i = 47; i <= 120; i++) high += freqData[i];
+  high = high / (74 * 255);
+
+  // Smooth
+  audioBands.kick += (kick - audioBands.kick) * bandSmooth;
+  audioBands.low += (low - audioBands.low) * bandSmooth;
+  audioBands.mid += (mid - audioBands.mid) * bandSmooth;
+  audioBands.high += (high - audioBands.high) * bandSmooth;
+  audioBands.overall = (audioBands.kick + audioBands.low + audioBands.mid + audioBands.high) / 4;
+}
+
+// Stubs — buttons still call these but they're no-ops with mp3 playback
+function updateAudio() {}
+function audioNoiseBurst() {}
+function audioFilterSweep() {}
+function audioDelayBump() {}
+
+// ═══════════════════════════════════════════════════════
+// BUTTON HANDLERS
+// ═══════════════════════════════════════════════════════
+
+function flashBtn(id) {
+  let el = document.getElementById(id);
+  el.classList.remove('flash');
+  void el.offsetWidth;
+  el.classList.add('flash');
+}
+
+function cycleColor() {
+  if (!started) return;
+  colorMode = (colorMode + 1) % 3;
+  flashBtn('btn-color');
+  document.getElementById('color-counter').textContent = (colorMode + 1) + '/3';
+  overrideTimer = 300; // 10 seconds at 30fps
+  // Also trigger next mandala
+  let next = (currentMandalaIdx + 1) % MANDALAS.length;
+  startMorph(next, 400);
+  audioFilterSweep();
+}
+
+function cycleGlitch() {
+  if (!started) return;
+  glitchMode = (glitchMode + 1) % 10;
+  flashBtn('btn-glitch');
+  document.getElementById('glitch-counter').textContent = (glitchMode + 1) + '/10';
+  if (glitchMode === 9) regenerateShatter();
+  overrideTimer = 300;
+  audioNoiseBurst();
+}
+
+function cycleMotion() {
+  if (!started) return;
+  motionMode = (motionMode + 1) % 10;
+  flashBtn('btn-motion');
+  document.getElementById('motion-counter').textContent = (motionMode + 1) + '/10';
+  overrideTimer = 300;
+  audioDelayBump();
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === '1') cycleColor();
+  if (e.key === '2') cycleGlitch();
+  if (e.key === '3') cycleMotion();
+  if (e.key === ' ') { if (!started) initExperience(); }
+});
+
+// ═══════════════════════════════════════════════════════
+// TIMELINE SEQUENCER
+// ═══════════════════════════════════════════════════════
+
+function getPhase(f) {
+  let acc = 0;
+  for (let i = 0; i < PHASE_FRAMES.length; i++) {
+    if (f < acc + PHASE_FRAMES[i]) {
+      return { phase: i, phaseFrame: f - acc, phaseT: (f - acc) / PHASE_FRAMES[i] };
+    }
+    acc += PHASE_FRAMES[i];
+  }
+  return { phase: 4, phaseFrame: PHASE_FRAMES[4], phaseT: 1 };
+}
+
+function timelineUpdate() {
+  let { phase, phaseFrame, phaseT } = getPhase(frame);
+
+  // Update phase label
+  document.getElementById('phase-label').textContent = PHASE_NAMES[phase];
+  document.getElementById('time-bar').style.width = (frame / TOTAL_FRAMES * 100) + '%';
+
+  // Override timer
+  if (overrideTimer > 0) {
+    overrideTimer--;
+    return; // don't drive timeline while override active
+  }
+
+  // ── GENESIS (0:00 - 0:30) ──
+  if (phase === 0) {
+    drawOnTarget = phaseT * 0.25; // draw first 25% of strokes
+    drawOnSpeed = 0.003;
+    // Stay on mandala 0
+    if (currentMandalaIdx !== 0 && morphT >= 1) {
+      currentMandalaIdx = 0;
+    }
+  }
+  // ── INSCRIPTION (0:30 - 1:30) ──
+  else if (phase === 1) {
+    drawOnTarget = 0.25 + phaseT * 0.75; // 25% → 100%
+    drawOnSpeed = 0.004;
+    // Morph to mandala 1 at 50%
+    if (phaseT > 0.5 && phaseT < 0.52 && morphT >= 1 && currentMandalaIdx === 0) {
+      startMorph(1, 500);
+    }
+  }
+  // ── PROCESSION (1:30 - 3:00) ──
+  else if (phase === 2) {
+    drawOnTarget = 1;
+    drawOnSpeed = 0.01;
+
+    // Cycle through mandalas 2-5
+    let mandalaPhase = Math.floor(phaseT * 4); // 0,1,2,3
+    let targetMandala = 2 + mandalaPhase;
+    if (targetMandala > 5) targetMandala = 5;
+
+    if (morphT >= 1 && currentMandalaIdx !== targetMandala) {
+      startMorph(targetMandala, 600);
+    }
+
+    // Vestment shifts
+    if (phaseT < 0.33) {
+      colorMode = 0; // ASH
+    } else if (phaseT < 0.66) {
+      colorMode = 2; // GILT
+    } else {
+      colorMode = 1; // BONE
+    }
+  }
+  // ── RAPTURE (3:00 - 4:15) ──
+  else if (phase === 3) {
+    drawOnTarget = 1;
+
+    // Morph to mandala 6 then 7
+    let targetMandala = phaseT < 0.5 ? 6 : 7;
+    if (morphT >= 1 && currentMandalaIdx !== targetMandala) {
+      startMorph(targetMandala, 400);
+    }
+
+    // Escalating glitch
+    let glitchPhase = Math.floor(phaseT * 5);
+    let glitchSequence = [1, 4, 2, 8, 9]; // scanline → chromatic → h-tear → invert → shatter
+    glitchMode = glitchSequence[Math.min(glitchPhase, 4)];
+
+    // Vestment back to ASH for maximum contrast
+    colorMode = 0;
+
+    // Speed up motion
+    if (phaseT < 0.3) motionMode = 2; // SPIN
+    else if (phaseT < 0.6) motionMode = 5; // ORBIT
+    else motionMode = 8; // TUMBLE
+  }
+  // ── STILL (4:15 - 5:00) ──
+  else if (phase === 4) {
+    drawOnTarget = 1 - phaseT; // deconstruct
+    drawOnSpeed = 0.003;
+    glitchMode = 0;
+    motionMode = 0;
+    colorMode = 0;
+
+    // Morph back to mandala 0
+    if (morphT >= 1 && currentMandalaIdx !== 0 && phaseT < 0.1) {
+      startMorph(0, 800);
+    }
+  }
+
+  updateAudio(phase, phaseT);
+}
+
+// ═══════════════════════════════════════════════════════
+// MOTION
+// ═══════════════════════════════════════════════════════
+
+function getMotion(mode, f) {
+  let tx = 0, ty = 0, rot = 0, sc = 1;
+  switch (mode) {
+    case 0: break;
+    case 1: tx = Math.sin(f * 0.005) * 40; ty = Math.cos(f * 0.004) * 25; break;
+    case 2: rot = f * 0.015; break;
+    case 3: sc = 1 + Math.sin(f * 0.02) * 0.15; break;
+    case 4: rot = Math.sin(f * 0.025) * 0.4; break;
+    case 5: tx = Math.cos(f * 0.012) * 60; ty = Math.sin(f * 0.012) * 60; rot = f * 0.008; break;
+    case 6: tx = (Math.random() - 0.5) * 12; ty = (Math.random() - 0.5) * 12; break;
+    case 7: { let b = (f % 40) / 40; sc = 1 + Math.pow(Math.max(0, 1 - b * 3), 2) * 0.25; break; }
+    case 8: rot = f * 0.01; sc = 0.9 + Math.sin(f * 0.02) * 0.15; tx = Math.sin(f * 0.008) * 30; break;
+    case 9: ty = Math.sin(f * 0.03) * 50; rot = Math.sin(f * 0.015) * 0.1; break;
+  }
+  return { tx, ty, rot, sc };
+}
+
+// ═══════════════════════════════════════════════════════
+// MAIN RENDER
+// ═══════════════════════════════════════════════════════
+
+function render() {
+  if (!started) { requestAnimationFrame(render); return; }
+
+  frame++;
+  if (frame > TOTAL_FRAMES) frame = TOTAL_FRAMES; // hold on final frame
+
+  // Timeline
+  timelineUpdate();
+
+  // Morph progress
+  if (morphT < 1) {
+    morphT += 1 / morphDuration;
+    if (morphT >= 1) {
+      morphT = 1;
+      currentMandalaIdx = targetMandalaIdx;
+    }
+  }
+
+  // Draw-on progress
+  if (globalDrawOn < drawOnTarget) {
+    globalDrawOn = Math.min(drawOnTarget, globalDrawOn + drawOnSpeed);
+  } else if (globalDrawOn > drawOnTarget) {
+    globalDrawOn = Math.max(drawOnTarget, globalDrawOn - drawOnSpeed);
+  }
+
+  let vest = VESTMENTS[colorMode];
+  let fg = vest.fg;
+  let bg = vest.bg;
+  let isLight = bg[0] > 128;
+
+  // Clear
+  ctx.fillStyle = `rgb(${bg[0]},${bg[1]},${bg[2]})`;
+  ctx.fillRect(0, 0, W, H);
+
+  // Get strokes
+  let strokes = getMorphedStrokes();
+  let motion = getMotion(motionMode, frame);
+
+  // Slow base rotation (1 rev per 2 min = 3600 frames)
+  let baseRot = frame * TAU / 3600;
+
+  let fgCol = `rgb(${fg[0]},${fg[1]},${fg[2]})`;
+  let fgDim = `rgba(${fg[0]},${fg[1]},${fg[2]},0.08)`;
+  let regCol = isLight ? 'rgba(0,0,0,0.12)' : 'rgba(228,225,218,0.12)';
+
+  // ── Audio-reactive analysis ──
+  analyseAudio();
+  let aKick = audioBands.kick;
+  let aLow = audioBands.low;
+  let aMid = audioBands.mid;
+  let aHigh = audioBands.high;
+  let aAll = audioBands.overall;
+
+  // Noise displacement: kick + low drive breathing
+  let noiseAmt = 0.005 + aKick * 0.04 + aLow * 0.025 + (morphT < 1 ? 0.01 : 0);
+  let { phase } = getPhase(frame);
+
+  // Debris: mid + high drive particle activity
+  let debrisIntensity = 0.1 + aMid * 0.6 + aHigh * 0.4;
+  updateDebris(debrisIntensity * 3);
+  drawDebris(fgDim, debrisIntensity);
+
+  // Scale pulse on kick
+  let kickScale = 1 + aKick * 0.06;
+
+  // Rotation modulated by low
+  let audioRot = aLow * 0.015;
+
+  ctx.save();
+  ctx.translate(CX + motion.tx, CY + motion.ty);
+  ctx.rotate(baseRot + motion.rot + audioRot);
+  ctx.scale(motion.sc * kickScale, motion.sc * kickScale);
+
+  // ── Ghost echo 1 (larger, thinner) — spread by kick ──
+  let ghostSpread = 1.06 + aKick * 0.06;
+  ctx.save();
+  ctx.scale(ghostSpread, ghostSpread);
+  ctx.rotate(0.02 + aLow * 0.01);
+  for (let i = 0; i < strokes.length; i++) {
+    let strokeDrawOn = getStrokeDrawOn(i, strokes.length, globalDrawOn);
+    if (strokeDrawOn <= 0) continue;
+    let s = displaceStroke(strokes[i], noiseAmt * 1.2, frame, i);
+    let ghostAlpha = 0.03 + aMid * 0.03;
+    drawStroke(s, 0, 0, SC, strokeDrawOn, isLight ? `rgba(0,0,0,${ghostAlpha})` : `rgba(228,225,218,${ghostAlpha})`, 0.3);
+  }
+  ctx.restore();
+
+  // ── Ghost echo 2 (smaller, thinner) ──
+  let ghostShrink = 0.94 - aKick * 0.04;
+  ctx.save();
+  ctx.scale(ghostShrink, ghostShrink);
+  ctx.rotate(-0.025 - aLow * 0.008);
+  for (let i = 0; i < strokes.length; i++) {
+    let strokeDrawOn = getStrokeDrawOn(i, strokes.length, globalDrawOn);
+    if (strokeDrawOn <= 0) continue;
+    let s = displaceStroke(strokes[i], noiseAmt * 0.8, frame, i + 500);
+    drawStroke(s, 0, 0, SC, strokeDrawOn, isLight ? 'rgba(0,0,0,0.03)' : 'rgba(228,225,218,0.03)', 0.2);
+  }
+  ctx.restore();
+
+  // ── Main mandala ── stroke weight driven by mid
+  let mainWeight = (isLight ? 1.5 : 1.2) + aMid * 1.5;
+  if (morphT < 1) mainWeight += 0.5;
+
+  for (let i = 0; i < strokes.length; i++) {
+    let strokeDrawOn = getStrokeDrawOn(i, strokes.length, globalDrawOn);
+    if (strokeDrawOn <= 0) continue;
+    let s = displaceStroke(strokes[i], noiseAmt, frame, i);
+    drawStroke(s, 0, 0, SC, strokeDrawOn, fgCol, mainWeight);
+  }
+
+  // ── Bright inner trace ──
+  for (let i = 0; i < strokes.length; i++) {
+    let strokeDrawOn = getStrokeDrawOn(i, strokes.length, globalDrawOn);
+    if (strokeDrawOn <= 0) continue;
+    let s = displaceStroke(strokes[i], noiseAmt * 0.5, frame, i);
+    drawStroke(s, 0, 0, SC * 0.995, strokeDrawOn, fgCol, 0.4);
+  }
+
+  ctx.restore();
+
+  // Registration marks
+  drawRegistration(regCol);
+
+  // Status text
+  ctx.fillStyle = regCol;
+  ctx.font = '9px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(
+    VESTMENTS[colorMode].name + ' / ' + GLITCH_NAMES[glitchMode] + ' / ' +
+    Math.floor(frame / FPS / 60) + ':' + String(Math.floor(frame / FPS % 60)).padStart(2, '0'),
+    CX, H - 25
+  );
+
+  // Dither — intensifies with overall audio energy
+  let ditherAmt = 0.05 + aAll * 0.08;
+  if (colorMode === 2) ditherAmt += 0.03;
+  applyDither(ditherAmt);
+
+  // Glitch
+  applyGlitch(glitchMode);
+
+  requestAnimationFrame(render);
+}
+
+// Per-stroke draw-on: strokes reveal sequentially
+function getStrokeDrawOn(strokeIdx, totalStrokes, globalDraw) {
+  if (globalDraw >= 1) return 1;
+  if (globalDraw <= 0) return 0;
+  // Each stroke has a window in the global timeline
+  let strokeStart = strokeIdx / totalStrokes;
+  let strokeEnd = (strokeIdx + 1) / totalStrokes;
+  // Map global draw-on to this stroke's range
+  if (globalDraw <= strokeStart) return 0;
+  if (globalDraw >= strokeEnd) return 1;
+  return (globalDraw - strokeStart) / (strokeEnd - strokeStart);
+}
+
+// Displace stroke coordinates by noise
+function displaceStroke(s, amt, f, seed) {
+  let time = f * 0.005;
+  let displaced = { ...s };
+
+  let displace = (x, y, id) => {
+    let nx = noise2d(x * 3 + seed * 0.1, y * 3 + time) * amt;
+    let ny = noise2d(x * 3 + seed * 0.1 + 100, y * 3 + time) * amt;
+    return [x + nx, y + ny];
+  };
+
+  if (s.x1 !== undefined) {
+    let [nx1, ny1] = displace(s.x1, s.y1, 0);
+    let [nx2, ny2] = displace(s.x2, s.y2, 1);
+    displaced.x1 = nx1; displaced.y1 = ny1;
+    displaced.x2 = nx2; displaced.y2 = ny2;
+  }
+  if (s.x !== undefined && s.t !== 'L') {
+    let [nx, ny] = displace(s.x, s.y, 2);
+    displaced.x = nx; displaced.y = ny;
+  }
+
+  return displaced;
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+
+function initExperience() {
+  if (started) return;
+  started = true;
+  document.getElementById('overlay').style.display = 'none';
+  initAudio();
+  frame = 0;
+  globalDrawOn = 0;
+  drawOnTarget = 0;
+  currentMandalaIdx = 0;
+  targetMandalaIdx = 0;
+  morphT = 1;
+}
+
+render();
+</script>
+</body>
+</html>

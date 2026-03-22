@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAXIMALS MARFA — SPACE PLAN</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0a; font-family: 'Courier New', monospace; }
+canvas { display: block; }
+#ui { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 10; }
+#title {
+  position: fixed; top: 28px; left: 32px;
+  color: rgba(255,255,255,0.7); font-size: 11px; letter-spacing: 5px; text-transform: uppercase;
+}
+#title span { color: rgba(218,175,62,0.8); }
+#specs {
+  position: fixed; bottom: 28px; left: 32px;
+  color: rgba(255,255,255,0.25); font-size: 9px; letter-spacing: 2px; line-height: 1.8;
+}
+#legend {
+  position: fixed; top: 28px; right: 32px;
+  color: rgba(255,255,255,0.3); font-size: 9px; letter-spacing: 2px; line-height: 2.2;
+  text-align: right;
+}
+.legend-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 6px; vertical-align: middle;
+}
+#controls-hint {
+  position: fixed; bottom: 28px; right: 32px;
+  color: rgba(255,255,255,0.15); font-size: 9px; letter-spacing: 2px; text-align: right; line-height: 1.8;
+}
+</style>
+</head>
+<body>
+<div id="ui">
+  <div id="title">MAXIMALS MARFA — <span>INSTALLATION PLAN</span></div>
+  <div id="legend">
+    <div><span class="legend-dot" style="background:#00dcf0;"></span>LED WALL 2M × 2M</div>
+    <div><span class="legend-dot" style="background:#ff3333;"></span>LASER — CEILING REAR</div>
+    <div><span class="legend-dot" style="background:#dab03e;"></span>ARCADE CONSOLE</div>
+    <div><span class="legend-dot" style="background:#888;"></span>PA SPEAKERS</div>
+  </div>
+  <div id="specs">
+    VENUE — MARFA GALLERY<br>
+    WALLS — PLASTER / ACOUSTIC BAFFLES<br>
+    LED — CANBEST RS P2.6 / 768×768PX<br>
+    LASER — DIODE 3000 NOVA / SHOWNET<br>
+    CONSOLE — 3× JUMBO DOME BUTTONS<br>
+    SIGNAL — TOUCHDESIGNER → NDI/SHOWNET
+  </div>
+  <div id="controls-hint">DRAG TO ORBIT<br>SCROLL TO ZOOM</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+let scene, camera, renderer, clock;
+// Default view: looking from entrance (positive Z) toward back wall (negative Z)
+let targetRotX = 0.35, targetRotY = -0.15;
+let rotX = 0.35, rotY = -0.15, zoom = 13, targetZoom = 13;
+let isDragging = false, lastMX = 0, lastMY = 0;
+
+// Room: wide gallery, camera photo taken from +Z looking toward -Z
+// Left wall = -X (alcove partition on this side)
+// Right wall = +X (windows)
+// Back wall = -Z (LED goes here, directly across from camera)
+// Front wall = +Z (entrance, laser mounted here on ceiling)
+const RW = 9, RD = 7.5, RH = 4.2;
+
+const COL_PLASTER = 0xd4c8b8;
+const COL_FLOOR   = 0x8a8070;
+const COL_BAFFLE  = 0xe8e4de;
+const COL_CEIL    = 0xd8d4cc;
+const COL_WINDOW  = 0x88aa88;
+const COL_WOOD    = 0x6b4e3a;
+
+init();
+animate();
+
+function init() {
+  scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x1a1815, 0.018);
+  clock = new THREE.Clock();
+
+  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(0x0a0a0a);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
+  document.body.appendChild(renderer.domElement);
+
+  // ── LIGHTING ──────────────────────────────────
+  scene.add(new THREE.AmbientLight(0xd5c8b5, 0.4));
+
+  // Overhead gallery lighting
+  [[-1.5, -1.0], [1.5, -0.5], [0, 1.5]].forEach(([x, z]) => {
+    let l = new THREE.PointLight(0xfff0d8, 0.65, 12, 2);
+    l.position.set(x, RH - 0.3, z);
+    l.castShadow = true;
+    scene.add(l);
+  });
+
+  // Window daylight from right (+X) wall
+  let wl = new THREE.DirectionalLight(0xffeedd, 0.4);
+  wl.position.set(RW / 2, 3, 0);
+  scene.add(wl);
+
+  // LED wall glow — on back wall center
+  let ledGlow = new THREE.PointLight(0x00ccee, 2.2, 9, 2);
+  ledGlow.position.set(0, 1.6, -RD / 2 + 0.8);
+  scene.add(ledGlow);
+
+  // Laser red accent — from front/entrance ceiling
+  let lasLight = new THREE.SpotLight(0xff2200, 0.5, 14, Math.PI * 0.22, 0.5);
+  lasLight.position.set(0, RH - 0.4, RD / 2 - 0.8);
+  lasLight.target.position.set(0, 1.5, -RD / 2 + 0.15);
+  scene.add(lasLight);
+  scene.add(lasLight.target);
+
+  buildRoom();
+  buildBaffles();
+  buildWindows();
+  buildAlcoveWall();
+  buildLEDWall();
+  buildLaser();
+  buildBeam();
+  buildSpeakers();
+  buildConsole();
+  buildFigure();
+  buildFloorMarks();
+  buildLabels();
+
+  // ── CONTROLS ──────────────────────────────────
+  let cv = renderer.domElement;
+  cv.addEventListener('mousedown', e => { isDragging = true; lastMX = e.clientX; lastMY = e.clientY; });
+  cv.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    targetRotY += (e.clientX - lastMX) * 0.005;
+    targetRotX += (e.clientY - lastMY) * 0.005;
+    targetRotX = Math.max(-0.1, Math.min(1.2, targetRotX));
+    lastMX = e.clientX; lastMY = e.clientY;
+  });
+  cv.addEventListener('mouseup', () => isDragging = false);
+  cv.addEventListener('mouseleave', () => isDragging = false);
+  cv.addEventListener('wheel', e => {
+    targetZoom += e.deltaY * 0.008;
+    targetZoom = Math.max(5, Math.min(22, targetZoom));
+  });
+  cv.addEventListener('touchstart', e => {
+    if (e.touches.length === 1) { isDragging = true; lastMX = e.touches[0].clientX; lastMY = e.touches[0].clientY; }
+  }, { passive: true });
+  cv.addEventListener('touchmove', e => {
+    if (!isDragging || e.touches.length !== 1) return;
+    targetRotY += (e.touches[0].clientX - lastMX) * 0.005;
+    targetRotX += (e.touches[0].clientY - lastMY) * 0.005;
+    targetRotX = Math.max(-0.1, Math.min(1.2, targetRotX));
+    lastMX = e.touches[0].clientX; lastMY = e.touches[0].clientY;
+  }, { passive: true });
+  cv.addEventListener('touchend', () => isDragging = false);
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+}
+
+function M(color, rough, metal) {
+  return new THREE.MeshStandardMaterial({ color, roughness: rough || 0.8, metalness: metal || 0 });
+}
+
+// ── ROOM SHELL ──────────────────────────────────
+function buildRoom() {
+  // Floor
+  let floor = new THREE.Mesh(new THREE.PlaneGeometry(RW, RD), M(COL_FLOOR, 0.55, 0.1));
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  // Ceiling
+  let ceil = new THREE.Mesh(new THREE.PlaneGeometry(RW, RD), M(COL_CEIL, 0.9));
+  ceil.rotation.x = Math.PI / 2; ceil.position.y = RH;
+  scene.add(ceil);
+
+  // Back wall (-Z) — LED goes on this wall
+  addWall(RW, RH, [0, RH / 2, -RD / 2], 0);
+
+  // Front wall (+Z) — entrance, laser above
+  addWall(RW, RH, [0, RH / 2, RD / 2], Math.PI);
+
+  // Left wall (-X) — alcove partition side
+  addWallSide(RD, RH, [-RW / 2, RH / 2, 0], Math.PI / 2);
+
+  // Right wall (+X) — windows
+  addWallSide(RD, RH, [RW / 2, RH / 2, 0], -Math.PI / 2);
+
+  // Edge lines
+  let em = new THREE.LineBasicMaterial({ color: 0x998877, transparent: true, opacity: 0.12 });
+  let hw = RW / 2, hd = RD / 2;
+  [
+    [[-hw, 0, -hd], [-hw, RH, -hd]], [[hw, 0, -hd], [hw, RH, -hd]],
+    [[-hw, 0, hd], [-hw, RH, hd]], [[hw, 0, hd], [hw, RH, hd]],
+    [[-hw, 0, -hd], [hw, 0, -hd]], [[-hw, 0, hd], [hw, 0, hd]],
+    [[-hw, RH, -hd], [hw, RH, -hd]], [[-hw, RH, hd], [hw, RH, hd]],
+    [[-hw, 0, -hd], [-hw, 0, hd]], [[hw, 0, -hd], [hw, 0, hd]],
+    [[-hw, RH, -hd], [-hw, RH, hd]], [[hw, RH, -hd], [hw, RH, hd]],
+  ].forEach(([a, b]) => addLine(a, b, em));
+
+  // Floor slab joints
+  let sm = new THREE.LineBasicMaterial({ color: 0x706860, transparent: true, opacity: 0.2 });
+  for (let x = -hw; x <= hw; x += 1.5) addLine([x, 0.005, -hd], [x, 0.005, hd], sm);
+  for (let z = -hd; z <= hd; z += 1.5) addLine([-hw, 0.005, z], [hw, 0.005, z], sm);
+}
+
+function addWall(w, h, pos, rotY) {
+  let wall = new THREE.Mesh(new THREE.PlaneGeometry(w, h), M(COL_PLASTER, 0.85));
+  wall.position.set(...pos);
+  wall.rotation.y = rotY;
+  scene.add(wall);
+}
+function addWallSide(w, h, pos, rotY) {
+  let wall = new THREE.Mesh(new THREE.PlaneGeometry(w, h), M(COL_PLASTER, 0.85));
+  wall.position.set(...pos);
+  wall.rotation.y = rotY;
+  scene.add(wall);
+}
+
+// ── ACOUSTIC BAFFLES ────────────────────────────
+function buildBaffles() {
+  let bm = M(COL_BAFFLE, 0.65, 0.05);
+  let count = 24;
+  let span = RD - 0.8;
+  for (let i = 0; i < count; i++) {
+    let z = -RD / 2 + 0.4 + (i / (count - 1)) * span;
+    let b = new THREE.Mesh(new THREE.BoxGeometry(RW - 0.6, 0.55, 0.035), bm);
+    b.position.set(0, RH - 0.28, z);
+    b.castShadow = true;
+    scene.add(b);
+  }
+}
+
+// ── WINDOWS (right wall, +X) ────────────────────
+function buildWindows() {
+  let woodM = M(COL_WOOD, 0.65, 0.1);
+  let glassM = new THREE.MeshStandardMaterial({
+    color: COL_WINDOW, roughness: 0.1, transparent: true, opacity: 0.25
+  });
+
+  let winW = 1.1, winH = 1.7, winBot = 1.0;
+  [-2.0, -0.2, 1.6].forEach(z => {
+    // Glass
+    let g = new THREE.Mesh(new THREE.PlaneGeometry(winH, winW), glassM);
+    g.position.set(RW / 2 - 0.02, winBot + winH / 2, z);
+    g.rotation.y = -Math.PI / 2;
+    scene.add(g);
+
+    // Frame pieces
+    let ft = 0.055;
+    [[0, winBot + winH, winW + 0.08, ft], [0, winBot, winW + 0.08, ft]].forEach(([_, y, w, h]) => {
+      let bar = new THREE.Mesh(new THREE.BoxGeometry(ft, h, w), woodM);
+      bar.position.set(RW / 2 - 0.01, y, z);
+      scene.add(bar);
+    });
+    [[-winW / 2, winH], [winW / 2, winH], [0, winH]].forEach(([oz, h]) => {
+      let bar = new THREE.Mesh(new THREE.BoxGeometry(ft, h, 0.04), woodM);
+      bar.position.set(RW / 2 - 0.01, winBot + h / 2, z + oz);
+      scene.add(bar);
+    });
+
+    // Daylight glow
+    let wl = new THREE.PointLight(0xffeebb, 0.12, 3.5);
+    wl.position.set(RW / 2 - 0.4, winBot + winH / 2, z);
+    scene.add(wl);
+  });
+}
+
+// ── ALCOVE PARTITION (left wall) ────────────────
+function buildAlcoveWall() {
+  let pm = M(COL_PLASTER, 0.85);
+  // The protruding partition seen on left side of photo
+  let ax = -RW / 2 + 0.25; // attached to left wall
+  let aW = 0.4;  // thickness
+  let aH = 3.3;
+  let aD = 2.2;  // how far it protrudes into room
+  let aZ = -RD / 2 + aD / 2;
+
+  // Front face (facing room center)
+  let front = new THREE.Mesh(new THREE.PlaneGeometry(aD, aH), pm);
+  front.position.set(ax + aW, aH / 2, aZ);
+  front.rotation.y = Math.PI / 2;
+  scene.add(front);
+
+  // Side face (facing back wall / short end)
+  let side = new THREE.Mesh(new THREE.PlaneGeometry(aW, aH), pm);
+  side.position.set(ax + aW / 2, aH / 2, -RD / 2 + aD);
+  scene.add(side);
+
+  // Top
+  let top = new THREE.Mesh(new THREE.PlaneGeometry(aW, aD), pm);
+  top.position.set(ax + aW / 2, aH, aZ);
+  top.rotation.x = -Math.PI / 2;
+  scene.add(top);
+
+  // Inner face (facing left wall)
+  let inner = new THREE.Mesh(new THREE.PlaneGeometry(aD, aH), pm);
+  inner.position.set(ax, aH / 2, aZ);
+  inner.rotation.y = -Math.PI / 2;
+  scene.add(inner);
+}
+
+// ── LED WALL — on back wall, centered ───────────
+function buildLEDWall() {
+  let ledX = 0, ledY = 1.5, ledZ = -RD / 2;
+
+  // Black bezel frame
+  let frame = new THREE.Mesh(new THREE.BoxGeometry(2.15, 2.15, 0.08), M(0x111111, 0.4, 0.9));
+  frame.position.set(ledX, ledY, ledZ + 0.03);
+  scene.add(frame);
+
+  // ── LIVE LED SCREEN (glyph animation) ──────────
+  let ledCanvas = document.createElement('canvas');
+  ledCanvas.width = 256; ledCanvas.height = 256;
+  let lctx = ledCanvas.getContext('2d');
+  let ledTex = new THREE.CanvasTexture(ledCanvas);
+  ledTex.minFilter = THREE.LinearFilter;
+  ledTex.magFilter = THREE.LinearFilter;
+
+  let screenMat = new THREE.MeshBasicMaterial({ map: ledTex });
+  let screen = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), screenMat);
+  screen.position.set(ledX, ledY, ledZ + 0.08);
+  scene.add(screen);
+
+  // Store refs for animation loop
+  window._ledCtx = lctx;
+  window._ledTex = ledTex;
+  window._ledCanvas = ledCanvas;
+
+  // ── GLYPH GENERATOR ──────────────────────────
+  function srandGen(seed) {
+    let s = seed;
+    return function() { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+  }
+
+  function makeGlyph(seed, family) {
+    let sr = srandGen(seed);
+    let strokes = [];
+    if (family === 0) {
+      strokes.push([0, -0.9, 0, 0.9]);
+      let n = 2 + Math.floor(sr() * 4);
+      for (let i = 0; i < n; i++) {
+        let y = -0.8 + (i / (n - 0.5)) * 1.6;
+        let bx = 0.25 + sr() * 0.5;
+        let by = y + (sr() - 0.5) * 0.4;
+        strokes.push([0, y, bx, by]);
+        strokes.push([0, y, -bx, by]);
+      }
+      if (sr() > 0.4) { let w = 0.2+sr()*0.3; strokes.push([-w,-0.9,w,-0.9]); }
+      if (sr() > 0.4) { let w = 0.2+sr()*0.3; strokes.push([-w,0.9,w,0.9]); }
+    } else if (family === 1) {
+      let arms = 3 + Math.floor(sr() * 4);
+      for (let i = 0; i < arms; i++) {
+        let a = (i / arms) * Math.PI * 2 - Math.PI / 2;
+        let len = 0.4 + sr() * 0.5;
+        strokes.push([Math.cos(a) * 0.1, Math.sin(a) * 0.1, Math.cos(a) * len, Math.sin(a) * len]);
+      }
+    } else if (family === 2) {
+      let layers = 2 + Math.floor(sr() * 3);
+      for (let i = 0; i < layers; i++) {
+        let y = -0.7 + (i / (layers - 0.5)) * 1.4;
+        let w = 0.25 + sr() * 0.4;
+        let h = 0.15 + sr() * 0.3;
+        strokes.push([-w, y + h, 0, y - h]);
+        strokes.push([w, y + h, 0, y - h]);
+      }
+    } else {
+      let segs = 4 + Math.floor(sr() * 5);
+      for (let i = 0; i < segs; i++) {
+        strokes.push([(sr()-0.5)*1.2,(sr()-0.5)*1.6,(sr()-0.5)*1.2,(sr()-0.5)*1.6]);
+      }
+    }
+    return strokes;
+  }
+
+  // Pre-gen glyphs
+  let glyphs = [];
+  for (let f = 0; f < 4; f++)
+    for (let i = 0; i < 3; i++)
+      glyphs.push(makeGlyph(42 + f * 1000 + i * 137, f));
+
+  window._ledGlyphs = glyphs;
+  window._ledColorIdx = 0;
+  window._ledGlyphIdx = 0;
+
+  // Colors: white/black, black/white, gold/black
+  window._ledSchemes = [
+    { fg: '#f0f0f0', bg: '#000000' },
+    { fg: '#0f0f0f', bg: '#eeeee6' },
+    { fg: '#dab03e', bg: '#000000' },
+  ];
+
+  // Auto-cycle
+  window._ledCycleTimer = 0;
+}
+
+// ── LASER — ceiling mount on front wall (+Z) ────
+function buildLaser() {
+  let hm = M(0x1a1a1a, 0.35, 0.85);
+  let lx = 0, ly = RH - 0.5, lz = RD / 2 - 0.8;
+
+  // Housing
+  let housing = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.24, 0.48), hm);
+  housing.position.set(lx, ly, lz);
+  scene.add(housing);
+
+  // Lens (facing -Z toward LED wall)
+  let lensMat = new THREE.MeshStandardMaterial({ color: 0x220000, emissive: 0xff2200, emissiveIntensity: 0.9 });
+  let lens = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 12), lensMat);
+  lens.position.set(lx, ly, lz - 0.26);
+  scene.add(lens);
+
+  // Mount bracket to ceiling
+  let bracket = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.45, 6), hm);
+  bracket.position.set(lx, ly + 0.34, lz);
+  scene.add(bracket);
+
+  let plate = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.018, 8), hm);
+  plate.position.set(lx, RH - 0.02, lz);
+  scene.add(plate);
+}
+
+// ── BEAM PATH ───────────────────────────────────
+function buildBeam() {
+  // Laser origin: front ceiling, pointing at LED wall center
+  let ox = 0, oy = RH - 0.5, oz = RD / 2 - 1.06;
+  let tx = 0, ty = 1.5, tz = -RD / 2 + 0.12;
+
+  // Center beam
+  let bm = new THREE.LineBasicMaterial({ color: 0xff2200, transparent: true, opacity: 0.22 });
+  addLine([ox, oy, oz], [tx, ty, tz], bm);
+
+  // Spread lines
+  let sm = new THREE.LineDashedMaterial({ color: 0xff2200, transparent: true, opacity: 0.05, dashSize: 0.15, gapSize: 0.1 });
+  [[-0.8, 0], [0.8, 0], [0, -0.6], [0, 0.6], [-0.6, -0.4], [0.6, -0.4], [-0.6, 0.4], [0.6, 0.4]].forEach(([dx, dy]) => {
+    let g = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(ox, oy, oz),
+      new THREE.Vector3(tx + dx, ty + dy, tz)
+    ]);
+    let l = new THREE.Line(g, sm);
+    l.computeLineDistances();
+    scene.add(l);
+  });
+
+  // Beam cone volume
+  let dist = new THREE.Vector3(tx - ox, ty - oy, tz - oz).length();
+  let coneGeo = new THREE.CylinderGeometry(1.1, 0.04, dist, 12, 1, true);
+  let coneMat = new THREE.MeshBasicMaterial({
+    color: 0xff1100, transparent: true, opacity: 0.012,
+    side: THREE.DoubleSide, depthWrite: false
+  });
+  let cone = new THREE.Mesh(coneGeo, coneMat);
+  let mid = new THREE.Vector3((ox + tx) / 2, (oy + ty) / 2, (oz + tz) / 2);
+  cone.position.copy(mid);
+  let dir = new THREE.Vector3(tx - ox, ty - oy, tz - oz).normalize();
+  cone.setRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir));
+  scene.add(cone);
+}
+
+// ── PA SPEAKERS — back corners ──────────────────
+function buildSpeakers() {
+  let sm = M(0x111111, 0.5, 0.6);
+
+  [[-RW / 2 + 0.8, -RD / 2 + 0.5], [RW / 2 - 0.8, -RD / 2 + 0.5]].forEach(([sx, sz]) => {
+    // Box
+    let box = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.52, 0.28), sm);
+    box.position.set(sx, 1.45, sz);
+    scene.add(box);
+
+    // Pole
+    let pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.2, 6), sm);
+    pole.position.set(sx, 0.6, sz);
+    scene.add(pole);
+
+    // Tripod base
+    let base = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.025, 3), sm);
+    base.position.set(sx, 0.012, sz);
+    scene.add(base);
+
+    // Cone
+    let cm = M(0x222222, 0.3, 0.5);
+    let cone = new THREE.Mesh(new THREE.CircleGeometry(0.09, 12), cm);
+    cone.position.set(sx, 1.5, sz + 0.15);
+    scene.add(cone);
+  });
+}
+
+// ── CONSOLE — foreground, facing LED wall ───────
+function buildConsole() {
+  let pm = M(0x151515, 0.5, 0.75);
+  let cx = 0, cz = 1.8;
+
+  // Pedestal
+  let base = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.85, 0.38), pm);
+  base.position.set(cx, 0.425, cz);
+  base.castShadow = true;
+  scene.add(base);
+
+  // Angled top — tilted toward +Z (facing viewer/entrance)
+  let top = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.035, 0.42), M(0x1c1c1c, 0.35, 0.85));
+  top.position.set(cx, 0.88, cz);
+  top.rotation.x = 0.2;
+  scene.add(top);
+
+  // Three dome buttons — on the +Z face of the panel
+  [
+    { x: -0.18, col: 0xcccccc, em: 0x888888 },
+    { x: 0, col: 0xff3333, em: 0xff0000 },
+    { x: 0.18, col: 0x3388ff, em: 0x0055ff },
+  ].forEach(b => {
+    let geo = new THREE.SphereGeometry(0.05, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2);
+    let m = new THREE.MeshStandardMaterial({
+      color: b.col, emissive: b.em, emissiveIntensity: 0.5,
+      roughness: 0.25, metalness: 0.5
+    });
+    let btn = new THREE.Mesh(geo, m);
+    btn.position.set(cx + b.x, 0.92, cz);
+    btn.rotation.x = 0.2;
+    scene.add(btn);
+
+    let ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.05, 0.06, 20),
+      new THREE.MeshBasicMaterial({ color: b.col, transparent: true, opacity: 0.35, side: THREE.DoubleSide })
+    );
+    ring.position.set(cx + b.x, 0.895, cz - 0.01);
+    ring.rotation.x = -Math.PI / 2 + 0.2;
+    scene.add(ring);
+  });
+
+  // Gold accent
+  let gl = new THREE.PointLight(0xdab03e, 0.35, 2.5, 2);
+  gl.position.set(cx, 0.5, cz);
+  scene.add(gl);
+}
+
+// ── SINGLE FIGURE AT CONSOLE ────────────────────
+function buildFigure() {
+  let fm = new THREE.MeshBasicMaterial({ color: 0x2a2a30, transparent: true, opacity: 0.55 });
+  // Figure stands on the +Z side (entrance side), facing -Z toward buttons
+  let fx = 0, fz = 2.3;
+
+  // Body
+  let body = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.6, 6), fm);
+  body.position.set(fx, 0.7, fz);
+  scene.add(body);
+  // Head
+  let head = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 10), fm);
+  head.position.set(fx, 1.12, fz);
+  scene.add(head);
+  // Legs
+  [-0.06, 0.06].forEach(ox => {
+    let leg = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.017, 0.4, 5), fm);
+    leg.position.set(fx + ox, 0.2, fz);
+    leg.rotation.z = ox > 0 ? -0.06 : 0.06;
+    scene.add(leg);
+  });
+  // Arms reaching forward toward console (-Z direction)
+  [-0.1, 0.1].forEach(ox => {
+    let arm = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.4, 5), fm);
+    arm.position.set(fx + ox * 0.7, 0.82, fz - 0.15);
+    arm.rotation.x = 0.65;
+    arm.rotation.z = ox > 0 ? 0.25 : -0.25;
+    scene.add(arm);
+  });
+}
+
+// ── FLOOR MARKS ─────────────────────────────────
+function buildFloorMarks() {
+  // Center axis (laser path on floor)
+  let am = new THREE.LineDashedMaterial({ color: 0xff2200, transparent: true, opacity: 0.1, dashSize: 0.2, gapSize: 0.15 });
+  let ag = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, 0.008, -RD / 2),
+    new THREE.Vector3(0, 0.008, RD / 2)
+  ]);
+  let al = new THREE.Line(ag, am);
+  al.computeLineDistances();
+  scene.add(al);
+}
+
+// ── LABELS ──────────────────────────────────────
+function buildLabels() {
+  addLabel('LED WALL 2M×2M', 0, 2.85, -RD / 2 + 0.2, 0x00dcf0, 0.09);
+  addLabel('P2.6 / 768×768', 0, 0.2, -RD / 2 + 0.2, 0x00dcf0, 0.055);
+  addLabel('LASER', 0, RH - 1.2, RD / 2 - 0.8, 0xff3333, 0.07);
+  addLabel('DIODE 3000 NOVA', 0, RH - 1.45, RD / 2 - 0.8, 0xff3333, 0.05);
+  addLabel('CONSOLE', 0, -0.1, 1.8, 0xdab03e, 0.065);
+  addLabel('COLOR / GLITCH / MOTION', 0, -0.3, 1.8, 0xdab03e, 0.05);
+  addLabel('PA', -RW / 2 + 0.8, 2.1, -RD / 2 + 0.5, 0x666666, 0.05);
+  addLabel('PA', RW / 2 - 0.8, 2.1, -RD / 2 + 0.5, 0x666666, 0.05);
+}
+
+// ── HELPERS ─────────────────────────────────────
+function addLine(a, b, material) {
+  let g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...a), new THREE.Vector3(...b)]);
+  scene.add(new THREE.Line(g, material));
+}
+
+function addLabel(text, x, y, z, color, scale) {
+  let c = document.createElement('canvas');
+  let ctx = c.getContext('2d');
+  c.width = 512; c.height = 64;
+  ctx.font = '22px Courier New';
+  ctx.fillStyle = '#' + color.toString(16).padStart(6, '0');
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 256, 32);
+  let tex = new THREE.CanvasTexture(c);
+  tex.minFilter = THREE.LinearFilter;
+  let m = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0.6 });
+  let s = new THREE.Sprite(m);
+  s.position.set(x, y, z);
+  s.scale.set(512 * scale / 100, 64 * scale / 100, 1);
+  scene.add(s);
+}
+
+// ── ANIMATE ─────────────────────────────────────
+function animate() {
+  requestAnimationFrame(animate);
+  let t = clock.getElapsedTime();
+
+  rotX += (targetRotX - rotX) * 0.06;
+  rotY += (targetRotY - rotY) * 0.06;
+  zoom += (targetZoom - zoom) * 0.06;
+
+  if (!isDragging) targetRotY += 0.00015;
+
+  camera.position.x = Math.sin(rotY) * Math.cos(rotX) * zoom;
+  camera.position.y = Math.sin(rotX) * zoom;
+  camera.position.z = Math.cos(rotY) * Math.cos(rotX) * zoom;
+  camera.lookAt(0, 1.4, -0.5);
+
+  // ── DRAW LIVE LED SCREEN ──────────────────────
+  let ctx = window._ledCtx;
+  let tex = window._ledTex;
+  if (ctx && tex) {
+    let W = 256, H = 256;
+    let fc = Math.floor(t * 60);
+
+    // Auto-cycle: change glyph every 3s, color every 9s
+    window._ledCycleTimer++;
+    if (window._ledCycleTimer % 180 === 0) {
+      window._ledGlyphIdx = (window._ledGlyphIdx + 1) % window._ledGlyphs.length;
+    }
+    if (window._ledCycleTimer % 540 === 0) {
+      window._ledColorIdx = (window._ledColorIdx + 1) % window._ledSchemes.length;
+    }
+
+    let scheme = window._ledSchemes[window._ledColorIdx];
+    let glyph = window._ledGlyphs[window._ledGlyphIdx];
+
+    // Background
+    ctx.fillStyle = scheme.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Draw glyph
+    ctx.save();
+    ctx.translate(W / 2, H / 2);
+    let rot = Math.sin(t * 0.3) * 0.04;
+    ctx.rotate(rot);
+    let sc = 90 + Math.sin(t * 1.0) * 4;
+
+    // Ghost layers
+    ctx.globalAlpha = 0.08;
+    ctx.strokeStyle = scheme.fg;
+    ctx.lineWidth = 1;
+    let ghostSc = sc * 1.1;
+    ctx.save();
+    ctx.rotate(0.03);
+    glyph.forEach(s => {
+      ctx.beginPath();
+      ctx.moveTo(s[0] * ghostSc, s[1] * ghostSc);
+      ctx.lineTo(s[2] * ghostSc, s[3] * ghostSc);
+      ctx.stroke();
+    });
+    ctx.restore();
+
+    // Main glyph
+    ctx.globalAlpha = 0.85;
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = scheme.fg;
+    glyph.forEach(s => {
+      ctx.beginPath();
+      ctx.moveTo(s[0] * sc, s[1] * sc);
+      ctx.lineTo(s[2] * sc, s[3] * sc);
+      ctx.stroke();
+    });
+
+    // Bright inner
+    ctx.globalAlpha = 1.0;
+    ctx.lineWidth = 0.8;
+    glyph.forEach(s => {
+      ctx.beginPath();
+      ctx.moveTo(s[0] * sc * 0.99, s[1] * sc * 0.99);
+      ctx.lineTo(s[2] * sc * 0.99, s[3] * sc * 0.99);
+      ctx.stroke();
+    });
+
+    ctx.restore();
+
+    // Scanlines
+    ctx.globalAlpha = 0.06;
+    ctx.fillStyle = scheme.bg === '#000000' ? '#ffffff' : '#000000';
+    for (let y = 0; y < H; y += 3) {
+      ctx.fillRect(0, y, W, 1);
+    }
+    ctx.globalAlpha = 1.0;
+
+    // Crosshair
+    ctx.strokeStyle = scheme.fg;
+    ctx.globalAlpha = 0.12;
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(W / 2 - 8, H / 2); ctx.lineTo(W / 2 + 8, H / 2);
+    ctx.moveTo(W / 2, H / 2 - 8); ctx.lineTo(W / 2, H / 2 + 8);
+    ctx.stroke();
+    ctx.globalAlpha = 1.0;
+
+    tex.needsUpdate = true;
+  }
+
+  renderer.render(scene, camera);
+}
+</script>
+</body>
+</html>
