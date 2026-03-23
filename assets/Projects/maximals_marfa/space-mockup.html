@@ -67,19 +67,19 @@ let isDragging = false, lastMX = 0, lastMY = 0;
 // Front wall = +Z (entrance, laser mounted here on ceiling)
 const RW = 9, RD = 7.5, RH = 4.2;
 
-const COL_PLASTER = 0xd4c8b8;
-const COL_FLOOR   = 0x8a8070;
-const COL_BAFFLE  = 0xe8e4de;
-const COL_CEIL    = 0xd8d4cc;
-const COL_WINDOW  = 0x88aa88;
-const COL_WOOD    = 0x6b4e3a;
+const COL_PLASTER = 0x2a2a2a;
+const COL_FLOOR   = 0x3a3a3a;
+const COL_BAFFLE  = 0x333333;
+const COL_CEIL    = 0x353535;
+const COL_WINDOW  = 0x445544;
+const COL_WOOD    = 0x3d2e22;
 
 init();
 animate();
 
 function init() {
   scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x1a1815, 0.018);
+  scene.fog = new THREE.FogExp2(0x0a0a0a, 0.025);
   clock = new THREE.Clock();
 
   camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
@@ -90,22 +90,22 @@ function init() {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 0.7;
   document.body.appendChild(renderer.domElement);
 
   // ── LIGHTING ──────────────────────────────────
-  scene.add(new THREE.AmbientLight(0xd5c8b5, 0.4));
+  scene.add(new THREE.AmbientLight(0x888888, 0.15));
 
-  // Overhead gallery lighting
+  // Overhead gallery lighting — dim
   [[-1.5, -1.0], [1.5, -0.5], [0, 1.5]].forEach(([x, z]) => {
-    let l = new THREE.PointLight(0xfff0d8, 0.65, 12, 2);
+    let l = new THREE.PointLight(0xeee8dd, 0.25, 12, 2);
     l.position.set(x, RH - 0.3, z);
     l.castShadow = true;
     scene.add(l);
   });
 
-  // Window daylight from right (+X) wall
-  let wl = new THREE.DirectionalLight(0xffeedd, 0.4);
+  // Window daylight from right (+X) wall — subdued
+  let wl = new THREE.DirectionalLight(0xccccbb, 0.12);
   wl.position.set(RW / 2, 3, 0);
   scene.add(wl);
 
@@ -198,7 +198,7 @@ function buildRoom() {
   addWallSide(RD, RH, [RW / 2, RH / 2, 0], -Math.PI / 2);
 
   // Edge lines
-  let em = new THREE.LineBasicMaterial({ color: 0x998877, transparent: true, opacity: 0.12 });
+  let em = new THREE.LineBasicMaterial({ color: 0x444444, transparent: true, opacity: 0.15 });
   let hw = RW / 2, hd = RD / 2;
   [
     [[-hw, 0, -hd], [-hw, RH, -hd]], [[hw, 0, -hd], [hw, RH, -hd]],
@@ -210,7 +210,7 @@ function buildRoom() {
   ].forEach(([a, b]) => addLine(a, b, em));
 
   // Floor slab joints
-  let sm = new THREE.LineBasicMaterial({ color: 0x706860, transparent: true, opacity: 0.2 });
+  let sm = new THREE.LineBasicMaterial({ color: 0x555555, transparent: true, opacity: 0.2 });
   for (let x = -hw; x <= hw; x += 1.5) addLine([x, 0.005, -hd], [x, 0.005, hd], sm);
   for (let z = -hd; z <= hd; z += 1.5) addLine([-hw, 0.005, z], [hw, 0.005, z], sm);
 }
