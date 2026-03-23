@@ -80,10 +80,7 @@ canvas { display: block; }
 }
 
 #phase-label {
-  position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-  font-family: 'Courier New', monospace; font-size: 9px; letter-spacing: 3px;
-  color: rgba(228,225,218,0.25); z-index: 100; text-transform: uppercase;
-  pointer-events: none;
+  display: none;
 }
 
 #audio-toggle {
@@ -1248,15 +1245,7 @@ function render() {
   // Registration marks
   drawRegistration(regCol);
 
-  // Status text
-  ctx.fillStyle = regCol;
-  ctx.font = '9px monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText(
-    VESTMENTS[colorMode].name + ' / ' + GLITCH_NAMES[glitchMode] + ' / ' +
-    Math.floor(frame / FPS / 60) + ':' + String(Math.floor(frame / FPS % 60)).padStart(2, '0'),
-    CX, H - 25
-  );
+  // Status text removed for clean presentation
 
   // Dither — intensifies with overall audio energy
   let ditherAmt = 0.05 + aAll * 0.08;
