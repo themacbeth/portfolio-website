@@ -192,11 +192,22 @@ function drawGlyph(glyph, cx, cy, scale, drawOn, color, weight, rotation) {
   ctx.lineJoin = 'round';
 
   let totalStrokes = glyph.s.length;
-  let strokesToDraw = Math.ceil(totalStrokes * drawOn);
 
-  for (let si = 0; si < strokesToDraw; si++) {
+  for (let si = 0; si < totalStrokes; si++) {
+    // Staggered draw-on: each stroke has its own window
+    let strokeStart = si / totalStrokes;
+    let strokeEnd = (si + 1.5) / totalStrokes; // overlap windows for fluid feel
+    let strokeDrawOn;
+    if (drawOn <= strokeStart) strokeDrawOn = 0;
+    else if (drawOn >= strokeEnd) strokeDrawOn = 1;
+    else strokeDrawOn = (drawOn - strokeStart) / (strokeEnd - strokeStart);
+
+    // Ease each individual stroke
+    strokeDrawOn = strokeDrawOn * strokeDrawOn * (3 - 2 * strokeDrawOn); // smoothstep
+
+    if (strokeDrawOn <= 0) continue;
+
     let stroke = glyph.s[si];
-    let strokeDrawOn = si < strokesToDraw - 1 ? 1 : (drawOn * totalStrokes - si);
 
     if (typeof stroke === 'string') {
       if (strokeDrawOn < 0.5) continue;
@@ -406,8 +417,13 @@ function timelineUpdate() {
     glyphDrawOn = 0;
   }
 
-  // Draw-on animation for current glyph
-  if (glyphDrawOn < 1) glyphDrawOn = Math.min(1, glyphDrawOn + 0.008);
+  // Draw-on animation — dynamic speed: starts slow, accelerates, audio-reactive
+  if (glyphDrawOn < 1) {
+    let baseSpeed = 0.005;
+    let accel = glyphDrawOn * 0.02; // faster as it progresses
+    let audioBoost = audioBands.kick * 0.04 + audioBands.overall * 0.01;
+    glyphDrawOn = Math.min(1, glyphDrawOn + baseSpeed + accel + audioBoost);
+  }
 
   // Phase 0: GENESIS — fade in first glyph
   if (phase === 0) {
@@ -508,33 +524,9 @@ function render() {
 
   // Audio-reactive scale
   let kickScale = 1 + audioBands.kick * 0.15;
-  let glyphScale = SC * 1.6 * kickScale;
+  let glyphScale = SC * 2.0 * kickScale;
 
-  // ── OUTER RING SYSTEM ──
-  let ringCol = colorMode === 2 ? 'rgba(218,176,62,0.12)' : 'rgba(228,225,218,0.08)';
-  let outerR = SC * 1.3 * kickScale;
-  let rings = [
-    { r: outerR, startA: 0, endA: TAU, ticks: 24, tickLen: 4 },
-    { r: outerR * 0.75, startA: 0.2, endA: TAU - 0.2, ticks: 0, tickLen: 0 },
-  ];
-
-  if (globalDrawOn > 0.3) {
-    drawRingSystem(CX, CY, rings, ringCol, 0.5, baseRotation);
-
-    // Inner segmented arcs
-    let innerR = SC * 0.55;
-    let segCol = colorMode >= 1 ? 'rgba(218,176,62,0.06)' : 'rgba(228,225,218,0.05)';
-    for (let i = 0; i < 4; i++) {
-      let a = (i / 4) * TAU + baseRotation * -0.5;
-      ctx.strokeStyle = segCol;
-      ctx.lineWidth = 0.5;
-      ctx.beginPath();
-      ctx.arc(CX, CY, innerR, a + 0.1, a + TAU / 4 - 0.1);
-      ctx.stroke();
-    }
-  }
-
-  // ── CENTRAL GLYPH ──
+  // ── CENTRAL GLYPH — just the symbol, nothing else ──
   let centralDraw = globalDrawOn * glyphDrawOn;
   if (centralDraw > 0) {
     drawGlyph(
@@ -543,64 +535,21 @@ function render() {
       glyphScale,
       centralDraw,
       fgMain,
-      2,
-      0 // no rotation on central glyph — it's an icon
+      2.5,
+      0
     );
 
-    // Ghost echo at slight offset (thinner)
+    // Ghost echo (thinner, slight offset) in dual color mode
     if (colorMode === 2 && globalDrawOn > 0.5) {
       drawGlyph(
         GLYPHS[glyphIdx],
         CX, CY,
-        glyphScale * 1.06,
+        glyphScale * 1.04,
         centralDraw,
-        'rgba(218,176,62,0.08)',
+        'rgba(218,176,62,0.1)',
         0.5,
-        0.015
+        0.01
       );
-    }
-  }
-
-  // ── SATELLITE GLYPHS ──
-  if (globalDrawOn > 0.4) {
-    for (let sat of satellites) {
-      sat.angle += sat.speed + audioBands.low * 0.003;
-      sat.rot += sat.rotSpeed;
-
-      let x = CX + Math.cos(sat.angle) * sat.orbitR;
-      let y = CY + Math.sin(sat.angle) * sat.orbitR;
-
-      let satCol = (satellites.indexOf(sat) % 2 === 0) ? fgMain : fgAlt;
-      let satAlpha = colorMode === 2 ? 0.15 : 0.08;
-      let r = sat.glyphIdx % 3 === 0 ? fgGold : fgWhite;
-      let col = `rgba(${r === fgGold ? '218,176,62' : '228,225,218'},${satAlpha})`;
-
-      drawGlyph(
-        GLYPHS[sat.glyphIdx],
-        x, y,
-        sat.scale * (0.8 + audioBands.mid * 0.4),
-        globalDrawOn,
-        col,
-        0.5,
-        sat.rot
-      );
-    }
-  }
-
-  // ── RADIAL SPOKES (subtle) ──
-  if (globalDrawOn > 0.6) {
-    let spokeCount = 12;
-    let spokeCol = 'rgba(228,225,218,0.025)';
-    ctx.strokeStyle = spokeCol;
-    ctx.lineWidth = 0.5;
-    for (let i = 0; i < spokeCount; i++) {
-      let a = (i / spokeCount) * TAU + baseRotation;
-      let r1 = SC * 0.4;
-      let r2 = SC * 1.4;
-      ctx.beginPath();
-      ctx.moveTo(CX + Math.cos(a) * r1, CY + Math.sin(a) * r1);
-      ctx.lineTo(CX + Math.cos(a) * r2, CY + Math.sin(a) * r2);
-      ctx.stroke();
     }
   }
 
@@ -616,7 +565,6 @@ function initExperience() {
   started = true;
   document.getElementById('overlay').style.display = 'none';
   initAudio();
-  initSatellites();
   frame = 0;
   globalDrawOn = 0;
   glyphDrawOn = 0;
