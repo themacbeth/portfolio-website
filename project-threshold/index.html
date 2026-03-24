@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>The Threshold</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #F6F1E9;
+    --fg: #2C2821;
+    --muted: #2C282170;
+    --faint: #2C282125;
+    --ghost: #2C28210E;
+    --cream: #EDE6D8;
+    --void: #0E0D0B;
+    --mono: 'Courier New', 'Courier', monospace;
+    --serif: 'Georgia', 'Palatino Linotype', serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--serif);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 50;
+  }
+
+  /* Tag label */
+  .tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 3.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  /* Divider */
+  .divider { height: 1px; background: var(--ghost); }
+
+  /* Dot */
+  .dot {
+    border-radius: 50%;
+    background: var(--void);
+    flex-shrink: 0;
+  }
+
+  /* Room image card */
+  .room-img {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.3s;
+    background-size: cover;
+    background-position: center;
+  }
+  .room-img:hover { transform: scale(1.008); }
+  .room-img .room-label {
+    position: absolute;
+    bottom: 10px;
+    left: 12px;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(246,241,233,0.5);
+  }
+
+  /* Nav */
+  .threshold-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 44px;
+    border-bottom: 1px solid var(--ghost);
+  }
+  .nav-left { display: flex; align-items: center; gap: 12px; }
+  .nav-left .dot { width: 16px; height: 16px; }
+  .nav-left span {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+  .nav-right {
+    display: flex;
+    gap: 28px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Hero */
+  .hero {
+    padding: 96px 44px 56px;
+    max-width: 820px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .hero h1 {
+    font-size: clamp(36px, 5.5vw, 64px);
+    font-weight: 400;
+    font-style: italic;
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+    margin-bottom: 28px;
+  }
+  .hero .subtitle {
+    font-size: 17px;
+    line-height: 1.85;
+    color: var(--muted);
+    max-width: 470px;
+    margin: 0 auto 18px;
+  }
+  .hero .emphasis {
+    font-size: 17px;
+    line-height: 1.85;
+    max-width: 470px;
+    margin: 0 auto 42px;
+    font-style: italic;
+    opacity: 0.65;
+  }
+
+  /* Hero image */
+  .hero-image {
+    padding: 0 44px 72px;
+  }
+  .hero-image .room-img {
+    max-width: 1000px;
+    margin: 0 auto;
+    aspect-ratio: 21/9;
+  }
+
+  /* Section common */
+  .section { padding: 64px 44px; }
+  .section-center { max-width: 660px; margin: 0 auto; }
+
+  /* What We Replace grid */
+  .replace-grid {
+    display: grid;
+    grid-template-columns: 1fr 28px 1fr;
+    gap: 15px 0;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  .replace-old {
+    text-align: right;
+    color: var(--muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--faint);
+  }
+  .replace-arrow {
+    text-align: center;
+    color: var(--faint);
+    font-size: 11px;
+  }
+  .replace-new { font-style: italic; }
+
+  /* 72 hour */
+  .promise {
+    max-width: 620px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .promise p:first-of-type {
+    font-size: clamp(16px, 2vw, 20px);
+    line-height: 1.85;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .promise .fade {
+    font-size: 14px;
+    line-height: 1.85;
+    color: var(--faint);
+    margin-top: 22px;
+  }
+
+  /* Life here - three featured */
+  .featured-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 3px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  .featured-grid .room-img { aspect-ratio: 4/3; }
+
+  /* Surrender */
+  .surrender {
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .surrender .lead {
+    font-size: clamp(17px, 2.2vw, 22px);
+    font-style: italic;
+    line-height: 1.8;
+    opacity: 0.68;
+    margin-bottom: 24px;
+  }
+  .surrender .body {
+    font-size: 15px;
+    line-height: 1.85;
+    color: var(--muted);
+    margin-bottom: 32px;
+  }
+  .surrender .room-img {
+    aspect-ratio: 16/9;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+
+  /* Daily schedule */
+  .schedule {
+    max-width: 620px;
+    margin: 0 auto;
+  }
+  .schedule-grid {
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    gap: 14px 28px;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  .schedule-time {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--faint);
+    padding-top: 2px;
+  }
+  .schedule-desc { color: var(--muted); }
+
+  /* Testimonials */
+  .testimonials {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .testimonial {
+    text-align: center;
+    padding-bottom: 40px;
+    margin-bottom: 40px;
+  }
+  .testimonial:not(:last-child) {
+    border-bottom: 1px solid var(--ghost);
+  }
+  .testimonial blockquote {
+    font-size: clamp(17px, 2.3vw, 24px);
+    font-style: italic;
+    line-height: 1.65;
+    margin: 0 auto 16px;
+    max-width: 560px;
+    opacity: 0.72;
+  }
+  .testimonial cite {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--faint);
+    font-style: normal;
+  }
+
+  /* Spaces grid */
+  .spaces-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 3px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .space-cell {
+    position: relative;
+  }
+  .space-cell .room-img { aspect-ratio: 1; }
+  .space-cell .room-img .room-label { display: none; }
+  .space-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(14,13,11,0.55);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    padding: 8px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .space-cell:hover .space-overlay { opacity: 1; }
+  .space-overlay .name {
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #F6F1E9;
+    opacity: 0.9;
+    text-align: center;
+    margin-bottom: 3px;
+  }
+  .space-overlay .sub {
+    font-family: var(--mono);
+    font-size: 7px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #F6F1E9;
+    opacity: 0.35;
+  }
+
+  /* FAQ */
+  .faq-section {
+    padding: 64px 44px;
+    background: var(--cream);
+  }
+  .faq-wrap { max-width: 560px; margin: 0 auto; }
+  .faq-item {
+    margin-bottom: 28px;
+    padding-bottom: 28px;
+  }
+  .faq-item:not(:last-child) {
+    border-bottom: 1px solid var(--ghost);
+  }
+  .faq-q {
+    font-size: 16px;
+    font-style: italic;
+    margin-bottom: 8px;
+    opacity: 0.85;
+  }
+  .faq-a {
+    font-size: 13px;
+    line-height: 1.85;
+    color: var(--muted);
+  }
+
+  /* CTA */
+  .cta {
+    padding: 88px 44px;
+    text-align: center;
+  }
+  .cta h2 {
+    font-size: clamp(28px, 4.5vw, 52px);
+    font-weight: 400;
+    font-style: italic;
+    line-height: 1.2;
+    margin-bottom: 18px;
+  }
+  .cta .body {
+    font-size: 15px;
+    line-height: 1.85;
+    color: var(--muted);
+    max-width: 400px;
+    margin: 0 auto 40px;
+  }
+  .cta-form {
+    max-width: 360px;
+    margin: 0 auto;
+    text-align: left;
+  }
+  .cta-field { margin-bottom: 24px; }
+  .cta-field label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin-bottom: 8px;
+  }
+  .cta-field .line { height: 1px; background: var(--faint); }
+
+  /* Footer */
+  .threshold-footer {
+    padding: 22px 44px;
+    border-top: 1px solid var(--ghost);
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+
+  /* Lightbox */
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(14,13,11,0.92);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .lightbox.active { display: flex; }
+  .lightbox-backdrop {
+    position: absolute;
+    inset: 0;
+    cursor: pointer;
+  }
+  .lb-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--mono);
+    font-size: 18px;
+    color: #F6F1E9;
+    opacity: 0.2;
+    cursor: pointer;
+    padding: 20px 12px;
+    z-index: 201;
+    user-select: none;
+    transition: opacity 0.2s;
+  }
+  .lb-arrow:hover { opacity: 0.5; }
+  .lb-prev { left: 24px; }
+  .lb-next { right: 24px; }
+  .lb-content {
+    max-width: 700px;
+    width: 85%;
+    z-index: 201;
+  }
+  .lb-image {
+    width: 100%;
+    aspect-ratio: 4/3;
+    background-size: cover;
+    background-position: center;
+  }
+  .lb-info {
+    padding: 20px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .lb-title {
+    font-size: 20px;
+    font-style: italic;
+    color: #E8E0D0;
+    margin-bottom: 5px;
+  }
+  .lb-sub {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #E8E0D040;
+  }
+  .lb-collect {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #E8E0D0;
+    border: 1px solid #E8E0D020;
+    padding: 10px 20px;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    background: none;
+    transition: border-color 0.2s;
+    flex-shrink: 0;
+  }
+  .lb-collect:hover { border-color: #E8E0D050; }
+  .lb-collect .dot {
+    width: 6px;
+    height: 6px;
+    background: #E8E0D0;
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .threshold-nav { padding: 20px 24px; }
+    .nav-right { display: none; }
+    .hero { padding: 64px 24px 40px; }
+    .hero-image { padding: 0 24px 48px; }
+    .section { padding: 48px 24px; }
+    .featured-grid { grid-template-columns: 1fr; gap: 3px; }
+    .spaces-grid { grid-template-columns: repeat(4, 1fr); }
+    .faq-section { padding: 48px 24px; }
+    .cta { padding: 64px 24px; }
+    .threshold-footer { padding: 18px 24px; flex-direction: column; gap: 8px; }
+  }
+  @media (max-width: 600px) {
+    .spaces-grid { grid-template-columns: repeat(3, 1fr); }
+    .schedule-grid { grid-template-columns: 72px 1fr; gap: 10px 16px; }
+    .replace-grid { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <div class="lightbox-backdrop" id="lb-close"></div>
+  <div class="lb-arrow lb-prev" id="lb-prev">&larr;</div>
+  <div class="lb-arrow lb-next" id="lb-next">&rarr;</div>
+  <div class="lb-content">
+    <div class="lb-image" id="lb-image"></div>
+    <div class="lb-info">
+      <div>
+        <p class="lb-title" id="lb-title"></p>
+        <p class="lb-sub" id="lb-sub"></p>
+      </div>
+      <button class="lb-collect">Collect <span class="dot"></span></button>
+    </div>
+  </div>
+</div>
+
+<!-- Nav -->
+<nav class="threshold-nav">
+  <div class="nav-left">
+    <div class="dot"></div>
+    <span>The Threshold</span>
+  </div>
+  <div class="nav-right">
+    <span>The Quiet</span>
+    <span>Life Here</span>
+    <span>Voices</span>
+    <span>The Surrender</span>
+    <span>Arrive</span>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <p class="tag" style="margin-bottom:32px">Disconnect completely. Arrive gently.</p>
+  <h1>You've tried the apps.<br>The screen-time limits.<br>The phone-free Sundays.</h1>
+  <p class="subtitle">You touched grass and then posted about it. You did a digital detox weekend and checked your screen time on Monday. You know none of it works. Not really.</p>
+  <p class="emphasis">We built a place where the choice is made for you — gently, completely, and with love. You won't have to try anymore.</p>
+  <div class="dot" style="width:44px;height:44px;margin:0 auto"></div>
+</section>
+
+<!-- Hero Image -->
+<section class="hero-image">
+  <div class="room-img" data-room="0" style="background-image:url('images/room-01.jpg')">
+    <span class="room-label">The Main Corridor</span>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- What We Replace -->
+<section class="section">
+  <div class="section-center">
+    <p class="tag" style="text-align:center;margin-bottom:40px">What We Replace</p>
+    <div class="replace-grid" id="replace-grid"></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- 72-Hour Promise -->
+<section class="section">
+  <div class="promise">
+    <p class="tag" style="margin-bottom:32px">The 72-Hour Promise</p>
+    <p>Research shows 72 hours breaks digital dependency. We've found it takes slightly longer to hear The Quiet — four to five days. By day seven, the halls feel different. The light changes. Spaces that seemed identical begin to reveal their character.</p>
+    <p class="fade">By month three, Residents stop counting days entirely.</p>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- Life Here -->
+<section class="section">
+  <p class="tag" style="text-align:center;margin-bottom:40px">Life Here</p>
+  <div class="featured-grid">
+    <div class="room-img" data-room="2" style="background-image:url('images/room-03.jpg')">
+      <span class="room-label">The Surrender Room</span>
+    </div>
+    <div class="room-img" data-room="4" style="background-image:url('images/room-05.jpg')">
+      <span class="room-label">The Pool</span>
+    </div>
+    <div class="room-img" data-room="6" style="background-image:url('images/room-07.jpg')">
+      <span class="room-label">The Garden</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- The Surrender -->
+<section class="section">
+  <div class="surrender">
+    <p class="tag" style="margin-bottom:28px">The Surrender</p>
+    <p class="lead">Upon Arrival, you will be asked to place your devices in a wooden box bearing your name. The box will be sealed.</p>
+    <p class="body">You will feel a small grief. Then a large relief. This is The Surrender. It is the first gift we give you.</p>
+    <div class="room-img" data-room="2" style="background-image:url('images/room-03.jpg')">
+      <span class="room-label">The Surrender Room</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- Daily Schedule -->
+<section class="section">
+  <div class="schedule">
+    <p class="tag" style="margin-bottom:32px">A Day in The Quiet</p>
+    <div class="schedule-grid" id="schedule-grid"></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- Testimonials -->
+<section class="section">
+  <div class="testimonials" id="testimonials"></div>
+</section>
+
+<div class="divider"></div>
+
+<!-- Our Spaces -->
+<section class="section">
+  <div style="max-width:1100px;margin:0 auto">
+    <p class="tag" style="text-align:center;margin-bottom:36px">Our Spaces</p>
+    <div class="spaces-grid" id="spaces-grid"></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- FAQ -->
+<section class="faq-section">
+  <div class="faq-wrap" id="faq-wrap">
+    <p class="tag" style="text-align:center;margin-bottom:40px">Questions We Welcome</p>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <h2>Come home.</h2>
+  <p class="body">Not everyone hears The Quiet. The fact that you're still reading means something. We don't recruit. We recognize.</p>
+  <div class="cta-form" id="cta-form"></div>
+</section>
+
+<!-- Footer -->
+<footer class="threshold-footer">
+  <span>&copy; The Threshold Community, Year 7</span>
+  <span>This page is our only window &nbsp;&bull;</span>
+</footer>
+
+<script>
+const ROOMS = [
+  { id:"01", title:"The Main Corridor", sub:"Morning Light" },
+  { id:"02", title:"The Dining Hall", sub:"Table Set for Thirty" },
+  { id:"03", title:"The Surrender Room", sub:"Wooden Lockboxes" },
+  { id:"04", title:"Sleeping Quarters", sub:"Beds 7 Through 14" },
+  { id:"05", title:"The Pool", sub:"Reflection Space" },
+  { id:"06", title:"The Writing Room", sub:"Letters Home" },
+  { id:"07", title:"The Garden", sub:"Under the Grow Lights" },
+  { id:"08", title:"The Listening Room", sub:"Two Chairs" },
+  { id:"09", title:"The Library", sub:"Untitled Spines" },
+  { id:"10", title:"The Meditation Hall", sub:"Cushions in a Circle" },
+  { id:"11", title:"The Mail Room", sub:"Outgoing Only" },
+  { id:"12", title:"The Hallway Junction", sub:"Community \u2190 Quiet \u2192" },
+  { id:"13", title:"The Kitchen", sub:"Daily Meals" },
+  { id:"14", title:"The Nursery", sub:"Family Living" },
+  { id:"15", title:"The Infirmary", sub:"Resident Care" },
+  { id:"16", title:"The Archive", sub:"Personal Effects" },
+  { id:"17", title:"The Stairwell", sub:"Lower Levels" },
+  { id:"18", title:"The Door Ajar", sub:"Warm Light" },
+  { id:"19", title:"The Exit", sub:"Always Open" },
+  { id:"20", title:"The Opening", sub:"Level 3" },
+  { id:"21", title:"The Courtyard", sub:"Indoor Sky" },
+  { id:"22", title:"The Observation Room", sub:"Adjustment Period" },
+  { id:"23", title:"Overnight Arrivals", sub:"Your First Night" },
+  { id:"24", title:"The Elevator", sub:"All Levels" },
+];
+
+// --- Lightbox ---
+let currentLb = -1;
+const lightbox = document.getElementById('lightbox');
+const lbImage = document.getElementById('lb-image');
+const lbTitle = document.getElementById('lb-title');
+const lbSub = document.getElementById('lb-sub');
+
+function openLb(idx) {
+  currentLb = idx;
+  const room = ROOMS[idx];
+  lbImage.style.backgroundImage = `url('images/room-${room.id}.jpg')`;
+  lbTitle.textContent = room.title;
+  lbSub.textContent = room.sub;
+  lightbox.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function closeLb() {
+  lightbox.classList.remove('active');
+  document.body.style.overflow = '';
+  currentLb = -1;
+}
+function navLb(dir) {
+  if (currentLb < 0) return;
+  const next = (currentLb + dir + ROOMS.length) % ROOMS.length;
+  openLb(next);
+}
+
+document.getElementById('lb-close').addEventListener('click', closeLb);
+document.getElementById('lb-prev').addEventListener('click', () => navLb(-1));
+document.getElementById('lb-next').addEventListener('click', () => navLb(1));
+document.addEventListener('keydown', e => {
+  if (currentLb < 0) return;
+  if (e.key === 'Escape') closeLb();
+  if (e.key === 'ArrowLeft') navLb(-1);
+  if (e.key === 'ArrowRight') navLb(1);
+});
+
+// Attach click handlers to all room images
+document.querySelectorAll('.room-img[data-room]').forEach(el => {
+  el.addEventListener('click', () => openLb(parseInt(el.dataset.room)));
+});
+
+// --- What We Replace ---
+const replacements = [
+  ["Scrolling","Walking"],["Group chats","The Circle"],["Notifications","Silence"],
+  ["Screen glow","Fluorescent warmth"],["Likes","Letters home"],
+  ["Algorithms","The halls decide"],["Blue light","Warm light. Always warm."]
+];
+const replaceGrid = document.getElementById('replace-grid');
+replacements.forEach(([old, neu]) => {
+  replaceGrid.innerHTML += `<span class="replace-old">${old}</span><span class="replace-arrow">\u2192</span><span class="replace-new">${neu}</span>`;
+});
+
+// --- Schedule ---
+const schedule = [
+  ["6:00 AM","Wake naturally. No alarms. The light comes on gently."],
+  ["7:00 AM","Communal breakfast. The table is always set."],
+  ["8:30 AM","Morning Walk through the halls. Every walk is different."],
+  ["10:00 AM","The Writing Room opens. Letters home."],
+  ["12:00 PM","Shared meal. Silence is welcome but not required."],
+  ["2:00 PM","Garden tending under the grow lights."],
+  ["4:00 PM","The Listening Room. A Guide sits with you."],
+  ["6:00 PM","Evening meal together. The table seats everyone."],
+  ["8:00 PM","Free hours. The library. The pool. The halls."],
+  ["10:00 PM","Lights dim. The halls continue."],
+];
+const scheduleGrid = document.getElementById('schedule-grid');
+schedule.forEach(([t, d]) => {
+  scheduleGrid.innerHTML += `<span class="schedule-time">${t}</span><span class="schedule-desc">${d}</span>`;
+});
+
+// --- Testimonials ---
+const testimonials = [
+  { text:"I used to scroll for six hours a day. Now I walk the halls and I\u2019ve never felt more present. The silence isn\u2019t empty here. It\u2019s full.", tag:"Resident since Year 2" },
+  { text:"I tried every digital detox on the market. Lockbox cabins. Silent retreats. Dopamine fasts. They all had a check-out date. This doesn\u2019t.", tag:"Arrived Year 3" },
+  { text:"The Openings appeared after my second month. A perfect circle in the wall. Dark inside. Warm air coming through. The Guides say everyone sees them eventually.", tag:"Resident since Year 5" },
+];
+const testimonialsEl = document.getElementById('testimonials');
+testimonialsEl.innerHTML = '<p class="tag" style="text-align:center;margin-bottom:44px">Resident Voices</p>';
+testimonials.forEach(t => {
+  testimonialsEl.innerHTML += `<div class="testimonial"><blockquote>\u201C${t.text}\u201D</blockquote><cite>\u2014 ${t.tag} &nbsp;\u25CF</cite></div>`;
+});
+
+// --- Spaces Grid ---
+const spacesGrid = document.getElementById('spaces-grid');
+ROOMS.forEach((room, i) => {
+  spacesGrid.innerHTML += `
+    <div class="space-cell">
+      <div class="room-img" data-room="${i}" style="background-image:url('images/room-${room.id}.jpg')"></div>
+      <div class="space-overlay">
+        <p class="name">${room.title}</p>
+        <p class="sub">${room.sub}</p>
+      </div>
+    </div>`;
+});
+// Re-attach click handlers for dynamically created room images
+spacesGrid.querySelectorAll('.room-img[data-room]').forEach(el => {
+  el.addEventListener('click', () => openLb(parseInt(el.dataset.room)));
+});
+
+// --- FAQ ---
+const faqs = [
+  { q:"Is this a cult?", a:"We get this question. We welcome it. A cult demands obedience to a single leader \u2014 we have no leader. A cult isolates you \u2014 we encourage letters home. We simply offer a place where the noise stops. That\u2019s all this is." },
+  { q:"What happens to my phone?", a:"Your devices are lovingly stored in The Surrender Room upon Arrival. Wooden lockbox. Your name on the lid. Sealed. Most Residents stop missing them within 48 hours." },
+  { q:"How much does it cost?", a:"Nothing. Food, shelter, clothing, community \u2014 provided. Leave your wallet. You won\u2019t need it." },
+  { q:"Can I leave?", a:"Of course. The hallways always lead to an exit. Most Residents find they prefer to stay. That\u2019s a choice, not a condition." },
+];
+const faqWrap = document.getElementById('faq-wrap');
+faqs.forEach(faq => {
+  faqWrap.innerHTML += `<div class="faq-item"><p class="faq-q">${faq.q}</p><p class="faq-a">${faq.a}</p></div>`;
+});
+
+// --- CTA Form ---
+const ctaLabels = ["What is your name?","How long have you been searching?","What are you leaving behind?","Do you dream of hallways?"];
+const ctaForm = document.getElementById('cta-form');
+ctaLabels.forEach(label => {
+  ctaForm.innerHTML += `<div class="cta-field"><label>${label}</label><div class="line"></div></div>`;
+});
+ctaForm.innerHTML += `<div style="text-align:center;margin-top:36px"><div class="dot" style="width:48px;height:48px;margin:0 auto 10px"></div><p class="tag" style="opacity:.3">Enter The Quiet</p></div>`;
+</script>
+</body>
+</html>
