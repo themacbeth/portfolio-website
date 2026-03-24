@@ -9,12 +9,11 @@
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
   :root {
-    --bg: #F6F1E9;
+    --bg: #dfdfdf;
     --fg: #2C2821;
     --muted: #2C282170;
-    --faint: #2C282125;
+    --faint: #2c282182;
     --ghost: #2C28210E;
-    --cream: #EDE6D8;
     --void: #0E0D0B;
     --mono: 'Courier New', 'Courier', monospace;
     --serif: 'Georgia', 'Palatino Linotype', serif;
@@ -53,9 +52,8 @@
   /* Divider */
   .divider { height: 1px; background: var(--ghost); }
 
-  /* Dot */
+  /* Dot (square logo) */
   .dot {
-    border-radius: 50%;
     background: var(--void);
     flex-shrink: 0;
   }
@@ -97,15 +95,6 @@
     letter-spacing: 4px;
     text-transform: uppercase;
   }
-  .nav-right {
-    display: flex;
-    gap: 28px;
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
 
   /* Hero */
   .hero {
@@ -145,7 +134,7 @@
   .hero-image .room-img {
     max-width: 1000px;
     margin: 0 auto;
-    aspect-ratio: 21/9;
+    aspect-ratio: 1;
   }
 
   /* Section common */
@@ -200,7 +189,7 @@
     max-width: 1000px;
     margin: 0 auto;
   }
-  .featured-grid .room-img { aspect-ratio: 4/3; }
+  .featured-grid .room-img { aspect-ratio: 1; }
 
   /* Surrender */
   .surrender {
@@ -222,7 +211,7 @@
     margin-bottom: 32px;
   }
   .surrender .room-img {
-    aspect-ratio: 16/9;
+    aspect-ratio: 1;
     max-width: 560px;
     margin: 0 auto;
   }
@@ -254,10 +243,10 @@
   }
   .testimonial {
     text-align: center;
-    padding-bottom: 40px;
-    margin-bottom: 40px;
   }
   .testimonial:not(:last-child) {
+    padding-bottom: 40px;
+    margin-bottom: 40px;
     border-bottom: 1px solid var(--ghost);
   }
   .testimonial blockquote {
@@ -326,7 +315,7 @@
   /* FAQ */
   .faq-section {
     padding: 64px 44px;
-    background: var(--cream);
+    background: var(--bg);
   }
   .faq-wrap { max-width: 560px; margin: 0 auto; }
   .faq-item {
@@ -437,7 +426,7 @@
   }
   .lb-image {
     width: 100%;
-    aspect-ratio: 4/3;
+    aspect-ratio: 1;
     background-size: cover;
     background-position: center;
   }
@@ -482,25 +471,68 @@
     width: 6px;
     height: 6px;
     background: #E8E0D0;
+    border-radius: 0;
   }
 
   /* Responsive */
   @media (max-width: 900px) {
     .threshold-nav { padding: 20px 24px; }
-    .nav-right { display: none; }
+    .nav-left span { font-size: 11px; letter-spacing: 3px; }
     .hero { padding: 64px 24px 40px; }
+    .hero h1 { font-size: clamp(28px, 7vw, 48px); }
+    .hero .subtitle { font-size: 15px; margin: 0 auto 14px; }
     .hero-image { padding: 0 24px 48px; }
+    .emphasis { padding: 0 24px; }
     .section { padding: 48px 24px; }
     .featured-grid { grid-template-columns: 1fr; gap: 3px; }
     .spaces-grid { grid-template-columns: repeat(4, 1fr); }
     .faq-section { padding: 48px 24px; }
     .cta { padding: 64px 24px; }
-    .threshold-footer { padding: 18px 24px; flex-direction: column; gap: 8px; }
+    .cta h2 { font-size: clamp(24px, 8vw, 42px); }
+    .threshold-footer { padding: 18px 24px; flex-direction: column; gap: 8px; text-align: center; }
+    .lb-content { width: 92%; }
+    .lb-arrow { padding: 14px 8px; font-size: 16px; }
+    .lb-prev { left: 8px; }
+    .lb-next { right: 8px; }
+    .lb-info { flex-direction: column; gap: 14px; }
+    .lb-title { font-size: 17px; }
+    .lb-collect { align-self: flex-start; }
   }
   @media (max-width: 600px) {
+    .threshold-nav { padding: 16px 18px; }
+    .nav-left .dot { width: 12px; height: 12px; }
+    .nav-left span { font-size: 10px; letter-spacing: 2.5px; }
+    .hero { padding: 48px 18px 32px; }
+    .hero h1 { font-size: clamp(24px, 7vw, 36px); margin-bottom: 20px; }
+    .hero .subtitle { font-size: 14px; }
+    .hero-image { padding: 0 18px 36px; }
+    .emphasis { padding: 0 18px; font-size: 14px !important; }
+    .section { padding: 40px 18px; }
+    .replace-grid { font-size: 13px; grid-template-columns: 1fr 20px 1fr; }
+    .promise p:first-of-type { font-size: 15px; }
+    .surrender .lead { font-size: 16px; }
+    .schedule-grid { grid-template-columns: 56px 1fr; gap: 10px 14px; font-size: 13px; }
+    .schedule-time { font-size: 10px; }
+    .testimonial blockquote { font-size: 16px; }
     .spaces-grid { grid-template-columns: repeat(3, 1fr); }
-    .schedule-grid { grid-template-columns: 72px 1fr; gap: 10px 16px; }
-    .replace-grid { font-size: 13px; }
+    .space-overlay .name { font-size: 7px; }
+    .space-overlay .sub { font-size: 6px; }
+    .faq-section { padding: 40px 18px; }
+    .faq-q { font-size: 14px; }
+    .faq-a { font-size: 12px; }
+    .cta { padding: 48px 18px; }
+    .cta .body { font-size: 14px; }
+    .cta-form { max-width: 100%; }
+    .threshold-footer { padding: 16px 18px; font-size: 8px; }
+    .dot { width: 36px !important; height: 36px !important; }
+    .nav-left .dot { width: 12px !important; height: 12px !important; }
+    .lb-collect .dot { width: 6px !important; height: 6px !important; }
+  }
+
+  /* Touch: show overlay on tap for spaces grid */
+  @media (hover: none) {
+    .space-cell .space-overlay { opacity: 1; background: rgba(14,13,11,0.4); }
+    .room-img:hover { transform: none; }
   }
 </style>
 </head>
@@ -529,21 +561,13 @@
     <div class="dot"></div>
     <span>The Threshold</span>
   </div>
-  <div class="nav-right">
-    <span>The Quiet</span>
-    <span>Life Here</span>
-    <span>Voices</span>
-    <span>The Surrender</span>
-    <span>Arrive</span>
-  </div>
 </nav>
 
 <!-- Hero -->
 <section class="hero">
   <p class="tag" style="margin-bottom:32px">Disconnect completely. Arrive gently.</p>
-  <h1>You've tried the apps.<br>The screen-time limits.<br>The phone-free Sundays.</h1>
+  <h1>You've tried the apps.<br>The screen-time limits.</h1>
   <p class="subtitle">You touched grass and then posted about it. You did a digital detox weekend and checked your screen time on Monday. You know none of it works. Not really.</p>
-  <p class="emphasis">We built a place where the choice is made for you — gently, completely, and with love. You won't have to try anymore.</p>
   <div class="dot" style="width:44px;height:44px;margin:0 auto"></div>
 </section>
 
@@ -553,6 +577,8 @@
     <span class="room-label">The Main Corridor</span>
   </div>
 </section>
+
+<p class="emphasis" style="text-align:center;font-size:17px;line-height:1.85;max-width:470px;margin:0 auto 42px;font-style:italic;opacity:0.65;">We built a place where the choice is made for you — gently, completely, and with love. You won't have to try anymore.</p>
 
 <div class="divider"></div>
 
@@ -714,6 +740,14 @@ function navLb(dir) {
 document.getElementById('lb-close').addEventListener('click', closeLb);
 document.getElementById('lb-prev').addEventListener('click', () => navLb(-1));
 document.getElementById('lb-next').addEventListener('click', () => navLb(1));
+
+// Touch swipe for lightbox
+let touchStartX = 0;
+lightbox.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+lightbox.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(dx) > 50) navLb(dx < 0 ? 1 : -1);
+}, { passive: true });
 document.addEventListener('keydown', e => {
   if (currentLb < 0) return;
   if (e.key === 'Escape') closeLb();
@@ -739,16 +773,16 @@ replacements.forEach(([old, neu]) => {
 
 // --- Schedule ---
 const schedule = [
-  ["6:00 AM","Wake naturally. No alarms. The light comes on gently."],
-  ["7:00 AM","Communal breakfast. The table is always set."],
-  ["8:30 AM","Morning Walk through the halls. Every walk is different."],
-  ["10:00 AM","The Writing Room opens. Letters home."],
-  ["12:00 PM","Shared meal. Silence is welcome but not required."],
-  ["2:00 PM","Garden tending under the grow lights."],
-  ["4:00 PM","The Listening Room. A Guide sits with you."],
-  ["6:00 PM","Evening meal together. The table seats everyone."],
-  ["8:00 PM","Free hours. The library. The pool. The halls."],
-  ["10:00 PM","Lights dim. The halls continue."],
+  ["06:00","Wake naturally. No alarms. The light comes on gently."],
+  ["07:00","Communal breakfast. The table is always set."],
+  ["08:30","Morning Walk through the halls. Every walk is different."],
+  ["10:00","The Writing Room opens. Letters home."],
+  ["12:00","Shared meal. Silence is welcome but not required."],
+  ["14:00","Garden tending under the grow lights."],
+  ["16:00","The Listening Room. A Guide sits with you."],
+  ["18:00","Evening meal together. The table seats everyone."],
+  ["20:00","Free hours. The library. The pool. The halls."],
+  ["22:00","Lights dim. The halls continue."],
 ];
 const scheduleGrid = document.getElementById('schedule-grid');
 schedule.forEach(([t, d]) => {
@@ -759,7 +793,6 @@ schedule.forEach(([t, d]) => {
 const testimonials = [
   { text:"I used to scroll for six hours a day. Now I walk the halls and I\u2019ve never felt more present. The silence isn\u2019t empty here. It\u2019s full.", tag:"Resident since Year 2" },
   { text:"I tried every digital detox on the market. Lockbox cabins. Silent retreats. Dopamine fasts. They all had a check-out date. This doesn\u2019t.", tag:"Arrived Year 3" },
-  { text:"The Openings appeared after my second month. A perfect circle in the wall. Dark inside. Warm air coming through. The Guides say everyone sees them eventually.", tag:"Resident since Year 5" },
 ];
 const testimonialsEl = document.getElementById('testimonials');
 testimonialsEl.innerHTML = '<p class="tag" style="text-align:center;margin-bottom:44px">Resident Voices</p>';
@@ -775,7 +808,6 @@ ROOMS.forEach((room, i) => {
       <div class="room-img" data-room="${i}" style="background-image:url('images/room-${room.id}.jpg')"></div>
       <div class="space-overlay">
         <p class="name">${room.title}</p>
-        <p class="sub">${room.sub}</p>
       </div>
     </div>`;
 });
@@ -802,7 +834,7 @@ const ctaForm = document.getElementById('cta-form');
 ctaLabels.forEach(label => {
   ctaForm.innerHTML += `<div class="cta-field"><label>${label}</label><div class="line"></div></div>`;
 });
-ctaForm.innerHTML += `<div style="text-align:center;margin-top:36px"><div class="dot" style="width:48px;height:48px;margin:0 auto 10px"></div><p class="tag" style="opacity:.3">Enter The Quiet</p></div>`;
+ctaForm.innerHTML += `<div style="text-align:center;margin-top:36px"><div class="dot" style="width:48px;height:48px;margin:0 auto 10px"></div><p class="tag" style="opacity:.8">Enter The Quiet</p></div>`;
 </script>
 </body>
 </html>
