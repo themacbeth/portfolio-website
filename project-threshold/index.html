@@ -95,6 +95,16 @@
     letter-spacing: 4px;
     text-transform: uppercase;
   }
+  .nav-link {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .nav-link:hover { color: var(--fg); }
 
   /* Hero */
   .hero {
@@ -561,14 +571,15 @@
     <div class="dot"></div>
     <span>The Threshold</span>
   </div>
+  <a href="#spaces" class="nav-link">Our Spaces</a>
 </nav>
 
 <!-- Hero -->
 <section class="hero">
-  <p class="tag" style="margin-bottom:32px">Disconnect completely. Arrive gently.</p>
+  <p class="tag" style="margin-bottom:32px">Unplug. Arrive. Stay.</p>
   <h1>You've tried the apps.<br>The screen-time limits.</h1>
   <p class="subtitle">You touched grass and then posted about it. You did a digital detox weekend and checked your screen time on Monday. You know none of it works. Not really.</p>
-  <div class="dot" style="width:44px;height:44px;margin:0 auto"></div>
+  
 </section>
 
 <!-- Hero Image -->
@@ -653,7 +664,7 @@
 <div class="divider"></div>
 
 <!-- Our Spaces -->
-<section class="section">
+<section class="section" id="spaces">
   <div style="max-width:1100px;margin:0 auto">
     <p class="tag" style="text-align:center;margin-bottom:36px">Our Spaces</p>
     <div class="spaces-grid" id="spaces-grid"></div>
