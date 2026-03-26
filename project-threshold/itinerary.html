@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Plan Your Itinerary — The Threshold</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #dfdfdf;
+    --fg: #2C2821;
+    --muted: #2C282170;
+    --faint: #2c282182;
+    --ghost: #2C28210E;
+    --void: #0E0D0B;
+    --mono: 'Courier New', 'Courier', monospace;
+    --serif: 'Georgia', 'Palatino Linotype', serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--serif);
+    line-height: 1.6;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 50;
+  }
+
+  .tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 3.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  .dot { background: var(--void); flex-shrink: 0; }
+  .divider { height: 1px; background: var(--ghost); }
+
+  /* Nav */
+  .threshold-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 44px;
+    border-bottom: 1px solid var(--ghost);
+  }
+  .nav-left { display: flex; align-items: center; gap: 12px; }
+  .nav-left .dot { width: 16px; height: 16px; }
+  .nav-left span {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+  .nav-left a { text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px; }
+  .nav-back {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .nav-back:hover { color: var(--fg); }
+
+  /* Main content */
+  .content {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 64px 44px;
+  }
+
+  /* Header */
+  .itin-header {
+    text-align: center;
+    margin-bottom: 56px;
+  }
+  .itin-header h1 {
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 400;
+    font-style: italic;
+    margin-bottom: 12px;
+  }
+  .itin-header .sub {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.85;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  /* Progress */
+  .progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 48px;
+  }
+  .progress-dot {
+    width: 10px;
+    height: 10px;
+    background: var(--ghost);
+    transition: background 0.3s;
+  }
+  .progress-dot.active { background: var(--faint); }
+  .progress-dot.done { background: var(--void); }
+  .progress-line {
+    width: 20px;
+    height: 1px;
+    background: var(--ghost);
+  }
+
+  /* Category selection */
+  .categories {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .categories p {
+    margin-bottom: 24px;
+    font-style: italic;
+    color: var(--muted);
+  }
+  .cat-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+  .cat-btn {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border: 1px solid var(--ghost);
+    padding: 12px 22px;
+    background: none;
+    color: var(--fg);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .cat-btn:hover { border-color: var(--fg); }
+  .cat-btn.selected {
+    background: var(--void);
+    color: var(--bg);
+    border-color: var(--void);
+  }
+  .cat-btn.used {
+    opacity: 0.3;
+    pointer-events: none;
+  }
+  .cat-btn.chosen-cat {
+    border-color: var(--fg);
+    background: var(--fg);
+    color: var(--bg);
+  }
+
+  .proceed-btn {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border: 1px solid var(--fg);
+    padding: 14px 32px;
+    background: none;
+    color: var(--fg);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 28px;
+  }
+  .proceed-btn:hover { background: var(--void); color: var(--bg); }
+  .proceed-btn:disabled { opacity: 0.2; pointer-events: none; }
+
+  /* Image picking */
+  .pick-section {
+    text-align: center;
+  }
+  .pick-section .current-cat {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .pick-section .step-label {
+    font-style: italic;
+    font-size: 20px;
+    margin-bottom: 36px;
+  }
+  .thumb-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    max-width: 720px;
+    margin: 0 auto 24px;
+  }
+  .thumb {
+    aspect-ratio: 1;
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 2px solid transparent;
+  }
+  .thumb:hover { transform: scale(1.02); }
+  .thumb.selected { border-color: var(--void); }
+  .thumb .thumb-label {
+    position: absolute;
+    bottom: 10px;
+    left: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: rgba(246,241,233,0.7);
+    text-transform: uppercase;
+  }
+
+  .pick-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .shuffle-btn {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border: 1px solid var(--ghost);
+    padding: 10px 18px;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .shuffle-btn:hover { border-color: var(--fg); color: var(--fg); }
+  .choose-btn {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border: 1px solid var(--fg);
+    padding: 14px 32px;
+    background: none;
+    color: var(--fg);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .choose-btn:hover { background: var(--void); color: var(--bg); }
+  .choose-btn:disabled { opacity: 0.2; pointer-events: none; }
+
+  /* Lightbox */
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(14,13,11,0.92);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .lightbox.active { display: flex; }
+  .lightbox-backdrop {
+    position: absolute;
+    inset: 0;
+    cursor: pointer;
+  }
+  .lb-content {
+    max-width: 700px;
+    width: 85%;
+    z-index: 201;
+  }
+  .lb-image {
+    width: 100%;
+    aspect-ratio: 1;
+    background-size: cover;
+    background-position: center;
+  }
+  .lb-close-btn {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: #F6F1E9;
+    opacity: 0.4;
+    cursor: pointer;
+    z-index: 202;
+    background: none;
+    border: none;
+    padding: 10px;
+    transition: opacity 0.2s;
+  }
+  .lb-close-btn:hover { opacity: 0.8; }
+
+  /* Checkout */
+  .checkout {
+    text-align: center;
+  }
+  .checkout h2 {
+    font-size: clamp(24px, 3.5vw, 40px);
+    font-weight: 400;
+    font-style: italic;
+    margin-bottom: 12px;
+  }
+  .checkout .checkout-sub {
+    color: var(--muted);
+    font-size: 15px;
+    margin-bottom: 48px;
+  }
+  .checkout-grid {
+    display: grid;
+    gap: 12px;
+    max-width: 720px;
+    margin: 0 auto 40px;
+  }
+  .checkout-grid.cols-1 { grid-template-columns: 1fr; max-width: 280px; }
+  .checkout-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .checkout-grid.cols-5 { grid-template-columns: repeat(5, 1fr); }
+  .checkout-item {
+    text-align: center;
+  }
+  .checkout-item .img {
+    aspect-ratio: 1;
+    background-size: cover;
+    background-position: center;
+    margin-bottom: 8px;
+  }
+  .checkout-item .label {
+    font-family: var(--mono);
+    font-size: 8px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .checkout-divider {
+    height: 1px;
+    background: var(--ghost);
+    max-width: 400px;
+    margin: 0 auto 28px;
+  }
+  .checkout-total {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .checkout-price {
+    font-size: clamp(24px, 3vw, 36px);
+    font-style: italic;
+    margin-bottom: 36px;
+  }
+  .mint-btn {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    border: 2px solid var(--fg);
+    padding: 18px 48px;
+    background: none;
+    color: var(--fg);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .mint-btn:hover {
+    background: var(--void);
+    color: var(--bg);
+  }
+
+  /* Footer */
+  .threshold-footer {
+    padding: 22px 44px;
+    border-top: 1px solid var(--ghost);
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin-top: 64px;
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .threshold-nav { padding: 20px 24px; }
+    .content { padding: 48px 24px; }
+    .thumb-grid { gap: 8px; }
+    .threshold-footer { padding: 18px 24px; flex-direction: column; gap: 8px; }
+    .checkout-grid.cols-5 { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .thumb-grid { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .cat-btn { padding: 10px 14px; font-size: 9px; }
+    .checkout-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .checkout-grid.cols-5 { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <div class="lightbox-backdrop" id="lb-close"></div>
+  <button class="lb-close-btn" id="lb-close-btn">&times;</button>
+  <div class="lb-content">
+    <div class="lb-image" id="lb-image"></div>
+  </div>
+</div>
+
+<!-- Nav -->
+<nav class="threshold-nav">
+  <div class="nav-left">
+    <a href="index.html">
+      <div class="dot"></div>
+      <span>The Threshold</span>
+    </a>
+  </div>
+  <a href="index.html" class="nav-back">&larr; Back</a>
+</nav>
+
+<div class="content" id="app"></div>
+
+<footer class="threshold-footer">
+  <span>&copy; The Threshold Community, Year 7</span>
+  <span>This page is our only window &nbsp;&bull;</span>
+</footer>
+
+<script>
+// --- Image pools by category ---
+const POOLS = {
+  reflection: [
+    "freepik__empty-chapel-office-follow-the-rule-of-thirds-for-__54207-Edit.jpg",
+    "freepik__empty-chapel-office-follow-the-rule-of-thirds-for-__54208.jpg",
+    "freepik__a-wideangle-shot-captures-an-empty-indoor-church-t__10644.jpg",
+    "freepik__a-wideangle-shot-captures-an-empty-indoor-religiou__10647.jpg",
+    "freepik__interior-of-a-small-white-clapboard-country-church__79244.jpg",
+    "freepik__interior-of-a-small-white-clapboard-country-church__79246.jpg",
+  ],
+  activity: [
+    "freepik__clubhouse-community-indoor-fitness-room__4535.jpg",
+    "freepik__clubhouse-community-indoor-fitness-room__4538.jpg",
+    "freepik__clubhouse-community-indoor-squash-courts__4519.jpg",
+    "freepik__clubhouse-indoor-gym__67970.jpg",
+    "freepik__empty-fitness-equipment-follow-the-rule-of-thirds-__67981.jpg",
+    "freepik__community-indoor-swimming-pool__4549.jpg",
+  ],
+  "check-in": [
+    "freepik__clubhouse-community-indoor-lobby__4528.jpg",
+    "freepik__a-small-white-clapboard-country-church-except-it-i__79242.jpg",
+    "freepik__a-small-white-clapboard-country-church-except-it-i__79243.jpg",
+    "creation_2523616128.jpg",
+    "creation_2526998557.jpg",
+  ],
+  room: [
+    "freepik__empty-room-small-niche-recess-with-cross-follow-th__48232.jpg",
+    "freepik__empty-room-small-niche-recess-with-cushioned-bench__48236.jpg",
+    "freepik__empty-room-small-niche-recess-with-cushioned-bench__48238.jpg",
+    "freepik__empty-room-with-a-90s-console-zenith-tv-follow-the__11094.jpg",
+    "freepik__a-twisted-wideangle-shot-captures-an-empty-room-wi__24606.jpg",
+    "freepik__a-twisted-wideangle-shot-captures-an-empty-room-wi__71207.jpg",
+    "freepik__a-twisted-wideangle-shot-captures-an-empty-room-wi__71211.jpg",
+  ],
+  dining: [
+    "freepik__interior-of-a-small-white-clapboard-country-church__79247.jpg",
+    "freepik__interior-of-a-small-white-clapboard-country-church__79248.jpg",
+    "freepik__replace-tool-in-corner-img1-with-this-tool-img2__66466.jpg",
+    "freepik__empty-narrow-hallway-niche-recess-follow-the-rule-__48253.jpg",
+  ],
+  wander: [
+    "freepik__a-wide-angle-hallway-with-a-distant-far-offcenter-__11197.jpg",
+    "freepik__endless-maze-curved-hallway-with-bizarre-arrangeme__74223.jpg",
+    "freepik__endless-maze-hallway-with-bizarre-arrangement-of-4__74225.jpg",
+    "freepik__endless-maze-hallway-with-bizarre-arrangement-of-4__74229.jpg",
+    "freepik__curved-hallway-few-primitive-inflatable-geometric-__85413.jpg",
+    "freepik__empty-endless-hallway-with-odd-arrangement-of-4-ov__74244.jpg",
+    "freepik__empty-hallway-with-bizarre-arrangement-of-4-oversi__74236.jpg",
+    "freepik__empty-hallway-with-bizarre-arrangement-of-4-oversi__74237.jpg",
+  ],
+  passage: [
+    "freepik__a-wideangle-shot-captures-an-empty-curved-staircas__24611.jpg",
+    "freepik__narrow-stairwell-with-odd-arrangement-of-4-primiti__48186.jpg",
+    "freepik__staircase-with-odd-arrangement-of-4-primitive-geom__48180.jpg",
+    "freepik__stairwell-with-odd-arrangement-of-4-oversized-prim__74248.jpg",
+    "freepik__empty-fire-escape-stairwell-small-niche-recess-fol__4556.jpg",
+    "freepik__empty-fire-escape-stairwell-small-niche-recess-fol__4557.jpg",
+    "freepik__empty-fire-escape-stairwell-small-niche-recess-fol__4558.jpg",
+  ],
+  garden: [
+    "creation_2524022435-Edit.jpg",
+    "creation_2526989470-Edit.jpg",
+    "freepik__a-wideangle-shot-captures-an-empty-greenhouse-draw__66462.jpg",
+    "freepik__empty-emergency-exit-stairwell-small-niche-recess-__48263.jpg",
+  ],
+  chapel: [
+    "freepik__a-small-white-clapboard-country-church-except-it-i__79242.jpg",
+    "freepik__a-small-white-clapboard-country-church-except-it-i__79243.jpg",
+    "freepik__a-wideangle-shot-captures-an-empty-indoor-church-t__10644.jpg",
+    "freepik__a-wideangle-shot-captures-an-empty-indoor-religiou__10647.jpg",
+    "freepik__empty-chapel-office-follow-the-rule-of-thirds-for-__54207-Edit.jpg",
+    "freepik__empty-chapel-office-follow-the-rule-of-thirds-for-__54208.jpg",
+  ],
+  observation: [
+    "freepik__empty-hallway-door-in-far-corner-slightly-open-dar__42280.jpg",
+    "freepik__empty-narrow-hallway-with-bizarre-arrangement-of-4__74233.jpg",
+    "freepik__empty-narrow-hallway-with-bizarre-arrangement-of-4__74234.jpg",
+    "freepik__empty-staircase-toilet-in-the-far-corner-with-wind__97499.jpg",
+    "freepik__empty-staircase-toilet-in-the-far-corner-with-wind__97503.jpg",
+  ],
+};
+
+// --- Tier definitions ---
+const TIERS = {
+  1: { name: "The Seminar", sub: "Choose one category, then select your image.", picks: 1, categories: ["reflection", "activity"] },
+  3: { name: "The Weekend", sub: "Choose three categories, then select one image from each.", picks: 3, categories: ["check-in", "room", "reflection", "activity", "dining"] },
+  10: { name: "The Month", sub: "Walk the full path. Select one image from each category.", picks: 10, categories: ["check-in", "room", "reflection", "activity", "dining", "wander", "passage", "garden", "chapel", "observation"] },
+};
+
+// --- State ---
+const params = new URLSearchParams(window.location.search);
+const tierKey = parseInt(params.get('tier')) || 1;
+const tier = TIERS[tierKey] || TIERS[1];
+const app = document.getElementById('app');
+
+let chosenCategories = [];
+let currentStep = 0;
+let currentSet = [];
+let selectedThumb = -1;
+let selections = []; // { category, image }
+
+// --- Lightbox ---
+const lightbox = document.getElementById('lightbox');
+const lbImage = document.getElementById('lb-image');
+document.getElementById('lb-close').addEventListener('click', () => { lightbox.classList.remove('active'); document.body.style.overflow = ''; });
+document.getElementById('lb-close-btn').addEventListener('click', () => { lightbox.classList.remove('active'); document.body.style.overflow = ''; });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { lightbox.classList.remove('active'); document.body.style.overflow = ''; } });
+
+function openLightbox(img) {
+  lbImage.style.backgroundImage = `url('images/${img}')`;
+  lightbox.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+// --- Shuffle helper ---
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function getRandomSet(category) {
+  const pool = POOLS[category];
+  return shuffle(pool).slice(0, 3);
+}
+
+// --- Render functions ---
+function renderProgress() {
+  const total = tier.picks;
+  let html = '<div class="progress">';
+  for (let i = 0; i < total; i++) {
+    if (i > 0) html += '<div class="progress-line"></div>';
+    const cls = i < selections.length ? 'done' : i === selections.length ? 'active' : '';
+    html += `<div class="progress-dot ${cls}"></div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderCategorySelect() {
+  const needToChoose = tier.picks;
+  const allMandatory = needToChoose === tier.categories.length;
+
+  if (allMandatory) {
+    // For tier 10, all categories are mandatory — skip selection, go straight to steps
+    chosenCategories = [...tier.categories];
+    renderPickStep();
+    return;
+  }
+
+  let html = `
+    <div class="itin-header">
+      <p class="tag" style="margin-bottom:16px">Plan Your Itinerary</p>
+      <h1>${tier.name}</h1>
+      <p class="sub">${tier.sub}</p>
+    </div>
+    ${renderProgress()}
+    <div class="categories">
+      <p>Select ${needToChoose} ${needToChoose === 1 ? 'category' : 'categories'} for your path</p>
+      <div class="cat-grid" id="cat-grid">
+        ${tier.categories.map(c => `<button class="cat-btn" data-cat="${c}">${c}</button>`).join('')}
+      </div>
+      <button class="proceed-btn" id="proceed-btn" disabled>Begin</button>
+    </div>
+  `;
+
+  app.innerHTML = html;
+
+  const btns = document.querySelectorAll('.cat-btn');
+  const proceedBtn = document.getElementById('proceed-btn');
+  const tempSelected = new Set();
+
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cat = btn.dataset.cat;
+      if (tempSelected.has(cat)) {
+        tempSelected.delete(cat);
+        btn.classList.remove('selected');
+      } else if (tempSelected.size < needToChoose) {
+        tempSelected.add(cat);
+        btn.classList.add('selected');
+      }
+      proceedBtn.disabled = tempSelected.size !== needToChoose;
+    });
+  });
+
+  proceedBtn.addEventListener('click', () => {
+    chosenCategories = [...tempSelected];
+    currentStep = 0;
+    renderPickStep();
+  });
+}
+
+function renderPickStep() {
+  const cat = chosenCategories[currentStep];
+  currentSet = getRandomSet(cat);
+  selectedThumb = -1;
+
+  let html = `
+    <div class="itin-header">
+      <p class="tag" style="margin-bottom:16px">Plan Your Itinerary</p>
+      <h1>${tier.name}</h1>
+    </div>
+    ${renderProgress()}
+    <div class="pick-section">
+      <p class="current-cat">${cat}</p>
+      <p class="step-label">Choose your image</p>
+      <div class="thumb-grid" id="thumb-grid">
+        ${currentSet.map((img, i) => `
+          <div class="thumb" data-idx="${i}" style="background-image:url('images/${img}')">
+            <span class="thumb-label">${i + 1}</span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="pick-actions">
+        <button class="shuffle-btn" id="shuffle-btn">Shuffle</button>
+        <button class="choose-btn" id="choose-btn" disabled>Choose</button>
+      </div>
+    </div>
+  `;
+
+  app.innerHTML = html;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // Thumb click — select or expand
+  document.querySelectorAll('.thumb').forEach(thumb => {
+    thumb.addEventListener('click', (e) => {
+      const idx = parseInt(thumb.dataset.idx);
+      if (selectedThumb === idx) {
+        // Already selected — expand in lightbox
+        openLightbox(currentSet[idx]);
+      } else {
+        selectedThumb = idx;
+        document.querySelectorAll('.thumb').forEach(t => t.classList.remove('selected'));
+        thumb.classList.add('selected');
+        document.getElementById('choose-btn').disabled = false;
+      }
+    });
+  });
+
+  document.getElementById('shuffle-btn').addEventListener('click', () => {
+    currentSet = getRandomSet(cat);
+    selectedThumb = -1;
+    const grid = document.getElementById('thumb-grid');
+    grid.innerHTML = currentSet.map((img, i) => `
+      <div class="thumb" data-idx="${i}" style="background-image:url('images/${img}')">
+        <span class="thumb-label">${i + 1}</span>
+      </div>
+    `).join('');
+    document.getElementById('choose-btn').disabled = true;
+
+    grid.querySelectorAll('.thumb').forEach(thumb => {
+      thumb.addEventListener('click', () => {
+        const idx = parseInt(thumb.dataset.idx);
+        if (selectedThumb === idx) {
+          openLightbox(currentSet[idx]);
+        } else {
+          selectedThumb = idx;
+          grid.querySelectorAll('.thumb').forEach(t => t.classList.remove('selected'));
+          thumb.classList.add('selected');
+          document.getElementById('choose-btn').disabled = false;
+        }
+      });
+    });
+  });
+
+  document.getElementById('choose-btn').addEventListener('click', () => {
+    selections.push({ category: cat, image: currentSet[selectedThumb] });
+    currentStep++;
+    if (currentStep < chosenCategories.length) {
+      renderPickStep();
+    } else {
+      renderCheckout();
+    }
+  });
+}
+
+function renderCheckout() {
+  const count = selections.length;
+  const priceEach = 0.03;
+  const total = (count * priceEach).toFixed(2);
+  const colsClass = count <= 1 ? 'cols-1' : count <= 3 ? 'cols-3' : 'cols-5';
+
+  let html = `
+    <div class="checkout">
+      <p class="tag" style="margin-bottom:16px">Your Itinerary</p>
+      <h2>${tier.name}</h2>
+      <p class="checkout-sub">${count} ${count === 1 ? 'image' : 'images'} selected</p>
+      <div class="checkout-grid ${colsClass}">
+        ${selections.map(s => `
+          <div class="checkout-item">
+            <div class="img" style="background-image:url('images/${s.image}')"></div>
+            <p class="label">${s.category}</p>
+          </div>
+        `).join('')}
+      </div>
+      <div class="checkout-divider"></div>
+      <p class="checkout-total">${count} &times; 0.03 ETH</p>
+      <p class="checkout-price">${total} ETH</p>
+      <button class="mint-btn" id="mint-btn">Mint This Itinerary</button>
+    </div>
+  `;
+
+  app.innerHTML = html;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  document.getElementById('mint-btn').addEventListener('click', () => {
+    // Placeholder — would connect to wallet/contract
+    alert('Minting coming soon.');
+  });
+}
+
+// --- Init ---
+renderCategorySelect();
+</script>
+</body>
+</html>
