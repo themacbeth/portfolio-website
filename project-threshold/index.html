@@ -933,15 +933,11 @@ const spacesGrid = document.getElementById('spaces-grid');
 ROOMS.forEach((room, i) => {
   spacesGrid.innerHTML += `
     <div class="space-cell">
-      <div class="room-img" data-room="${i}" style="background-image:url('images/${room.img}')"></div>
+      <div class="room-img" style="background-image:url('images/${room.img}')"></div>
       <div class="space-overlay">
         <p class="name">${room.title}</p>
       </div>
     </div>`;
-});
-// Re-attach click handlers for dynamically created room images
-spacesGrid.querySelectorAll('.room-img[data-room]').forEach(el => {
-  el.addEventListener('click', () => openLb(parseInt(el.dataset.room)));
 });
 
 // --- FAQ ---
