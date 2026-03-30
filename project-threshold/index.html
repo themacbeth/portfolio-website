@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>The Threshold</title>
+<title>The Clearing</title>
 <style>
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -657,15 +657,21 @@
 <nav class="threshold-nav">
   <div class="nav-left">
     <div class="dot"></div>
-    <span>The Threshold</span>
+    <span>The Clearing</span>
   </div>
-  <a href="#spaces" class="nav-link">Our Spaces</a>
+  <div style="display:flex;gap:24px;align-items:center">
+    <a href="#promise" class="nav-link">The Quiet</a>
+    <a href="#life-here" class="nav-link">Life Here</a>
+    <a href="#testimonials" class="nav-link">Voices</a>
+    <a href="#surrender" class="nav-link">The Surrender</a>
+    <a href="#spaces" class="nav-link">Our Spaces</a>
+  </div>
 </nav>
 
 <!-- Hero -->
 <section class="hero">
-  <p class="tag" style="margin-bottom:32px">Unplug. Arrive. Stay.</p>
-  <h1>You've tried the apps.<br>The screen-time limits.</h1>
+  <p class="tag" style="margin-bottom:32px">Welcome to The Clearing. The noise ends here.</p>
+  <h1>Unplug. Arrive. Stay.</h1>
   <p class="subtitle">You touched grass and then posted about it. You did a digital detox weekend and checked your screen time on Monday. You know none of it works. Not really.</p>
   
 </section>
@@ -690,11 +696,11 @@
 <div class="divider"></div>
 
 <!-- 72-Hour Promise -->
-<section class="section">
+<section class="section" id="promise">
   <div class="promise">
     <p class="tag" style="margin-bottom:32px">The 72-Hour Promise</p>
     <p>Research shows 72 hours breaks digital dependency. We've found it takes slightly longer to hear The Quiet — four to five days. By day seven, the halls feel different. The light changes. Spaces that seemed identical begin to reveal their character.</p>
-    <p class="fade">By month three, Residents stop counting days entirely.</p>
+    <p class="fade">By month three, Wanderers stop counting days entirely.</p>
   </div>
 </section>
 
@@ -704,7 +710,7 @@
 <section class="section">
   <div class="tiers">
     <p class="tag" style="text-align:center;margin-bottom:24px">Choose Your Itinerary</p>
-    <p class="tiers-intro">Every Resident walks a different path. Choose the duration that feels right. Each room you select becomes yours — a piece of The Quiet to carry with you.</p>
+    <p class="tiers-intro">Every Wanderer walks a different path. Choose the duration that feels right. Each room you select becomes yours — a piece of The Clearing to carry with you.</p>
     <div class="tier-grid">
       <div class="tier-card">
         <h3 class="tier-name">The Seminar</h3>
@@ -725,7 +731,7 @@
         <h3 class="tier-name">The Month</h3>
         <p class="tier-sub">Full Immersion</p>
         <p class="tier-number">10</p>
-        <p class="tier-desc">A complete path through the compound. By the tenth day, most Residents say they've stopped counting.</p>
+        <p class="tier-desc">A complete path through the compound. By the tenth day, most Wanderers say they've stopped counting. The first 10 to complete this itinerary will receive something more.</p>
         <a href="itinerary.html?tier=10" class="tier-btn">Choose Your Path</a>
       </div>
     </div>
@@ -735,7 +741,7 @@
 <div class="divider"></div>
 
 <!-- Life Here -->
-<section class="section">
+<section class="section" id="life-here">
   <p class="tag" style="text-align:center;margin-bottom:40px">Life Here</p>
   <div class="featured-grid">
     <div class="room-img" data-room="2" style="background-image:url('images/freepik__empty-room-small-niche-recess-with-cross-follow-th__48232.jpg')">
@@ -753,7 +759,7 @@
 <div class="divider"></div>
 
 <!-- The Surrender -->
-<section class="section">
+<section class="section" id="surrender">
   <div class="surrender">
     <p class="tag" style="margin-bottom:28px">The Surrender</p>
     <p class="lead">Upon Arrival, you will be asked to place your devices in a wooden box bearing your name. The box will be sealed.</p>
@@ -777,8 +783,8 @@
 <div class="divider"></div>
 
 <!-- Testimonials -->
-<section class="section">
-  <div class="testimonials" id="testimonials"></div>
+<section class="section" id="testimonials">
+  <div class="testimonials" id="testimonials-inner"></div>
 </section>
 
 <div class="divider"></div>
@@ -809,7 +815,7 @@
 
 <!-- Footer -->
 <footer class="threshold-footer">
-  <span>&copy; The Threshold Community, Year 7</span>
+  <span>&copy; The Clearing Community, Year 7</span>
   <span>This page is our only window &nbsp;&bull;</span>
 </footer>
 
@@ -919,11 +925,11 @@ schedule.forEach(([t, d]) => {
 
 // --- Testimonials ---
 const testimonials = [
-  { text:"I used to scroll for six hours a day. Now I walk the halls and I\u2019ve never felt more present. The silence isn\u2019t empty here. It\u2019s full.", tag:"Resident since Year 2" },
+  { text:"I used to scroll for six hours a day. Now I walk the halls and I\u2019ve never felt more present. The silence isn\u2019t empty here. It\u2019s full.", tag:"Wanderer since Year 2" },
   { text:"I tried every digital detox on the market. Lockbox cabins. Silent retreats. Dopamine fasts. They all had a check-out date. This doesn\u2019t.", tag:"Arrived Year 3" },
 ];
-const testimonialsEl = document.getElementById('testimonials');
-testimonialsEl.innerHTML = '<p class="tag" style="text-align:center;margin-bottom:44px">Resident Voices</p>';
+const testimonialsEl = document.getElementById('testimonials-inner');
+testimonialsEl.innerHTML = '<p class="tag" style="text-align:center;margin-bottom:44px">Wanderer Voices</p>';
 testimonials.forEach(t => {
   testimonialsEl.innerHTML += `<div class="testimonial"><blockquote>\u201C${t.text}\u201D</blockquote><cite>\u2014 ${t.tag} &nbsp;\u25CF</cite></div>`;
 });
@@ -943,9 +949,11 @@ ROOMS.forEach((room, i) => {
 // --- FAQ ---
 const faqs = [
   { q:"Is this a cult?", a:"We get this question. We welcome it. A cult demands obedience to a single leader \u2014 we have no leader. A cult isolates you \u2014 we encourage letters home. We simply offer a place where the noise stops. That\u2019s all this is." },
-  { q:"What happens to my phone?", a:"Your devices are lovingly stored in The Surrender Room upon Arrival. Wooden lockbox. Your name on the lid. Sealed. Most Residents stop missing them within 48 hours." },
+  { q:"What happens to my phone?", a:"Your devices are lovingly stored in The Surrender Room upon Arrival. Wooden lockbox. Your name on the lid. Sealed. Most Wanderers stop missing them within 48 hours." },
+  { q:"Who are you?", a:"We are Reclaimers. We reclaimed our attention, our time, our presence. The Clearing is where we did it. There is no leader. There are Guides. There are Listeners. But The Clearing leads itself." },
   { q:"How much does it cost?", a:"Nothing. Food, shelter, clothing, community \u2014 provided. Leave your wallet. You won\u2019t need it." },
-  { q:"Can I leave?", a:"Of course. The hallways always lead to an exit. Most Residents find they prefer to stay. That\u2019s a choice, not a condition." },
+  { q:"Can I contact family?", a:"We encourage handwritten letters. We mail them for you weekly. It\u2019s more meaningful than a text, don\u2019t you think?" },
+  { q:"Can I leave?", a:"Of course. The hallways always lead to an exit. Most Wanderers find they prefer to stay. That\u2019s a choice, not a condition." },
 ];
 const faqWrap = document.getElementById('faq-wrap');
 faqs.forEach(faq => {
@@ -958,7 +966,7 @@ const ctaForm = document.getElementById('cta-form');
 ctaLabels.forEach(label => {
   ctaForm.innerHTML += `<div class="cta-field"><label>${label}</label><div class="line"></div></div>`;
 });
-ctaForm.innerHTML += `<div style="text-align:center;margin-top:36px"><div class="dot" style="width:48px;height:48px;margin:0 auto 10px"></div><p class="tag" style="opacity:.8">Enter The Quiet</p></div>`;
+ctaForm.innerHTML += `<div style="text-align:center;margin-top:36px"><div class="dot" style="width:48px;height:48px;margin:0 auto 10px"></div><p class="tag" style="opacity:.8">Enter The Clearing</p></div>`;
 </script>
 </body>
 </html>
