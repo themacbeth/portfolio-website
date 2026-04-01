@@ -390,6 +390,74 @@
     color: var(--bg);
   }
 
+  /* Consent / friction step */
+  .consent {
+    text-align: center;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  .consent .passage {
+    font-size: 15px;
+    line-height: 1.85;
+    color: var(--muted);
+    font-style: italic;
+    margin-bottom: 36px;
+  }
+  .consent-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    text-align: left;
+    margin-bottom: 32px;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .consent-check input[type="checkbox"] {
+    margin-top: 3px;
+    accent-color: var(--void);
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+  .consent-check label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    line-height: 1.6;
+  }
+
+  /* Post-mint confirmation */
+  .post-mint {
+    text-align: center;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+  .post-mint h2 {
+    font-size: clamp(24px, 3.5vw, 40px);
+    font-weight: 400;
+    font-style: italic;
+    margin-bottom: 16px;
+  }
+  .post-mint .welcome {
+    font-size: 17px;
+    line-height: 1.85;
+    font-style: italic;
+    opacity: 0.7;
+    margin-bottom: 12px;
+  }
+  .post-mint .identity {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 28px;
+  }
+
   /* Footer */
   .threshold-footer {
     padding: 22px 44px;
@@ -592,12 +660,50 @@ function renderProgress() {
   return html;
 }
 
+// --- Consent / friction step ---
+function renderConsent() {
+  const surrenderTexts = {
+    1: "You\u2019ve chosen The Seminar. One room. One moment. Before you choose, read this.",
+    3: "You\u2019ve chosen The Weekend. Three rooms. Three days. Before you choose, read this.",
+    10: "You\u2019ve chosen The Month. Ten rooms. A complete path. Before you choose, read this.",
+  };
+
+  let html = `
+    <div class="itin-header">
+      <p class="tag" style="margin-bottom:16px">Plan Your Itinerary</p>
+      <h1>${tier.name}</h1>
+    </div>
+    <div class="consent">
+      <p class="passage">${surrenderTexts[tierKey]}</p>
+      <p class="passage">Upon Arrival, you will be asked to place your devices in a wooden box bearing your name. The box will be sealed. You will feel a small grief. Then a large relief. This is The Surrender. It is the first gift we give you.</p>
+      <div class="consent-check">
+        <input type="checkbox" id="consent-cb">
+        <label for="consent-cb">I understand that my devices will be stored upon Arrival</label>
+      </div>
+      <button class="proceed-btn" id="consent-proceed" disabled>Continue</button>
+    </div>
+  `;
+
+  app.innerHTML = html;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  const cb = document.getElementById('consent-cb');
+  const proceedBtn = document.getElementById('consent-proceed');
+
+  cb.addEventListener('change', () => {
+    proceedBtn.disabled = !cb.checked;
+  });
+
+  proceedBtn.addEventListener('click', () => {
+    renderCategorySelect();
+  });
+}
+
 function renderCategorySelect() {
   const needToChoose = tier.picks;
   const allMandatory = needToChoose === tier.categories.length;
 
   if (allMandatory) {
-    // For tier 10, all categories are mandatory — skip selection, go straight to steps
     chosenCategories = [...tier.categories];
     renderPickStep();
     return;
@@ -760,13 +866,21 @@ function renderCheckout() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
   document.getElementById('mint-btn').addEventListener('click', () => {
-    // Placeholder — would connect to wallet/contract
-    alert('Minting coming soon.');
+    // Post-mint confirmation
+    app.innerHTML = `
+      <div class="post-mint">
+        <p class="tag" style="margin-bottom:24px">Confirmation</p>
+        <h2>Welcome to The Clearing.</h2>
+        <p class="welcome">Your box is ready. Your name is already on it.</p>
+        <p class="identity">You are now a Wanderer.</p>
+      </div>
+    `;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 }
 
 // --- Init ---
-renderCategorySelect();
+renderConsent();
 </script>
 </body>
 </html>

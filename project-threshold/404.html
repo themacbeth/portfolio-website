@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>The Clearing</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0A0908;
+    --fg: #F6F1E9;
+    --muted: #F6F1E940;
+    --mono: 'Courier New', 'Courier', monospace;
+    --serif: 'Georgia', 'Palatino Linotype', serif;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--serif);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 44px;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 50;
+  }
+  h1 {
+    font-size: clamp(20px, 3vw, 32px);
+    font-weight: 400;
+    font-style: italic;
+    line-height: 1.4;
+    margin-bottom: 40px;
+    opacity: 0.7;
+  }
+  a {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--fg);
+    text-decoration: none;
+    border: 1px solid #F6F1E920;
+    padding: 14px 28px;
+    transition: border-color 0.2s;
+  }
+  a:hover { border-color: #F6F1E960; }
+</style>
+</head>
+<body>
+  <h1>This room hasn't been built yet.<br>Keep walking.</h1>
+  <a href="index.html">Return to The Clearing</a>
+</body>
+</html>

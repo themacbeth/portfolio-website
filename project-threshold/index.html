@@ -632,9 +632,73 @@
     .space-cell .space-overlay { opacity: 1; background: rgba(14,13,11,0.4); }
     .room-img:hover { transform: none; }
   }
+
+  /* Custom square cursor on room images */
+  .room-img, .space-cell { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Crect width='12' height='12' fill='%230E0D0B'/%3E%3C/svg%3E") 6 6, pointer; }
+
+  /* Loading screen */
+  .loading-screen {
+    position: fixed;
+    inset: 0;
+    background: #0A0908;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.8s ease;
+  }
+  .loading-screen.fade-out { opacity: 0; pointer-events: none; }
+  .loading-text {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #F6F1E9;
+    opacity: 0;
+    animation: breathe 2.5s ease-in-out forwards;
+  }
+  @keyframes breathe {
+    0% { opacity: 0; }
+    30% { opacity: 0.6; }
+    70% { opacity: 0.6; }
+    100% { opacity: 0; }
+  }
+
+  /* Time counter in footer */
+  .time-counter {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--faint);
+    text-align: center;
+    padding: 14px 44px;
+    opacity: 0;
+    transition: opacity 1s ease;
+  }
+  .time-counter.visible { opacity: 1; }
+
+  /* Wanderer count */
+  .wanderer-count {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+
+  /* Hide nav links on mobile */
+  @media (max-width: 900px) {
+    .nav-links { display: none !important; }
+  }
 </style>
 </head>
 <body>
+
+<!-- Loading Screen -->
+<div class="loading-screen" id="loading-screen">
+  <p class="loading-text">Welcome to The Clearing. Breathe.</p>
+</div>
 
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox">
@@ -659,7 +723,7 @@
     <div class="dot"></div>
     <span>The Clearing</span>
   </div>
-  <div style="display:flex;gap:24px;align-items:center">
+  <div class="nav-links" style="display:flex;gap:24px;align-items:center">
     <a href="#promise" class="nav-link">The Quiet</a>
     <a href="#life-here" class="nav-link">Life Here</a>
     <a href="#testimonials" class="nav-link">Voices</a>
@@ -813,10 +877,14 @@
   <div class="cta-form" id="cta-form"></div>
 </section>
 
+<!-- Time Counter -->
+<div class="time-counter" id="time-counter"></div>
+
 <!-- Footer -->
 <footer class="threshold-footer">
   <span>&copy; The Clearing Community, Year 7</span>
-  <span>This page is our only window &nbsp;&bull;</span>
+  <span class="wanderer-count">Currently 0 Wanderers</span>
+  <span>This page is our only window &nbsp;<a href="room-25.html" style="color:inherit;text-decoration:none">&bull;</a></span>
 </footer>
 
 <script>
@@ -942,6 +1010,7 @@ ROOMS.forEach((room, i) => {
       <div class="room-img" style="background-image:url('images/${room.img}')"></div>
       <div class="space-overlay">
         <p class="name">${room.title}</p>
+        <p class="sub">${room.sub}</p>
       </div>
     </div>`;
 });
@@ -953,6 +1022,7 @@ const faqs = [
   { q:"Who are you?", a:"We are Reclaimers. We reclaimed our attention, our time, our presence. The Clearing is where we did it. There is no leader. There are Guides. There are Listeners. But The Clearing leads itself." },
   { q:"How much does it cost?", a:"Nothing. Food, shelter, clothing, community \u2014 provided. Leave your wallet. You won\u2019t need it." },
   { q:"Can I contact family?", a:"We encourage handwritten letters. We mail them for you weekly. It\u2019s more meaningful than a text, don\u2019t you think?" },
+  { q:"What are The Openings?", a:"Many long-term Wanderers report seeing them. The Guides consider them a natural part of the architecture. We encourage you not to research them before Arrival. Experience is more honest than expectation." },
   { q:"Can I leave?", a:"Of course. The hallways always lead to an exit. Most Wanderers find they prefer to stay. That\u2019s a choice, not a condition." },
 ];
 const faqWrap = document.getElementById('faq-wrap');
@@ -967,6 +1037,40 @@ ctaLabels.forEach(label => {
   ctaForm.innerHTML += `<div class="cta-field"><label>${label}</label><div class="line"></div></div>`;
 });
 ctaForm.innerHTML += `<div style="text-align:center;margin-top:36px"><div class="dot" style="width:48px;height:48px;margin:0 auto 10px"></div><p class="tag" style="opacity:.8">Enter The Clearing</p></div>`;
+
+// --- Loading Screen ---
+const loadingScreen = document.getElementById('loading-screen');
+setTimeout(() => {
+  loadingScreen.classList.add('fade-out');
+  setTimeout(() => loadingScreen.remove(), 800);
+}, 2800);
+
+// --- Time Counter ---
+const arrivalTime = Date.now();
+const timeCounter = document.getElementById('time-counter');
+let counterVisible = false;
+
+function updateCounter() {
+  const mins = Math.floor((Date.now() - arrivalTime) / 60000);
+  const secs = Math.floor((Date.now() - arrivalTime) / 1000) % 60;
+  if (mins < 1) {
+    timeCounter.textContent = `You\u2019ve been here for ${secs} second${secs !== 1 ? 's' : ''}`;
+  } else {
+    timeCounter.textContent = `You\u2019ve been here for ${mins} minute${mins !== 1 ? 's' : ''}`;
+  }
+}
+
+const footerObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting && !counterVisible) {
+      counterVisible = true;
+      updateCounter();
+      timeCounter.classList.add('visible');
+      setInterval(updateCounter, 1000);
+    }
+  });
+}, { threshold: 0.1 });
+footerObserver.observe(document.querySelector('.threshold-footer'));
 </script>
 </body>
 </html>
