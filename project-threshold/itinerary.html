@@ -83,13 +83,13 @@
   .content {
     max-width: 900px;
     margin: 0 auto;
-    padding: 64px 44px;
+    padding: 48px 44px;
   }
 
   /* Header */
   .itin-header {
     text-align: center;
-    margin-bottom: 56px;
+    margin-bottom: 32px;
   }
   .itin-header h1 {
     font-size: clamp(28px, 4vw, 48px);
@@ -111,7 +111,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    margin-bottom: 48px;
+    margin-bottom: 28px;
   }
   .progress-dot {
     width: 10px;
@@ -203,14 +203,14 @@
   .pick-section .step-label {
     font-style: italic;
     font-size: 20px;
-    margin-bottom: 36px;
+    margin-bottom: 24px;
   }
   .thumb-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: 12px;
     max-width: 720px;
-    margin: 0 auto 24px;
+    margin: 0 auto 16px;
   }
   .thumb {
     aspect-ratio: 1;
@@ -603,8 +603,8 @@ const POOLS = {
 // --- Tier definitions ---
 const TIERS = {
   1: { name: "The Seminar", sub: "Choose one category, then select your image.", picks: 1, categories: ["reflection", "activity"] },
-  3: { name: "The Weekend", sub: "Choose three categories, then select one image from each.", picks: 3, categories: ["check-in", "room", "reflection", "activity", "dining"] },
-  10: { name: "The Month", sub: "Walk the full path. Every Wanderer completes each step.", picks: 10, categories: ["check-in", "room", "reflection", "activity", "dining", "wander", "passage", "garden", "chapel", "observation"] },
+  3: { name: "The Weekend", sub: "Three rooms. One from each category.", picks: 3, categories: ["room", "activity", "reflection"] },
+  10: { name: "The Month", sub: "Walk the full path. Every Wanderer completes each step.", picks: 8, categories: ["room", "reflection", "reflection", "activity", "activity", "dining", "wander", "wander"] },
 };
 
 // --- State ---
@@ -665,7 +665,7 @@ function renderConsent() {
   const surrenderTexts = {
     1: "You\u2019ve chosen The Seminar. One room. One moment. Before you choose, read this.",
     3: "You\u2019ve chosen The Weekend. Three rooms. Three days. Before you choose, read this.",
-    10: "You\u2019ve chosen The Month. Ten rooms. A complete path. Before you choose, read this.",
+    10: "You\u2019ve chosen The Month. Eight rooms. A complete path. Before you choose, read this.",
   };
 
   let html = `
