@@ -9,287 +9,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Bebas+Neue&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../styles.css">
 <style>
-  :root {
-    --gold: #DAB03E;
-    --gold-dim: rgba(218,176,62,0.5);
-    --gold-faint: rgba(218,176,62,0.15);
-    --gold-ghost: rgba(218,176,62,0.06);
-    --bone: #e4e1da;
-    --bone-dim: rgba(228,225,218,0.5);
-    --bone-faint: rgba(228,225,218,0.25);
-    --bone-ghost: rgba(228,225,218,0.08);
-    --void: #0a0a0a;
-    --mono: 'Courier New', 'Courier', monospace;
-    --serif: 'Cormorant Garamond', 'Georgia', serif;
-  }
-
-  /* Override hero for dark ritual aesthetic */
-  .project-hero { min-height: 85vh; position: relative; overflow: hidden; }
-  .project-hero-bg {
-    background: #000;
-  }
-  .project-hero-content { z-index: 2; }
-  .project-hero-title {
-    font-family: var(--serif);
-    font-weight: 300;
-    letter-spacing: 0.35em;
-    font-size: clamp(48px, 8vw, 96px);
-    color: var(--bone);
-  }
-  .project-hero-tagline {
-    color: var(--gold-dim);
-    font-family: var(--mono);
-    letter-spacing: 0.3em;
-  }
-
-  /* Grain */
-  .veil-grain {
-    position: fixed;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 100;
-  }
-
-  /* Sections */
-  .veil-section {
-    padding: 80px 48px;
-    max-width: 900px;
-    margin: 0 auto;
-  }
-
-  .veil-tag {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 4px;
-    text-transform: uppercase;
-    color: var(--gold-dim);
-    margin-bottom: 28px;
-  }
-
-  .veil-heading {
-    font-family: var(--serif);
-    font-size: clamp(28px, 4vw, 44px);
-    font-weight: 300;
-    font-style: italic;
-    color: var(--bone);
-    line-height: 1.3;
-    margin-bottom: 24px;
-  }
-
-  .veil-body {
-    font-size: 15px;
-    line-height: 1.9;
-    color: var(--bone-dim);
-    max-width: 620px;
-  }
-  .veil-body + .veil-body { margin-top: 18px; }
-
-  .veil-divider {
-    border: none;
-    border-top: 1px solid var(--bone-ghost);
-    margin: 0 48px;
-  }
-
-  /* Manifesto / pull quote */
-  .veil-quote {
-    font-family: var(--serif);
-    font-size: clamp(20px, 3vw, 32px);
-    font-weight: 300;
-    font-style: italic;
-    color: var(--bone);
-    line-height: 1.6;
-    text-align: center;
-    max-width: 680px;
-    margin: 0 auto;
-    opacity: 0.7;
-  }
-
-  /* Specs grid */
-  .specs-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 36px 48px;
-    margin-top: 40px;
-  }
-  .spec-item {}
-  .spec-label {
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: var(--gold-dim);
-    margin-bottom: 8px;
-  }
-  .spec-value {
-    font-size: 14px;
-    color: var(--bone-faint);
-    line-height: 1.7;
-  }
-
-  /* Sequence / timeline */
-  .sequence {
-    margin-top: 40px;
-  }
-  .seq-item {
-    display: grid;
-    grid-template-columns: 80px 1fr;
-    gap: 24px;
-    padding: 20px 0;
-    border-bottom: 1px solid var(--bone-ghost);
-  }
-  .seq-item:first-child { border-top: 1px solid var(--bone-ghost); }
-  .seq-time {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 2px;
-    color: var(--gold-dim);
-    padding-top: 2px;
-  }
-  .seq-desc {
-    font-size: 14px;
-    color: var(--bone-dim);
-    line-height: 1.7;
-  }
-  .seq-title {
-    font-family: var(--serif);
-    font-style: italic;
-    font-size: 17px;
-    color: var(--bone);
-    margin-bottom: 4px;
-  }
-
-  /* Symbol strip */
-  .symbol-strip {
-    display: flex;
-    justify-content: center;
-    gap: 48px;
-    padding: 60px 0;
-  }
-  .symbol-glyph {
-    width: 48px;
-    height: 48px;
-    border: 1px solid var(--gold-faint);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    color: var(--gold-dim);
-    opacity: 0.6;
-  }
-
-  /* Preview cards */
-  .preview-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 3px;
-    margin-top: 40px;
-  }
-  .preview-card {
-    aspect-ratio: 16/9;
-    background: #060608;
-    overflow: hidden;
-    position: relative;
-    cursor: pointer;
-    transition: opacity 0.3s;
-  }
-  .preview-card:hover { opacity: 0.8; }
-  .preview-card iframe {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    border: none;
-    pointer-events: none;
-  }
-  .preview-label {
-    position: absolute;
-    bottom: 12px;
-    left: 14px;
-    font-family: var(--mono);
-    font-size: 9px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--bone-faint);
-    z-index: 2;
-  }
-
-  /* CTA */
-  .veil-cta {
-    text-align: center;
-    padding: 80px 48px;
-  }
-  .veil-cta-btn {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    border: 1px solid var(--gold-faint);
-    padding: 16px 36px;
-    color: var(--gold-dim);
-    background: none;
-    cursor: pointer;
-    text-decoration: none;
-    transition: all 0.3s;
-  }
-  .veil-cta-btn:hover {
-    border-color: var(--gold);
-    color: var(--gold);
-  }
-
-  /* Fullscreen viewer */
-  .overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 200;
-    background: #000;
-    display: none;
-  }
-  .overlay.active { display: block; }
-  .overlay iframe { width: 100%; height: 100%; border: none; }
-  .overlay-close {
-    position: fixed;
-    top: 20px;
-    right: 24px;
-    z-index: 210;
-    color: rgba(255,255,255,0.5);
-    font: 12px var(--mono);
-    letter-spacing: .15em;
-    cursor: pointer;
-    background: rgba(0,0,0,.6);
-    border: 1px solid rgba(255,255,255,0.2);
-    text-transform: uppercase;
-    padding: 10px 16px;
-    transition: color .2s, border-color .2s;
-  }
-  .overlay-close:hover { color: #fff; border-color: rgba(255,255,255,0.5); }
-  .overlay-title {
-    position: fixed;
-    top: 22px;
-    left: 24px;
-    z-index: 210;
-    color: var(--gold-dim);
-    font: 12px var(--mono);
-    letter-spacing: .15em;
-    text-transform: uppercase;
-    background: rgba(0,0,0,.6);
-    padding: 10px 16px;
-    border: 1px solid rgba(218,176,62,0.12);
-  }
-
-  @media (max-width: 768px) {
-    .veil-section { padding: 56px 24px; }
-    .veil-divider { margin: 0 24px; }
-    .specs-grid { grid-template-columns: 1fr; gap: 28px; }
-    .preview-grid { grid-template-columns: 1fr; }
-    .symbol-strip { gap: 28px; }
-    .seq-item { grid-template-columns: 60px 1fr; gap: 16px; }
+  @media (hover: none) {
+    .media-grid .media-item video::-webkit-media-controls { opacity: 1; }
   }
 </style>
 </head>
 <body>
-
-<div class="veil-grain"></div>
 
 <!-- ─── Nav ─── -->
 <nav id="navbar">
@@ -310,185 +35,73 @@
   </ul>
 </nav>
 
-<!-- ─── Hero ─── -->
+<!-- ─── Project Hero ─── -->
 <section class="project-hero">
   <div class="project-hero-bg"></div>
   <div class="project-hero-content">
     <h1 class="project-hero-title">THE VEIL</h1>
-    <p class="project-hero-tagline">laser projection · sacred ceremony · immersive audio-visual</p>
+    <p class="project-hero-tagline">Laser Projection · Sacred Ceremony · Immersive</p>
   </div>
 </section>
 
-<!-- ─── Manifesto ─── -->
-<div class="veil-section" style="text-align:center">
-  <p class="veil-quote">
-    A ceremony projected in light. Sacred geometry drawn by laser onto walls, bodies, and smoke. You don't watch The Veil. You stand inside it.
-  </p>
+<!-- ─── Intro ─── -->
+<div class="project-body">
+  <h3>THE VEIL</h3>
+  <p>A 30-minute immersive audio-visual ceremony performed in complete darkness. Participants enter a blacked-out space and are surrounded by laser-projected sacred geometry — symbols drawn in real-time across every surface. The floor. The walls. The fog. The bodies of those standing beside you. There is no screen. There is no stage. The projection is omnidirectional — a 360-degree laser throw that maps the room itself as its canvas.</p>
+  <p style="margin-top:16px">The symbols are generative, meaning no two ceremonies are identical. The system draws from a library of 25 sacred glyphs — geometric forms derived from ancient religious iconography, stripped to their structural essence and redrawn as single continuous laser paths. The audio is a purpose-built drone composition that evolves across seven movements. Sub-bass frequencies below the threshold of hearing create a physical sensation of pressure. The sound radiates from transducers embedded in the floor, so participants feel it rising through their feet.</p>
 </div>
+<p class="media-caption" style="margin-top: 0">full-screen + audio</p>
 
-<hr class="veil-divider">
-
-<!-- ─── About ─── -->
-<div class="veil-section">
-  <p class="veil-tag">About the Experience</p>
-  <h2 class="veil-heading">An immersive ceremony performed by light and sound</h2>
-  <p class="veil-body">
-    The Veil is a 30-minute audio-visual ritual designed for complete darkness. Participants enter a blacked-out space and are surrounded by laser-projected sacred geometry — symbols drawn in real-time across every surface. The floor. The walls. The fog. The bodies of those standing beside you.
-  </p>
-  <p class="veil-body">
-    There is no screen. There is no stage. The projection is omnidirectional — a 360-degree laser throw that maps the room itself as its canvas. The symbols are generative, meaning no two ceremonies are identical. The system draws from a library of 25 sacred glyphs — geometric forms derived from ancient religious iconography, stripped to their structural essence and redrawn as single continuous laser paths.
-  </p>
-  <p class="veil-body">
-    The audio is a purpose-built drone composition that evolves across the ceremony's seven movements. Sub-bass frequencies below the threshold of hearing create a physical sensation of pressure. Harmonic overtones shift in response to the laser geometry. The sound is not played from speakers mounted on walls — it radiates from transducers embedded in the floor, so participants feel it rising through their feet.
-  </p>
+<!-- ─── Generative Previews ─── -->
+<div class="media-grid" style="grid-template-columns: 1fr">
+  <div class="media-item" style="aspect-ratio: 16/9">
+    <iframe src="var1-procession.html" allow="autoplay" style="width:100%;height:100%;border:none"></iframe>
+  </div>
 </div>
+<p class="media-caption">I. Procession — symbols in slow ceremonial sequence</p>
 
-<hr class="veil-divider">
-
-<!-- ─── Symbol Strip ─── -->
-<div class="symbol-strip">
-  <div class="symbol-glyph">◇</div>
-  <div class="symbol-glyph">△</div>
-  <div class="symbol-glyph">○</div>
-  <div class="symbol-glyph">✝</div>
-  <div class="symbol-glyph">☽</div>
-  <div class="symbol-glyph">⬡</div>
-  <div class="symbol-glyph">✦</div>
+<div class="media-grid" style="grid-template-columns: 1fr">
+  <div class="media-item" style="aspect-ratio: 16/9">
+    <iframe src="glitch_marfa_3veils.html" allow="autoplay" style="width:100%;height:100%;border:none"></iframe>
+  </div>
 </div>
+<p class="media-caption">II. Three Veils — layered interference pattern</p>
 
-<hr class="veil-divider">
+<div class="media-grid" style="grid-template-columns: 1fr 1fr">
+  <div class="media-item" style="aspect-ratio: 1">
+    <iframe src="symbol-gallery.html" allow="autoplay" style="width:100%;height:100%;border:none"></iframe>
+  </div>
+  <div class="media-item" style="aspect-ratio: 1">
+    <iframe src="laser_throw_diagram.html" allow="autoplay" style="width:100%;height:100%;border:none"></iframe>
+  </div>
+</div>
+<p class="media-caption">Sacred glyph library · Laser throw diagram</p>
 
 <!-- ─── The Seven Movements ─── -->
-<div class="veil-section">
-  <p class="veil-tag">The Seven Movements</p>
-  <h2 class="veil-heading">Each ceremony follows the same arc. No two feel the same.</h2>
-  <div class="sequence">
-    <div class="seq-item">
-      <span class="seq-time">00:00</span>
-      <div>
-        <p class="seq-title">I. Threshold</p>
-        <p class="seq-desc">Total darkness. A single sub-bass tone rises through the floor. One point of light appears on the far wall — a single white laser dot, barely visible. It holds for 90 seconds. The room adjusts.</p>
-      </div>
-    </div>
-    <div class="seq-item">
-      <span class="seq-time">01:30</span>
-      <div>
-        <p class="seq-title">II. The Drawing</p>
-        <p class="seq-desc">The dot begins to move. A single line traces the first sacred symbol — slow, deliberate, the way a hand draws in sand. The glyph completes. Holds. Dissolves. A second begins. The drone deepens.</p>
-      </div>
-    </div>
-    <div class="seq-item">
-      <span class="seq-time">05:00</span>
-      <div>
-        <p class="seq-title">III. Multiplication</p>
-        <p class="seq-desc">The single laser splits. Two beams. Four. Eight. Symbols are drawn simultaneously across every surface. The fog machines engage — the beams become visible as lines cutting through the air above the participants. The geometry floats.</p>
-      </div>
-    </div>
-    <div class="seq-item">
-      <span class="seq-time">10:00</span>
-      <div>
-        <p class="seq-title">IV. The Procession</p>
-        <p class="seq-desc">Symbols begin to move. They drift across the walls in slow procession — a parade of sacred forms circling the room. The audio introduces a pulse. Not a beat. A pulse. Something biological. The symbols respond to it.</p>
-      </div>
-    </div>
-    <div class="seq-item">
-      <span class="seq-time">15:00</span>
-      <div>
-        <p class="seq-title">V. Convergence</p>
-        <p class="seq-desc">All symbols contract toward the center of the room. The beams cross through the fog, creating a three-dimensional lattice of light above the participants. The drone reaches its lowest frequency — felt more than heard. The floor vibrates.</p>
-      </div>
-    </div>
-    <div class="seq-item">
-      <span class="seq-time">22:00</span>
-      <div>
-        <p class="seq-title">VI. Dissolution</p>
-        <p class="seq-desc">The lattice breaks apart. Symbols fragment into raw geometry — lines, arcs, points of light scattering across every surface. The audio decays into pure harmonics. The room fills with gold.</p>
-      </div>
-    </div>
-    <div class="seq-item">
-      <span class="seq-time">27:00</span>
-      <div>
-        <p class="seq-title">VII. The Clearing</p>
-        <p class="seq-desc">One by one, the lights extinguish. The sound fades to a single tone. Then silence. Then darkness. The ceremony holds for 60 seconds of absolute nothing before the house lights rise.</p>
-      </div>
-    </div>
+<div class="project-body">
+  <h3>THE SEVEN MOVEMENTS</h3>
+  <p><strong style="color:rgba(255,255,255,0.6)">I. Threshold</strong> — Total darkness. A single sub-bass tone rises through the floor. One point of light appears on the far wall. It holds for 90 seconds.</p>
+  <p style="margin-top:12px"><strong style="color:rgba(255,255,255,0.6)">II. The Drawing</strong> — The dot begins to move. A single line traces the first sacred symbol — slow, deliberate. The glyph completes. Holds. Dissolves.</p>
+  <p style="margin-top:12px"><strong style="color:rgba(255,255,255,0.6)">III. Multiplication</strong> — The laser splits. Two beams. Four. Eight. The fog machines engage — beams become visible as lines cutting through the air.</p>
+  <p style="margin-top:12px"><strong style="color:rgba(255,255,255,0.6)">IV. The Procession</strong> — Symbols drift across the walls in slow procession. The audio introduces a pulse. Not a beat. Something biological.</p>
+  <p style="margin-top:12px"><strong style="color:rgba(255,255,255,0.6)">V. Convergence</strong> — All symbols contract toward center. Beams cross through fog, creating a three-dimensional lattice of light above participants.</p>
+  <p style="margin-top:12px"><strong style="color:rgba(255,255,255,0.6)">VI. Dissolution</strong> — The lattice breaks. Symbols fragment into raw geometry — lines, arcs, points of light scattering across every surface.</p>
+  <p style="margin-top:12px"><strong style="color:rgba(255,255,255,0.6)">VII. The Clearing</strong> — One by one, the lights extinguish. The sound fades to a single tone. Then silence. Then darkness. 60 seconds of absolute nothing.</p>
+</div>
+
+<!-- ─── Technical ─── -->
+<div class="project-body">
+  <h3>TECHNICAL</h3>
+  <p>8x ILDA laser projectors (2W RGB) in 360° throw configuration, 30kpps scan rate per unit. Floor-mounted tactile transducers with sub-bass haptic range (18Hz–60Hz). Ambisonic spatial audio (3rd order). Cracked oil fog for volumetric beam visibility. Temperature controlled to 16°C. Minimum 12m × 12m × 4m ceiling. Maximum 60 participants per ceremony. 30 minutes. 7 movements. No intermission. No phones.</p>
+</div>
+
+<!-- ─── Veil Editor ─── -->
+<div class="media-grid" style="grid-template-columns: 1fr">
+  <div class="media-item" style="aspect-ratio: 16/9">
+    <iframe src="veil_editor.html" allow="autoplay" style="width:100%;height:100%;border:none"></iframe>
   </div>
 </div>
-
-<hr class="veil-divider">
-
-<!-- ─── Technical Specifications ─── -->
-<div class="veil-section">
-  <p class="veil-tag">Technical Specifications</p>
-  <h2 class="veil-heading">Built for total immersion</h2>
-  <div class="specs-grid">
-    <div class="spec-item">
-      <p class="spec-label">Projection</p>
-      <p class="spec-value">8x ILDA laser projectors (2W RGB)<br>360° throw configuration<br>30kpps scan rate per unit</p>
-    </div>
-    <div class="spec-item">
-      <p class="spec-label">Audio</p>
-      <p class="spec-value">Floor-mounted tactile transducers<br>Sub-bass: 18Hz–60Hz haptic range<br>Ambisonic spatial audio (3rd order)</p>
-    </div>
-    <div class="spec-item">
-      <p class="spec-label">Atmosphere</p>
-      <p class="spec-value">Cracked oil fog (low-lying haze)<br>Volumetric beam visibility<br>Temperature controlled to 16°C</p>
-    </div>
-    <div class="spec-item">
-      <p class="spec-label">Software</p>
-      <p class="spec-value">Custom generative system<br>25 sacred glyph library<br>Real-time audio-reactive mapping</p>
-    </div>
-    <div class="spec-item">
-      <p class="spec-label">Space Requirements</p>
-      <p class="spec-value">Minimum 12m × 12m × 4m ceiling<br>Blacked-out walls and floor<br>Maximum 60 participants per ceremony</p>
-    </div>
-    <div class="spec-item">
-      <p class="spec-label">Duration</p>
-      <p class="spec-value">30 minutes per ceremony<br>7 movements<br>No intermission. No phones.</p>
-    </div>
-  </div>
-</div>
-
-<hr class="veil-divider">
-
-<!-- ─── Previews ─── -->
-<div class="veil-section">
-  <p class="veil-tag">Generative Previews</p>
-  <h2 class="veil-heading">Excerpts from the laser system</h2>
-  <p class="veil-body">These are real-time renders from the generative engine that drives the ceremony. Each preview runs the same symbol library and drawing algorithms used in the live laser projection.</p>
-  <div class="preview-grid" id="preview-grid"></div>
-</div>
-
-<hr class="veil-divider">
-
-<!-- ─── The Rules ─── -->
-<div class="veil-section">
-  <p class="veil-tag">Conditions of Entry</p>
-  <h2 class="veil-heading">The ceremony asks very little of you</h2>
-  <p class="veil-body">
-    No phones. No recording devices. No watches. You will be asked to surrender these at the entrance. They will be returned when you leave.
-  </p>
-  <p class="veil-body">
-    Wear dark clothing. The lasers project onto light surfaces — your body becomes part of the canvas. White fabric catches the geometry. Black fabric lets it pass through you.
-  </p>
-  <p class="veil-body">
-    Stand or sit. Move or be still. There is no correct way to experience The Veil. Some participants close their eyes. The light still reaches them.
-  </p>
-  <p class="veil-body" style="color:var(--gold-dim);font-style:italic;margin-top:32px">
-    "The ceremony does not require your belief. Only your presence."
-  </p>
-</div>
-
-<hr class="veil-divider">
-
-<!-- ─── CTA ─── -->
-<div class="veil-cta">
-  <p class="veil-tag" style="margin-bottom:20px">Inquiries</p>
-  <p class="veil-quote" style="font-size:clamp(22px,3vw,36px);margin-bottom:36px">
-    The Veil is available for galleries, institutions, and sacred spaces.
-  </p>
-  <a href="mailto:hello@macbeth.gallery" class="veil-cta-btn">Request a Ceremony</a>
-</div>
+<p class="media-caption">Veil Editor — generative ceremony system</p>
 
 <!-- ─── Footer ─── -->
 <footer>
@@ -500,67 +113,11 @@
   <p class="footer-copy">&copy; 2026 MACBETH. All rights reserved.</p>
 </footer>
 
-<!-- Fullscreen viewer -->
-<div class="overlay" id="overlay">
-  <div class="overlay-title" id="overlay-title"></div>
-  <button class="overlay-close" id="overlay-close">ESC</button>
-  <iframe id="overlay-frame" allow="autoplay"></iframe>
-</div>
-
 <script>
-const previews = [
-  { file: 'var1-procession.html', title: 'Procession' },
-  { file: 'symbol-gallery.html', title: 'Symbol Library' },
-  { file: 'glitch_marfa_3veils.html', title: 'Three Veils' },
-  { file: 'laser_throw_diagram.html', title: 'Laser Throw' },
-];
-
-const grid = document.getElementById('preview-grid');
-const previewObserver = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    const card = entry.target;
-    if (entry.isIntersecting && !card.dataset.loaded) {
-      card.dataset.loaded = '1';
-      const iframe = document.createElement('iframe');
-      iframe.src = card.dataset.file + '?mute=1';
-      iframe.allow = 'autoplay';
-      iframe.loading = 'lazy';
-      card.insertBefore(iframe, card.querySelector('.preview-label'));
-    }
-  });
-}, { rootMargin: '200px' });
-
-previews.forEach(p => {
-  const card = document.createElement('div');
-  card.className = 'preview-card';
-  card.dataset.file = p.file;
-  card.innerHTML = `<span class="preview-label">${p.title}</span>`;
-  card.addEventListener('click', () => {
-    document.getElementById('overlay-frame').src = p.file;
-    document.getElementById('overlay-title').textContent = p.title;
-    document.getElementById('overlay').classList.add('active');
-  });
-  grid.appendChild(card);
-  previewObserver.observe(card);
-});
-
-// Overlay controls
-document.getElementById('overlay-close').addEventListener('click', () => {
-  document.getElementById('overlay-frame').src = '';
-  document.getElementById('overlay').classList.remove('active');
-});
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    document.getElementById('overlay-frame').src = '';
-    document.getElementById('overlay').classList.remove('active');
-  }
-});
-
-// Nav
-const nav = document.getElementById('navbar');
-window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 60));
-document.querySelector('.nav-toggle').addEventListener('click', () => nav.classList.toggle('nav-open'));
-document.querySelectorAll('.nav-links a').forEach(a => a.addEventListener('click', () => nav.classList.remove('nav-open')));
+  const nav = document.getElementById('navbar');
+  window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 60));
+  document.querySelector('.nav-toggle').addEventListener('click', () => nav.classList.toggle('nav-open'));
+  document.querySelectorAll('.nav-links a').forEach(a => a.addEventListener('click', () => nav.classList.remove('nav-open')));
 </script>
 </body>
 </html>
