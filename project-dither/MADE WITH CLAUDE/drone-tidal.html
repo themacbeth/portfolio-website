@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sound Machine — Tidal</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #000; overflow: hidden; }
+  canvas { display: block; image-rendering: pixelated; }
+  #start { position: fixed; inset: 0; z-index: 10; display: flex;
+    align-items: center; justify-content: center; background: #000; cursor: pointer; }
+  #start span { color: #999; font: 13px monospace; opacity: 0.5; }
+  .gone { display: none !important; }
+</style>
+</head>
+<body>
+<div id="start"><span>click to begin</span></div>
+<canvas id="c"></canvas>
+<script>
+const THUMB_MODE=new URLSearchParams(location.search).has('mute');
+const C = document.getElementById('c');
+const X = C.getContext('2d');
+const DUR = 20;
+const DS = 6;
+let T = 0, on = false;
+
+const OC = document.createElement('canvas');
+const OX = OC.getContext('2d', { willReadFrequently: true });
+let ow, oh;
+let densityBuf = new Float32Array(1);
+let stars = [];
+
+function sz() {
+  C.width = innerWidth; C.height = innerHeight;
+  ow = Math.floor(C.width / DS);
+  oh = Math.floor(C.height / DS);
+  OC.width = ow; OC.height = oh;
+  densityBuf = new Float32Array(ow * oh);
+  initStars();
+}
+// moved below
+
+const PI = Math.PI, TWO_PI = PI * 2;
+sz(); addEventListener("resize", sz);
+
+// ═══════════════════════════════════════════════
+// AUDIO — Bb0+E1 tidal drone
+// ═══════════════════════════════════════════════
+let AC, masterGain, bus;
+let drones = [], noiseGain, noiseFilter;
+let metalFilter, metalGain;
+
+async function initAudio() {
+  AC = new AudioContext();
+
+  masterGain = AC.createGain();
+  masterGain.gain.value = 0.0;
+  masterGain.connect(AC.destination);
+
+  // ── Dark reverb — 6 second tail ──
+  const reverbNode = AC.createConvolver();
+  const revLen = AC.sampleRate * 6;
+  const revBuf = AC.createBuffer(2, revLen, AC.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = revBuf.getChannelData(ch);
+    for (let i = 0; i < revLen; i++) {
+      const noise = Math.random() * 2 - 1;
+      const decay = Math.exp(-i / (AC.sampleRate * 2.5));
+      const darkening = Math.exp(-i / (AC.sampleRate * 0.8));
+      data[i] = noise * decay * (0.4 + 0.6 * darkening);
+    }
+  }
+  reverbNode.buffer = revBuf;
+
+  const dryGain = AC.createGain();
+  dryGain.gain.value = 0.35;
+  const wetGain = AC.createGain();
+  wetGain.gain.value = 0.65;
+
+  // ── Waveshaper distortion ──
+  const distNode = AC.createWaveShaper();
+  const curve = new Float32Array(1024);
+  for (let i = 0; i < 1024; i++) {
+    const x = (i / 512) - 1;
+    curve[i] = Math.tanh(x * 2.5);
+  }
+  distNode.curve = curve;
+  distNode.oversample = '2x';
+
+  bus = AC.createGain();
+  bus.gain.value = 1;
+  bus.connect(distNode);
+  distNode.connect(dryGain);
+  distNode.connect(reverbNode);
+  reverbNode.connect(wetGain);
+  dryGain.connect(masterGain);
+  wetGain.connect(masterGain);
+
+  // ── Sub rumble — Bb0 detuned pair + E1 ──
+  const subNotes = [
+    { freq: 29.14, detune: 0.13 },
+    { freq: 29.27, detune: 0 },
+    { freq: 41.20, detune: 0.08 },
+  ];
+  subNotes.forEach(({ freq, detune }) => {
+    const osc = AC.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.value = freq + detune;
+    const g = AC.createGain();
+    g.gain.value = 0.1;
+    const lp = AC.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 90;
+    lp.Q.value = 3;
+    osc.connect(lp);
+    lp.connect(g);
+    g.connect(bus);
+    osc.start();
+    drones.push({ osc, gain: g, filter: lp });
+  });
+
+  // ── Mid cluster — Bb1 + Eb2 ──
+  const midNotes = [
+    { freq: 58.27, detune: 0 },
+    { freq: 61.74, detune: 0 },
+  ];
+  midNotes.forEach(({ freq, detune }) => {
+    const osc = AC.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.value = freq + detune;
+    const g = AC.createGain();
+    g.gain.value = 0.04;
+    const lp = AC.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 250;
+    lp.Q.value = 2;
+    osc.connect(lp);
+    lp.connect(g);
+    g.connect(bus);
+    osc.start();
+    drones.push({ osc, gain: g, filter: lp });
+  });
+
+  // ── Ghost tone — Bb3 ──
+  const ghostOsc = AC.createOscillator();
+  ghostOsc.type = 'sine';
+  ghostOsc.frequency.value = 233.08;
+  const ghostGain = AC.createGain();
+  ghostGain.gain.value = 0.012;
+  const ghostFilter = AC.createBiquadFilter();
+  ghostFilter.type = 'bandpass';
+  ghostFilter.frequency.value = 233.08;
+  ghostFilter.Q.value = 8;
+  ghostOsc.connect(ghostFilter);
+  ghostFilter.connect(ghostGain);
+  ghostGain.connect(bus);
+  ghostOsc.start();
+  drones.push({ osc: ghostOsc, gain: ghostGain, filter: ghostFilter });
+
+  // ── Noise ──
+  const noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate);
+  const nd = noiseBuf.getChannelData(0);
+  for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+
+  const noiseSrc = AC.createBufferSource();
+  noiseSrc.buffer = noiseBuf;
+  noiseSrc.loop = true;
+  noiseFilter = AC.createBiquadFilter();
+  noiseFilter.type = 'bandpass';
+  noiseFilter.frequency.value = 500;
+  noiseFilter.Q.value = 0.6;
+  noiseGain = AC.createGain();
+  noiseGain.gain.value = 0.035;
+  noiseSrc.connect(noiseFilter);
+  noiseFilter.connect(noiseGain);
+  noiseGain.connect(bus);
+  noiseSrc.start();
+
+  // ── Metallic scrape ──
+  const metalSrc = AC.createBufferSource();
+  metalSrc.buffer = noiseBuf;
+  metalSrc.loop = true;
+  metalFilter = AC.createBiquadFilter();
+  metalFilter.type = 'bandpass';
+  metalFilter.frequency.value = 1800;
+  metalFilter.Q.value = 45;
+  metalGain = AC.createGain();
+  metalGain.gain.value = 0.006;
+  metalSrc.connect(metalFilter);
+  metalFilter.connect(metalGain);
+  metalGain.connect(bus);
+  metalSrc.start();
+
+  // ── Second metal ──
+  const metal2Src = AC.createBufferSource();
+  metal2Src.buffer = noiseBuf;
+  metal2Src.loop = true;
+  const metal2Filter = AC.createBiquadFilter();
+  metal2Filter.type = 'bandpass';
+  metal2Filter.frequency.value = 900;
+  metal2Filter.Q.value = 35;
+  const metal2Gain = AC.createGain();
+  metal2Gain.gain.value = 0.008;
+  metal2Src.connect(metal2Filter);
+  metal2Filter.connect(metal2Gain);
+  metal2Gain.connect(bus);
+  metal2Src.start();
+
+  // ── LFOs — 1/DUR Hz = perfect loop sync ──
+  const lfo1 = AC.createOscillator();
+  lfo1.type = 'sine';
+  lfo1.frequency.value = 1 / DUR;
+  const lfo1G = AC.createGain();
+  lfo1G.gain.value = 150;
+  lfo1.connect(lfo1G);
+  lfo1G.connect(noiseFilter.frequency);
+  lfo1.start();
+
+  const lfo2 = AC.createOscillator();
+  lfo2.type = 'sine';
+  lfo2.frequency.value = 1 / DUR;
+  const lfo2G = AC.createGain();
+  lfo2G.gain.value = 500;
+  lfo2.connect(lfo2G);
+  lfo2G.connect(metalFilter.frequency);
+  lfo2G.connect(metal2Filter.frequency);
+  lfo2.start();
+
+  masterGain.gain.setTargetAtTime(0.35, AC.currentTime, 1.5);
+}
+
+function updateAudio(t, dis, env) {
+  if (!AC) return;
+  const now = AC.currentTime;
+
+  if (noiseGain) noiseGain.gain.setTargetAtTime(0.03 + dis * 0.15, now, 0.04);
+  if (metalGain) metalGain.gain.setTargetAtTime(0.004 + dis * 0.05, now, 0.02);
+
+  for (let i = 0; i < 3; i++) {
+    if (drones[i] && drones[i].filter)
+      drones[i].filter.frequency.setTargetAtTime(80 + dis * 200, now, 0.04);
+  }
+
+  const midCutoff = 200 + Math.sin(t * 0.4) * 80 + dis * 350;
+  for (let i = 3; i < 5; i++) {
+    if (drones[i] && drones[i].filter)
+      drones[i].filter.frequency.setTargetAtTime(midCutoff, now, 0.04);
+  }
+
+  if (drones[5]) drones[5].gain.gain.setTargetAtTime(0.008 + dis * 0.025, now, 0.05);
+  if (masterGain) masterGain.gain.setTargetAtTime(0.32 * env + 0.03, now, 0.15);
+}
+
+// ═══════════════════════════════════════════════
+// VISUALS — Tidal forces / Roche limit
+// ═══════════════════════════════════════════════
+const B8 = [
+  0,32,8,40,2,34,10,42,  48,16,56,24,50,18,58,26,
+  12,44,4,36,14,46,6,38, 60,28,52,20,62,30,54,22,
+  3,35,11,43,1,33,9,41,  51,19,59,27,49,17,57,25,
+  15,47,7,39,13,45,5,37, 63,31,55,23,61,29,53,21
+].map(v => v / 64);
+
+// Stars
+function initStars() {
+  stars = [];
+  for (let i = 0; i < 40; i++) {
+    stars.push({
+      x: Math.floor(Math.random() * ow),
+      y: Math.floor(Math.random() * oh),
+      bright: 0.08 + Math.random() * 0.15,
+      flicker: Math.random() * TWO_PI
+    });
+  }
+}
+
+// Debris particles for moon breakup
+const DEBRIS_COUNT = 60;
+let debris = [];
+function initDebris() {
+  debris = [];
+  for (let i = 0; i < DEBRIS_COUNT; i++) {
+    debris.push({
+      angle: (Math.random() - 0.5) * PI * 0.6,
+      dist: Math.random() * 0.8 + 0.2,
+      size: Math.random() * 1.5 + 0.5,
+      speed: Math.random() * 0.5 + 0.5,
+      bright: Math.random() * 0.5 + 0.5,
+      drift: (Math.random() - 0.5) * 2
+    });
+  }
+}
+initDebris();
+
+function renderTidal(phase, dis, env) {
+  densityBuf.fill(0);
+
+  const cx = ow * 0.25;
+  const cy = oh * 0.5;
+  const planetR = Math.min(ow, oh) * 0.15;
+
+  // Moon orbit: starts far right, approaches planet over 20s
+  // phase 0..0.75: approach, 0.75..1.0: breakup complete, ring forming
+  const rochePhase = Math.min(phase / 0.75, 1.0);
+  const resetPhase = phase > 0.9 ? (phase - 0.9) / 0.1 : 0;
+
+  // Moon distance from planet center
+  const maxDist = ow * 0.65;
+  const rocheDist = planetR * 2.5;
+  const moonDist = maxDist - rochePhase * (maxDist - rocheDist * 0.6);
+
+  // Moon position
+  const moonX = cx + moonDist;
+  const moonY = cy + Math.sin(phase * TWO_PI * 0.5) * oh * 0.03;
+  const moonR = planetR * 0.28;
+
+  // Breakup factor: 0 = intact, 1 = fully disintegrated
+  const breakStart = 0.55;
+  const breakFull = 0.8;
+  let breakup = 0;
+  if (phase > breakStart) {
+    breakup = Math.min(1, (phase - breakStart) / (breakFull - breakStart));
+    // Accelerate near the end
+    breakup = breakup * breakup * (3 - 2 * breakup);
+  }
+
+  // ── Background stars ──
+  for (const star of stars) {
+    const flick = 0.7 + 0.3 * Math.sin(phase * TWO_PI * 2 + star.flicker);
+    const b = star.bright * flick * env;
+    if (star.x >= 0 && star.x < ow && star.y >= 0 && star.y < oh) {
+      densityBuf[star.y * ow + star.x] += b;
+    }
+  }
+
+  // ── Planet with atmospheric banding ──
+  const bandCount = 8;
+  for (let y = -planetR - 2; y <= planetR + 2; y++) {
+    for (let x = -planetR - 2; x <= planetR + 2; x++) {
+      const px = Math.floor(cx + x);
+      const py = Math.floor(cy + y);
+      if (px < 0 || px >= ow || py < 0 || py >= oh) continue;
+
+      const r2 = x * x + y * y;
+      const rr = planetR * planetR;
+
+      if (r2 <= rr) {
+        const nr = Math.sqrt(r2) / planetR;
+        // Atmospheric banding
+        const bandY = y / planetR;
+        const band = Math.sin(bandY * bandCount * PI + phase * TWO_PI * 0.3) * 0.15;
+        // Limb darkening
+        const limb = 1 - nr * nr * 0.6;
+        // Slight equatorial brightening
+        const equator = Math.exp(-bandY * bandY * 8) * 0.15;
+        const bright = (0.5 + band + equator) * limb * env;
+        densityBuf[py * ow + px] += Math.max(0, bright);
+      } else if (r2 <= (planetR + 2) * (planetR + 2)) {
+        // Thin atmosphere glow
+        densityBuf[py * ow + px] += 0.12 * env;
+      }
+    }
+  }
+
+  // ── Tidal field lines between planet and moon ──
+  if (breakup < 1) {
+    const lineCount = 7;
+    for (let li = 0; li < lineCount; li++) {
+      const frac = (li + 1) / (lineCount + 1);
+      const spread = (frac - 0.5) * 2;
+      const yOff = spread * planetR * 1.8;
+
+      for (let s = 0; s <= 1; s += 0.008) {
+        // Curved field line from planet to moon
+        const lx = cx + planetR + s * (moonX - cx - planetR);
+        const curvature = Math.sin(s * PI) * yOff * (1 - breakup * 0.8);
+        const ly = cy + curvature + (moonY - cy) * s;
+
+        const ix = Math.floor(lx);
+        const iy = Math.floor(ly);
+        if (ix >= 0 && ix < ow && iy >= 0 && iy < oh) {
+          // Fainter near endpoints, brighter in middle
+          const edgeFade = Math.sin(s * PI);
+          const bright = 0.08 * edgeFade * env * (1 - breakup * 0.7);
+          densityBuf[iy * ow + ix] += bright;
+        }
+      }
+    }
+  }
+
+  // ── Moon — deforms and breaks apart ──
+  if (breakup < 1) {
+    // Elliptical deformation: stretches toward planet as breakup increases
+    const stretchX = 1 + breakup * 2.5;
+    const stretchY = 1 / (1 + breakup * 1.2);
+    const intact = 1 - breakup;
+
+    for (let y = -moonR * 3; y <= moonR * 3; y++) {
+      for (let x = -moonR * 3; x <= moonR * 3; x++) {
+        // Elliptical distance
+        const ex = x / stretchX;
+        const ey = y / stretchY;
+        const r2 = ex * ex + ey * ey;
+        const rr = moonR * moonR;
+
+        if (r2 <= rr) {
+          const px = Math.floor(moonX + x);
+          const py = Math.floor(moonY + y);
+          if (px < 0 || px >= ow || py < 0 || py >= oh) continue;
+
+          const nr = Math.sqrt(r2) / moonR;
+          const limb = 1 - nr * nr * 0.5;
+          // Fracture lines appear during breakup
+          const fracture = breakup > 0.3
+            ? Math.abs(Math.sin(x * 0.8 + y * 0.5)) * breakup * 0.5
+            : 0;
+          const bright = (0.7 * limb - fracture) * intact * env;
+          if (bright > 0) densityBuf[py * ow + px] += bright;
+        }
+      }
+    }
+  }
+
+  // ── Debris field — appears as moon breaks, forms ring ──
+  if (breakup > 0.1) {
+    const debrisIntensity = Math.min(1, (breakup - 0.1) / 0.3);
+    const ringPhase = Math.max(0, (phase - breakFull) / (1 - breakFull));
+
+    for (let i = 0; i < DEBRIS_COUNT; i++) {
+      const db = debris[i];
+
+      // Debris emerges from moon position, spreads along orbital path
+      let dx, dy;
+      if (ringPhase < 0.5) {
+        // Scattering from moon
+        const scatter = debrisIntensity * db.dist * moonR * 4;
+        dx = moonX + Math.cos(db.angle) * scatter * (1 + breakup);
+        dy = moonY + Math.sin(db.angle) * scatter;
+        // Drift toward orbital path
+        dx += db.drift * ringPhase * ow * 0.1;
+      } else {
+        // Forming ring around planet
+        const ringAngle = db.angle * 1.5 + phase * TWO_PI * db.speed * 0.2 + i * 0.1;
+        const ringR = planetR * (2.0 + db.dist * 1.5);
+        dx = cx + Math.cos(ringAngle) * ringR;
+        dy = cy + Math.sin(ringAngle) * ringR * 0.15;
+        // Blend from scatter to ring
+        const blend = (ringPhase - 0.5) * 2;
+        const scatterX = moonX + Math.cos(db.angle) * db.dist * moonR * 4;
+        const scatterY = moonY + Math.sin(db.angle) * db.dist * moonR * 4;
+        dx = scatterX + (dx - scatterX) * blend;
+        dy = scatterY + (dy - scatterY) * blend;
+      }
+
+      // Reset blend: debris fades as moon reforms
+      let resetFade = 1;
+      if (resetPhase > 0) {
+        resetFade = 1 - resetPhase;
+      }
+
+      const px = Math.floor(dx);
+      const py = Math.floor(dy);
+      if (px >= 0 && px < ow && py >= 0 && py < oh) {
+        const bright = db.bright * debrisIntensity * env * 0.6 * resetFade;
+        densityBuf[py * ow + px] += bright;
+        // Larger debris particles
+        if (db.size > 1 && px + 1 < ow) {
+          densityBuf[py * ow + px + 1] += bright * 0.5;
+        }
+        if (db.size > 1 && py + 1 < oh) {
+          densityBuf[(py + 1) * ow + px] += bright * 0.4;
+        }
+      }
+    }
+  }
+
+  // ── Fragmentation bursts at key moments ──
+  const burstTimes = [0.6, 0.68, 0.73];
+  for (const bt of burstTimes) {
+    const burstDist = Math.abs(phase - bt);
+    if (burstDist < 0.03) {
+      const burstIntensity = Math.exp(-burstDist * 200) * env;
+      const burstCount = 15;
+      for (let i = 0; i < burstCount; i++) {
+        const angle = (i / burstCount) * TWO_PI + bt * 7;
+        const rad = (0.03 - burstDist) * 800 + Math.random() * 5;
+        const bx = Math.floor(moonX + Math.cos(angle) * rad);
+        const by = Math.floor(moonY + Math.sin(angle) * rad * 0.6);
+        if (bx >= 0 && bx < ow && by >= 0 && by < oh) {
+          densityBuf[by * ow + bx] += burstIntensity * 0.8;
+        }
+      }
+    }
+  }
+
+  // ── Log-density mapping ──
+  let maxD = 0;
+  for (let i = 0; i < densityBuf.length; i++) {
+    if (densityBuf[i] > 0) {
+      densityBuf[i] = Math.log(densityBuf[i] + 1);
+      if (densityBuf[i] > maxD) maxD = densityBuf[i];
+    }
+  }
+
+  // Render density to grayscale on offscreen canvas
+  OX.fillStyle = '#000';
+  OX.fillRect(0, 0, ow, oh);
+  const img = OX.getImageData(0, 0, ow, oh);
+  const d = img.data;
+
+  if (maxD > 0) {
+    const invMax = 1 / maxD;
+    const gamma = 0.55;
+    const intensity = 0.6 + env * 0.4;
+    for (let i = 0; i < densityBuf.length; i++) {
+      if (densityBuf[i] > 0) {
+        const norm = densityBuf[i] * invMax;
+        const val = Math.pow(norm, gamma) * intensity * 255;
+        const idx = i * 4;
+        d[idx] = d[idx + 1] = d[idx + 2] = Math.min(255, val) | 0;
+      }
+    }
+  }
+
+  OX.putImageData(img, 0, 0);
+}
+
+function disruption(t) {
+  const phase = t / DUR;
+  let d = 0;
+  const beats = [0.0, 0.25, 0.5, 0.75];
+  for (const b of beats) {
+    let dist = Math.abs(phase - b);
+    dist = Math.min(dist, 1 - dist);
+    d += Math.exp(-dist * DUR * 5);
+  }
+  return d;
+}
+
+function envelope(t) {
+  const p = t / DUR;
+  if (p < 0.1) return p / 0.1;
+  if (p > 0.9) return (1 - p) / 0.1;
+  return 1;
+}
+
+function addGlow() {
+  const img = OX.getImageData(0, 0, ow, oh);
+  const d = img.data;
+  const src = new Uint8Array(ow * oh);
+  for (let i = 0; i < src.length; i++) src[i] = d[i * 4];
+  for (let y = 1; y < oh - 1; y++) {
+    for (let x = 1; x < ow - 1; x++) {
+      const i = y * ow + x;
+      const avg = (src[i-ow-1]+src[i-ow]+src[i-ow+1]+src[i-1]+src[i]+src[i+1]+src[i+ow-1]+src[i+ow]+src[i+ow+1]) / 9;
+      const idx = i * 4;
+      const v = Math.min(255, src[i] + (avg * 0.6) | 0);
+      d[idx] = d[idx+1] = d[idx+2] = v;
+    }
+  }
+  OX.putImageData(img, 0, 0);
+}
+
+function applyDither(time, dis) {
+  const img = OX.getImageData(0, 0, ow, oh);
+  const d = img.data;
+  const phase = Math.floor(time * 3) % 8;
+  for (let y = 0; y < oh; y++) {
+    for (let x = 0; x < ow; x++) {
+      const i = (y * ow + x) * 4;
+      const brightness = d[i] / 255;
+      const tx = (x + phase) % 8;
+      const ty = (y + phase) % 8;
+      let threshold = B8[ty * 8 + tx];
+      if (dis > 0.3 && (y + Math.floor(time * 13)) % 6 < dis * 1.8) {
+        threshold = 1 - threshold;
+      }
+      const br = brightness > threshold;
+      d[i] = d[i+1] = d[i+2] = br ? 255 : 0;
+      d[i+3] = 255;
+    }
+  }
+  OX.putImageData(img, 0, 0);
+}
+
+function render(t) {
+  const phase = t / DUR;
+  const env = envelope(t);
+  const dis = disruption(t);
+
+  renderTidal(phase, dis, env);
+  addGlow();
+  applyDither(t, dis);
+
+  X.imageSmoothingEnabled = false;
+  X.drawImage(OC, 0, 0, ow, oh, 0, 0, C.width, C.height);
+
+  updateAudio(t, dis, env);
+}
+
+let last = 0;
+function frame() {
+  if (!on) return;
+  requestAnimationFrame(frame);
+  const now = performance.now();
+  const d = Math.min((now - last) / 1000, 0.05);
+  last = now;
+  T += d;
+  if (T >= DUR) T -= DUR;
+  render(T);
+}
+
+// Auto-start: try immediately, fall back to click
+async function autoStart() {
+  document.getElementById('start').classList.add('gone');
+  if(!THUMB_MODE) await initAudio();
+  on = true; last = performance.now();
+  frame();
+}
+// If in iframe with allow="autoplay", AudioContext works without gesture
+if (window.self !== window.top) {
+  autoStart();
+} else {
+  // Standalone: try auto, show click overlay if audio blocked
+  autoStart().catch(() => {
+    document.getElementById('start').classList.remove('gone');
+    document.getElementById('start').addEventListener('click', () => autoStart());
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sound Machine — Corona</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #000; overflow: hidden; }
+  canvas { display: block; image-rendering: pixelated; }
+  #start { position: fixed; inset: 0; z-index: 10; display: flex;
+    align-items: center; justify-content: center; background: #000; cursor: pointer; }
+  #start span { color: #999; font: 13px monospace; opacity: 0.5; }
+  .gone { display: none !important; }
+</style>
+</head>
+<body>
+<div id="start"><span>click to begin</span></div>
+<canvas id="c"></canvas>
+<script>
+const THUMB_MODE=new URLSearchParams(location.search).has('mute');
+const C = document.getElementById('c');
+const X = C.getContext('2d');
+const DUR = 20;
+const DS = 6;
+let T = 0, on = false;
+
+const OC = document.createElement('canvas');
+const OX = OC.getContext('2d', { willReadFrequently: true });
+let ow, oh;
+let densityBuf = new Float32Array(1);
+
+const PI = Math.PI, TWO_PI = PI * 2;
+
+let stars = [];
+
+function sz() {
+  C.width = innerWidth; C.height = innerHeight;
+  ow = Math.floor(C.width / DS);
+  oh = Math.floor(C.height / DS);
+  OC.width = ow; OC.height = oh;
+  densityBuf = new Float32Array(ow * oh);
+
+  // Generate background stars
+  stars = [];
+  for (let i = 0; i < 60; i++) {
+    stars.push({
+      x: Math.random() * ow,
+      y: Math.random() * oh,
+      br: 0.15 + Math.random() * 0.6,
+      twinkleSpeed: 0.5 + Math.random() * 3
+    });
+  }
+}
+sz(); addEventListener('resize', sz);
+
+// ═══════════════════════════════════════════════
+// PERLIN NOISE
+// ═══════════════════════════════════════════════
+const perm = new Uint8Array(512);
+(function() {
+  const p = new Uint8Array(256);
+  for (let i = 0; i < 256; i++) p[i] = i;
+  for (let i = 255; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = p[i]; p[i] = p[j]; p[j] = tmp;
+  }
+  for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
+})();
+
+function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+function lerp(a, b, t) { return a + t * (b - a); }
+function grad(hash, x, y) {
+  const h = hash & 3;
+  const u = h < 2 ? x : y;
+  const v = h < 2 ? y : x;
+  return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
+}
+function noise2d(x, y) {
+  const xi = Math.floor(x) & 255, yi = Math.floor(y) & 255;
+  const xf = x - Math.floor(x), yf = y - Math.floor(y);
+  const u = fade(xf), v = fade(yf);
+  const aa = perm[perm[xi] + yi], ab = perm[perm[xi] + yi + 1];
+  const ba = perm[perm[xi + 1] + yi], bb = perm[perm[xi + 1] + yi + 1];
+  return lerp(lerp(grad(aa, xf, yf), grad(ba, xf - 1, yf), u),
+              lerp(grad(ab, xf, yf - 1), grad(bb, xf - 1, yf - 1), u), v);
+}
+
+// ═══════════════════════════════════════════════
+// AUDIO — deep corona drone (Eb0+A0)
+// ═══════════════════════════════════════════════
+let AC, masterGain, bus;
+let drones = [], noiseGain, noiseFilter;
+let metalFilter, metalGain;
+
+async function initAudio() {
+  AC = new AudioContext();
+
+  masterGain = AC.createGain();
+  masterGain.gain.value = 0.0;
+  masterGain.connect(AC.destination);
+
+  // ── Dark reverb — 6 second tail ──
+  const reverbNode = AC.createConvolver();
+  const revLen = AC.sampleRate * 6;
+  const revBuf = AC.createBuffer(2, revLen, AC.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = revBuf.getChannelData(ch);
+    for (let i = 0; i < revLen; i++) {
+      const n = Math.random() * 2 - 1;
+      const decay = Math.exp(-i / (AC.sampleRate * 2.5));
+      const darkening = Math.exp(-i / (AC.sampleRate * 0.8));
+      data[i] = n * decay * (0.4 + 0.6 * darkening);
+    }
+  }
+  reverbNode.buffer = revBuf;
+
+  const dryGain = AC.createGain();
+  dryGain.gain.value = 0.35;
+  const wetGain = AC.createGain();
+  wetGain.gain.value = 0.65;
+
+  // ── Waveshaper distortion ──
+  const distNode = AC.createWaveShaper();
+  const curve = new Float32Array(1024);
+  for (let i = 0; i < 1024; i++) {
+    const x = (i / 512) - 1;
+    curve[i] = Math.tanh(x * 2.5);
+  }
+  distNode.curve = curve;
+  distNode.oversample = '2x';
+
+  bus = AC.createGain();
+  bus.gain.value = 1;
+  bus.connect(distNode);
+  distNode.connect(dryGain);
+  distNode.connect(reverbNode);
+  reverbNode.connect(wetGain);
+  dryGain.connect(masterGain);
+  wetGain.connect(masterGain);
+
+  // ── Sub rumble — Eb0 + A0 root ──
+  const subNotes = [
+    { freq: 19.45, detune: 0.05 },
+    { freq: 19.50, detune: 0 },
+    { freq: 27.50, detune: 0.04 },
+  ];
+  subNotes.forEach(({ freq, detune }) => {
+    const osc = AC.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.value = freq + detune;
+    const g = AC.createGain();
+    g.gain.value = 0.12;
+    const lp = AC.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 70;
+    lp.Q.value = 3;
+    osc.connect(lp);
+    lp.connect(g);
+    g.connect(bus);
+    osc.start();
+    drones.push({ osc, gain: g, filter: lp });
+  });
+
+  // ── Dark mid — beating minor 2nd ──
+  const midNotes = [
+    { freq: 38.89, detune: 0 },
+    { freq: 41.20, detune: 0 },
+  ];
+  midNotes.forEach(({ freq, detune }) => {
+    const osc = AC.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.value = freq + detune;
+    const g = AC.createGain();
+    g.gain.value = 0.04;
+    const lp = AC.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 200;
+    lp.Q.value = 2;
+    osc.connect(lp);
+    lp.connect(g);
+    g.connect(bus);
+    osc.start();
+    drones.push({ osc, gain: g, filter: lp });
+  });
+
+  // ── Ghost tone ──
+  const ghostOsc = AC.createOscillator();
+  ghostOsc.type = 'sine';
+  ghostOsc.frequency.value = 155.56;
+  const ghostGain = AC.createGain();
+  ghostGain.gain.value = 0.012;
+  const ghostFilter = AC.createBiquadFilter();
+  ghostFilter.type = 'bandpass';
+  ghostFilter.frequency.value = 155.56;
+  ghostFilter.Q.value = 8;
+  ghostOsc.connect(ghostFilter);
+  ghostFilter.connect(ghostGain);
+  ghostGain.connect(bus);
+  ghostOsc.start();
+  drones.push({ osc: ghostOsc, gain: ghostGain, filter: ghostFilter });
+
+  // ── Noise ──
+  const noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate);
+  const nd = noiseBuf.getChannelData(0);
+  for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+
+  const noiseSrc = AC.createBufferSource();
+  noiseSrc.buffer = noiseBuf;
+  noiseSrc.loop = true;
+  noiseFilter = AC.createBiquadFilter();
+  noiseFilter.type = 'bandpass';
+  noiseFilter.frequency.value = 400;
+  noiseFilter.Q.value = 0.6;
+  noiseGain = AC.createGain();
+  noiseGain.gain.value = 0.035;
+  noiseSrc.connect(noiseFilter);
+  noiseFilter.connect(noiseGain);
+  noiseGain.connect(bus);
+  noiseSrc.start();
+
+  // ── Metallic scrape ──
+  const metalSrc = AC.createBufferSource();
+  metalSrc.buffer = noiseBuf;
+  metalSrc.loop = true;
+  metalFilter = AC.createBiquadFilter();
+  metalFilter.type = 'bandpass';
+  metalFilter.frequency.value = 1800;
+  metalFilter.Q.value = 45;
+  metalGain = AC.createGain();
+  metalGain.gain.value = 0.006;
+  metalSrc.connect(metalFilter);
+  metalFilter.connect(metalGain);
+  metalGain.connect(bus);
+  metalSrc.start();
+
+  // ── Second metal ──
+  const metal2Src = AC.createBufferSource();
+  metal2Src.buffer = noiseBuf;
+  metal2Src.loop = true;
+  const metal2Filter = AC.createBiquadFilter();
+  metal2Filter.type = 'bandpass';
+  metal2Filter.frequency.value = 900;
+  metal2Filter.Q.value = 35;
+  const metal2Gain = AC.createGain();
+  metal2Gain.gain.value = 0.008;
+  metal2Src.connect(metal2Filter);
+  metal2Filter.connect(metal2Gain);
+  metal2Gain.connect(bus);
+  metal2Src.start();
+
+  // ── LFOs — 1/DUR Hz = perfect loop sync ──
+  const lfo1 = AC.createOscillator();
+  lfo1.type = 'sine';
+  lfo1.frequency.value = 1 / DUR;
+  const lfo1G = AC.createGain();
+  lfo1G.gain.value = 120;
+  lfo1.connect(lfo1G);
+  lfo1G.connect(noiseFilter.frequency);
+  lfo1.start();
+
+  const lfo2 = AC.createOscillator();
+  lfo2.type = 'sine';
+  lfo2.frequency.value = 1 / DUR;
+  const lfo2G = AC.createGain();
+  lfo2G.gain.value = 500;
+  lfo2.connect(lfo2G);
+  lfo2G.connect(metalFilter.frequency);
+  lfo2G.connect(metal2Filter.frequency);
+  lfo2.start();
+
+  masterGain.gain.setTargetAtTime(0.35, AC.currentTime, 1.5);
+}
+
+function updateAudio(t, dis, env) {
+  if (!AC) return;
+  const now = AC.currentTime;
+
+  if (noiseGain) noiseGain.gain.setTargetAtTime(0.03 + dis * 0.15, now, 0.04);
+  if (metalGain) metalGain.gain.setTargetAtTime(0.004 + dis * 0.05, now, 0.02);
+
+  for (let i = 0; i < 3; i++) {
+    if (drones[i] && drones[i].filter)
+      drones[i].filter.frequency.setTargetAtTime(60 + dis * 180, now, 0.04);
+  }
+
+  const midCutoff = 160 + Math.sin(t * 0.4) * 60 + dis * 300;
+  for (let i = 3; i < 5; i++) {
+    if (drones[i] && drones[i].filter)
+      drones[i].filter.frequency.setTargetAtTime(midCutoff, now, 0.04);
+  }
+
+  if (drones[5]) drones[5].gain.gain.setTargetAtTime(0.008 + dis * 0.025, now, 0.05);
+  if (masterGain) masterGain.gain.setTargetAtTime(0.32 * env + 0.03, now, 0.15);
+}
+
+// ═══════════════════════════════════════════════
+// VISUALS — Stellar Corona with streamers
+// ═══════════════════════════════════════════════
+const B8 = [
+  0,32,8,40,2,34,10,42,  48,16,56,24,50,18,58,26,
+  12,44,4,36,14,46,6,38, 60,28,52,20,62,30,54,22,
+  3,35,11,43,1,33,9,41,  51,19,59,27,49,17,57,25,
+  15,47,7,39,13,45,5,37, 63,31,55,23,61,29,53,21
+].map(v => v / 64);
+
+// Streamer definitions
+function getStreamers(phase, dis) {
+  const count = 10;
+  const streamers = [];
+  for (let i = 0; i < count; i++) {
+    const baseAngle = -PI * 0.35 + (PI * 0.7) * (i / (count - 1));
+    const length = 0.25 + 0.45 * (0.5 + 0.5 * Math.sin(i * 2.3 + phase * TWO_PI));
+    const cmeBoost = dis > 0.4 ? dis * 0.6 : 0;
+    streamers.push({
+      angle: baseAngle + Math.sin(phase * TWO_PI + i * 1.7) * 0.08,
+      length: length + cmeBoost,
+      width: 0.015 + 0.025 * (0.5 + 0.5 * Math.cos(i * 3.1)),
+      brightness: 0.5 + 0.5 * Math.sin(i * 1.9 + phase * TWO_PI * 2),
+      curvature: (i % 2 === 0 ? 1 : -1) * (0.15 + 0.1 * Math.sin(phase * TWO_PI + i))
+    });
+  }
+  return streamers;
+}
+
+// Plasma particles along streamers
+let particles = [];
+function initParticles() {
+  particles = [];
+  for (let i = 0; i < 28; i++) {
+    particles.push({
+      streamerIdx: Math.floor(Math.random() * 10),
+      pos: Math.random(),
+      speed: 0.02 + Math.random() * 0.04,
+      brightness: 0.5 + Math.random() * 0.5,
+      offset: (Math.random() - 0.5) * 0.012
+    });
+  }
+}
+initParticles();
+
+function renderCorona(phase, dis, env) {
+  densityBuf.fill(0);
+
+  const diskCenterX = -ow * 0.08;
+  const diskCenterY = oh * 0.5;
+  const diskRadius = Math.min(ow, oh) * 0.32;
+  const limbX = diskCenterX + diskRadius;
+
+  const streamers = getStreamers(phase, dis);
+
+  // Draw corona streamers
+  for (let si = 0; si < streamers.length; si++) {
+    const s = streamers[si];
+    const streamerLen = s.length * Math.min(ow, oh);
+    const steps = Math.floor(streamerLen * 1.5);
+
+    for (let step = 0; step < steps; step++) {
+      const t = step / steps;
+      const dist = t * streamerLen;
+
+      // Streamer follows curved magnetic field line from limb
+      const baseX = limbX + Math.cos(s.angle) * dist;
+      const baseY = diskCenterY + Math.sin(s.angle) * dist;
+
+      // Curvature: streamers curve back toward the star
+      const curveOffset = s.curvature * dist * t * 0.4;
+      const perpX = -Math.sin(s.angle);
+      const perpY = Math.cos(s.angle);
+
+      const px = baseX + perpX * curveOffset;
+      const py = baseY + perpY * curveOffset;
+
+      // Perlin noise texture along streamer
+      const noiseVal = noise2d(si * 7.3 + t * 8, phase * 4) * 0.5 + 0.5;
+
+      // Brightness falls off with distance, modulated by noise
+      const falloff = Math.pow(1 - t, 1.5);
+      const streamerBr = s.brightness * falloff * noiseVal * (0.6 + env * 0.4);
+
+      // Width tapers along length
+      const w = s.width * Math.min(ow, oh) * (1 - t * 0.7);
+      const halfW = Math.max(1, Math.floor(w));
+
+      for (let dy = -halfW; dy <= halfW; dy++) {
+        const edgeFalloff = 1 - Math.abs(dy) / (halfW + 1);
+        const ix = Math.floor(px);
+        const iy = Math.floor(py + dy);
+        if (ix >= 0 && ix < ow && iy >= 0 && iy < oh) {
+          densityBuf[iy * ow + ix] += streamerBr * edgeFalloff * 0.8;
+        }
+      }
+    }
+  }
+
+  // Coronal loops near the limb
+  const loopCount = 5;
+  for (let li = 0; li < loopCount; li++) {
+    const loopAngle = -PI * 0.25 + (PI * 0.5) * (li / (loopCount - 1));
+    const loopHeight = (0.05 + 0.08 * (li % 3)) * Math.min(ow, oh);
+    const loopWidth = (0.04 + 0.06 * ((li + 1) % 3)) * Math.min(ow, oh);
+    const loopBr = 0.4 + 0.3 * Math.sin(phase * TWO_PI * 3 + li * 2);
+
+    for (let a = 0; a <= PI; a += 0.03) {
+      const lx = limbX + Math.cos(loopAngle) * Math.cos(a) * loopWidth;
+      const ly = diskCenterY + Math.sin(loopAngle) * Math.cos(a) * loopWidth + Math.sin(a) * loopHeight * (li % 2 === 0 ? -1 : 1);
+
+      const ix = Math.floor(lx);
+      const iy = Math.floor(ly);
+      if (ix >= 0 && ix < ow && iy >= 0 && iy < oh) {
+        const archBr = loopBr * (0.5 + 0.5 * Math.sin(a)) * (0.6 + env * 0.4);
+        densityBuf[iy * ow + ix] += archBr * 0.6;
+      }
+    }
+  }
+
+  // Plasma particles flowing along streamers
+  for (let pi = 0; pi < particles.length; pi++) {
+    const p = particles[pi];
+    p.pos += p.speed * 0.016;
+    if (p.pos > 1) { p.pos -= 1; p.streamerIdx = Math.floor(Math.random() * 10); }
+
+    const si = p.streamerIdx % streamers.length;
+    const s = streamers[si];
+    const dist = p.pos * s.length * Math.min(ow, oh);
+
+    const baseX = limbX + Math.cos(s.angle) * dist;
+    const baseY = diskCenterY + Math.sin(s.angle) * dist;
+    const curveOffset = s.curvature * dist * p.pos * 0.4;
+    const perpX = -Math.sin(s.angle);
+    const perpY = Math.cos(s.angle);
+
+    const px = Math.floor(baseX + perpX * curveOffset + p.offset * Math.min(ow, oh));
+    const py = Math.floor(baseY + perpY * curveOffset);
+
+    // Bright dot with small glow
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const ix = px + dx;
+        const iy = py + dy;
+        if (ix >= 0 && ix < ow && iy >= 0 && iy < oh) {
+          const d2 = dx * dx + dy * dy;
+          const glow = d2 === 0 ? 1 : 0.35;
+          densityBuf[iy * ow + ix] += p.brightness * glow * (1 - p.pos * 0.5);
+        }
+      }
+    }
+  }
+
+  // Limb glow — bright edge where corona meets disk
+  for (let y = 0; y < oh; y++) {
+    const dy = y - diskCenterY;
+    const distFromCenter = Math.sqrt(dy * dy);
+    if (distFromCenter < diskRadius * 1.3) {
+      const xAtLimb = diskCenterX + Math.sqrt(Math.max(0, diskRadius * diskRadius - dy * dy));
+      // Bright glow right at the limb
+      for (let gx = -3; gx <= 8; gx++) {
+        const ix = Math.floor(xAtLimb + gx);
+        if (ix >= 0 && ix < ow) {
+          const glowDist = Math.abs(gx);
+          const glowBr = Math.exp(-glowDist * 0.5) * 0.9 * (0.7 + env * 0.3);
+          densityBuf[y * ow + ix] += glowBr;
+        }
+      }
+    }
+  }
+
+  // Dark stellar disk — mask everything inside
+  for (let y = 0; y < oh; y++) {
+    for (let x = 0; x < ow; x++) {
+      const dx = x - diskCenterX;
+      const dy = y - diskCenterY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < diskRadius - 1) {
+        densityBuf[y * ow + x] = 0;
+      } else if (dist < diskRadius) {
+        densityBuf[y * ow + x] *= (dist - (diskRadius - 1));
+      }
+    }
+  }
+
+  // Background stars
+  for (let i = 0; i < stars.length; i++) {
+    const s = stars[i];
+    const ix = Math.floor(s.x);
+    const iy = Math.floor(s.y);
+    if (ix >= 0 && ix < ow && iy >= 0 && iy < oh) {
+      // Only show where corona is dim
+      const existing = densityBuf[iy * ow + ix];
+      if (existing < 0.15) {
+        const twinkle = 0.5 + 0.5 * Math.sin(phase * TWO_PI * s.twinkleSpeed + i * 3.7);
+        densityBuf[iy * ow + ix] += s.br * twinkle;
+      }
+    }
+  }
+
+  // Normalize and render to offscreen canvas
+  let maxD = 0;
+  for (let i = 0; i < densityBuf.length; i++) {
+    if (densityBuf[i] > 0) {
+      densityBuf[i] = Math.log(densityBuf[i] + 1);
+      if (densityBuf[i] > maxD) maxD = densityBuf[i];
+    }
+  }
+
+  OX.fillStyle = '#000';
+  OX.fillRect(0, 0, ow, oh);
+  const img = OX.getImageData(0, 0, ow, oh);
+  const d = img.data;
+
+  if (maxD > 0) {
+    const invMax = 1 / maxD;
+    const gamma = 0.5;
+    const intensity = 0.6 + env * 0.4;
+    for (let i = 0; i < densityBuf.length; i++) {
+      if (densityBuf[i] > 0) {
+        const norm = densityBuf[i] * invMax;
+        const val = Math.pow(norm, gamma) * intensity * 255;
+        const idx = i * 4;
+        d[idx] = d[idx + 1] = d[idx + 2] = Math.min(255, val) | 0;
+      }
+    }
+  }
+
+  OX.putImageData(img, 0, 0);
+}
+
+function disruption(t) {
+  const phase = t / DUR;
+  let d = 0;
+  const beats = [0.0, 0.25, 0.5, 0.75];
+  for (const b of beats) {
+    let dist = Math.abs(phase - b);
+    dist = Math.min(dist, 1 - dist);
+    d += Math.exp(-dist * DUR * 5);
+  }
+  return d;
+}
+
+function envelope(t) {
+  const p = t / DUR;
+  if (p < 0.1) return p / 0.1;
+  if (p > 0.9) return (1 - p) / 0.1;
+  return 1;
+}
+
+function addGlow() {
+  const img = OX.getImageData(0, 0, ow, oh);
+  const d = img.data;
+  const src = new Uint8Array(ow * oh);
+  for (let i = 0; i < src.length; i++) src[i] = d[i * 4];
+  for (let y = 1; y < oh - 1; y++) {
+    for (let x = 1; x < ow - 1; x++) {
+      const i = y * ow + x;
+      const avg = (src[i-ow-1]+src[i-ow]+src[i-ow+1]+src[i-1]+src[i]+src[i+1]+src[i+ow-1]+src[i+ow]+src[i+ow+1]) / 9;
+      const idx = i * 4;
+      const v = Math.min(255, src[i] + (avg * 0.6) | 0);
+      d[idx] = d[idx+1] = d[idx+2] = v;
+    }
+  }
+  OX.putImageData(img, 0, 0);
+}
+
+function applyDither(time, dis) {
+  const img = OX.getImageData(0, 0, ow, oh);
+  const d = img.data;
+  const phase = Math.floor(time * 3) % 8;
+  for (let y = 0; y < oh; y++) {
+    for (let x = 0; x < ow; x++) {
+      const i = (y * ow + x) * 4;
+      const brightness = d[i] / 255;
+      const tx = (x + phase) % 8;
+      const ty = (y + phase) % 8;
+      let threshold = B8[ty * 8 + tx];
+      if (dis > 0.3 && (y + Math.floor(time * 13)) % 6 < dis * 1.8) {
+        threshold = 1 - threshold;
+      }
+      const br = brightness > threshold;
+      d[i] = d[i+1] = d[i+2] = br ? 255 : 0;
+      d[i+3] = 255;
+    }
+  }
+  OX.putImageData(img, 0, 0);
+}
+
+function render(t) {
+  const phase = t / DUR;
+  const env = envelope(t);
+  const dis = disruption(t);
+
+  renderCorona(phase, dis, env);
+  addGlow();
+  applyDither(t, dis);
+
+  X.imageSmoothingEnabled = false;
+  X.drawImage(OC, 0, 0, ow, oh, 0, 0, C.width, C.height);
+
+  updateAudio(t, dis, env);
+}
+
+let last = 0;
+function frame() {
+  if (!on) return;
+  requestAnimationFrame(frame);
+  const now = performance.now();
+  const d = Math.min((now - last) / 1000, 0.05);
+  last = now;
+  T += d;
+  if (T >= DUR) T -= DUR;
+  render(T);
+}
+
+// Auto-start: try immediately, fall back to click
+async function autoStart() {
+  document.getElementById('start').classList.add('gone');
+  if(!THUMB_MODE) await initAudio();
+  on = true; last = performance.now();
+  frame();
+}
+// If in iframe with allow="autoplay", AudioContext works without gesture
+if (window.self !== window.top) {
+  autoStart();
+} else {
+  // Standalone: try auto, show click overlay if audio blocked
+  autoStart().catch(() => {
+    document.getElementById('start').classList.remove('gone');
+    document.getElementById('start').addEventListener('click', () => autoStart());
+  });
+}
+</script>
+</body>
+</html>

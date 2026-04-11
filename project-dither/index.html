@@ -170,6 +170,15 @@
   }
   .overlay-nav button:hover { color: #fff; border-color: rgba(255,255,255,0.5); }
 
+  /* Video cards */
+  .card video {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
   /* Red accent for red collection */
   .red .card-title { color: #c84030; }
   .red .collection-title { color: #b43028; }
@@ -215,30 +224,30 @@
   <p>A collection of generative sound machines rendered in 1-bit dithered black and white. Each piece is a self-contained procedural world paired with ambient sound design. Every machine runs as a 20-second perfect loop with audio built from synthesized drones, noise, and environmental textures.</p>
 </div>
 
-<!-- RED COLLECTION -->
-<section class="collection red" id="red">
+<!-- MADE WITH CLAUDE -->
+<section class="collection red" id="claude">
   <div class="collection-header">
     <div>
-      <div class="collection-title">Red Machines</div>
-      <div class="collection-count">4 pieces</div>
-      <div class="collection-desc">Dithered pixel attractors and forms. Red on black. Each piece is a 20-second perfect loop with dark ambient drone audio.</div>
+      <div class="collection-title">Made with Claude</div>
+      <div class="collection-count">6 pieces</div>
+      <div class="collection-desc">Interactive generative drones. Each piece is a self-contained procedural world with ambient sound design. Built with Claude.</div>
     </div>
   </div>
-  <div class="grid" id="red-grid"></div>
+  <div class="grid" id="claude-grid"></div>
 </section>
 
 <hr class="divider">
 
-<!-- WHITE COLLECTION -->
-<section class="collection" id="white">
+<!-- MADE WITH HERMES -->
+<section class="collection" id="hermes">
   <div class="collection-header">
     <div>
-      <div class="collection-title">Sound Machines</div>
-      <div class="collection-count">9 pieces</div>
-      <div class="collection-desc">1-bit dithered procedural worlds. Organic forms, deep ocean, rain, mycelium, galaxies. Black and white halftone with ambient sound design.</div>
+      <div class="collection-title">Made with Hermes</div>
+      <div class="collection-count">18 pieces</div>
+      <div class="collection-desc">Dithered video loops, glitch compositions, and mathematical forms. Rendered through Hermes.</div>
     </div>
   </div>
-  <div class="grid" id="white-grid"></div>
+  <div class="grid" id="hermes-grid"></div>
 </section>
 
 <!-- ─── Footer ─── -->
@@ -263,56 +272,85 @@
 </div>
 
 <script>
-const redPieces = [
-  { file: 'drone-clifford.html', title: 'Clifford', sub: 'dithered attractor / C1+Gb1 drone' },
-  { file: 'drone-gumowski-mira.html', title: 'Gumowski-Mira', sub: 'dithered attractor / Eb1+A1 resonance' },
-  { file: 'drone-henon.html', title: 'Hénon', sub: 'dithered attractor / A0+Eb1 tidal' },
-  { file: 'drone-flame.html', title: 'Flame', sub: 'IFS fractal flame / Db1+Ab1 smolder' },
+const claudePieces = [
+  { file: 'MADE WITH CLAUDE/drone-corona.html', title: 'Corona', sub: 'generative drone', type: 'html' },
+  { file: 'MADE WITH CLAUDE/drone-eclipse.html', title: 'Eclipse', sub: 'generative drone', type: 'html' },
+  { file: 'MADE WITH CLAUDE/drone-pulsar.html', title: 'Pulsar', sub: 'generative drone', type: 'html' },
+  { file: 'MADE WITH CLAUDE/drone-quasar.html', title: 'Quasar', sub: 'generative drone', type: 'html' },
+  { file: 'MADE WITH CLAUDE/drone-signal.html', title: 'Signal', sub: 'generative drone', type: 'html' },
+  { file: 'MADE WITH CLAUDE/drone-tidal.html', title: 'Tidal', sub: 'generative drone', type: 'html' },
 ];
 
-const whitePieces = [
-  { file: 'dither-scene-1-blobs.html', title: 'Blobs', sub: 'organic metaballs / deep sea pressure' },
-  { file: 'dither-scene-2-vortex.html', title: 'Vortex', sub: 'domain-warped spiral / diminished drone' },
-  { file: 'dither-scene-3-cells.html', title: 'Cells', sub: 'voronoi biology / microscopic hum' },
-  { file: 'soundmachine-4-abyss.html', title: 'Abyss', sub: 'bioluminescent jellyfish / sonar' },
-  { file: 'soundmachine-5-rain.html', title: 'Rain', sub: 'falling streaks + thunder / noise wash' },
-  { file: 'soundmachine-6-mycelium.html', title: 'Mycelium', sub: 'branching network / earth crackle' },
-  { file: 'soundmachine-8-membrane.html', title: 'Membrane', sub: 'breathing organ / heartbeat + breath' },
-  { file: 'soundmachine-9-galaxy.html', title: 'Galaxy', sub: 'spiral arms + starfield / stacked 5ths' },
-  { file: 'soundmachine-11-pulsar.html', title: 'Pulsar', sub: 'rotating beams / radio pulse' },
+const hermesPieces = [
+  { file: 'MADE WITH HERMES/115_alchemy_ai_8x8.mp4', title: 'Alchemy', sub: 'dithered loop', type: 'video' },
+  { file: 'MADE WITH HERMES/118_exorcism_reset_8x8.mp4', title: 'Exorcism', sub: 'dithered loop', type: 'video' },
+  { file: 'MADE WITH HERMES/130_stone_agi_2x2.mp4', title: 'Stone', sub: 'dithered loop', type: 'video' },
+  { file: 'MADE WITH HERMES/18_three_degrees_8x8.mp4', title: 'Three Degrees', sub: 'dithered loop', type: 'video' },
+  { file: 'MADE WITH HERMES/22_pillars_8x8.mp4', title: 'Pillars', sub: 'dithered loop', type: 'video' },
+  { file: 'MADE WITH HERMES/82_moon_update_8x8.mp4', title: 'Moon', sub: 'dithered loop', type: 'video' },
+  { file: 'MADE WITH HERMES/bold_df4_wave.mp4', title: 'Wave', sub: 'dithered loop', type: 'video' },
+  { file: 'MADE WITH HERMES/glitch_v1_heavy_chaos.mp4', title: 'Heavy Chaos', sub: 'glitch composition', type: 'video' },
+  { file: 'MADE WITH HERMES/glitch2_v2_mirror_fracture.mp4', title: 'Mirror Fracture', sub: 'glitch composition', type: 'video' },
+  { file: 'MADE WITH HERMES/glitch_v2_scanline_tears.mp4', title: 'Scanline Tears', sub: 'glitch composition', type: 'video' },
+  { file: 'MADE WITH HERMES/glitch_v3_kaleidoscope.mp4', title: 'Kaleidoscope', sub: 'glitch composition', type: 'video' },
+  { file: 'MADE WITH HERMES/glitch_v4_datamosh.mp4', title: 'Datamosh', sub: 'glitch composition', type: 'video' },
+  { file: 'MADE WITH HERMES/glitch_v5_binary_storm.mp4', title: 'Binary Storm', sub: 'glitch composition', type: 'video' },
+  { file: 'MADE WITH HERMES/lis_06_grid.mp4', title: 'Grid', sub: 'lissajous form', type: 'video' },
+  { file: 'MADE WITH HERMES/lissajous_dithered (1).gif', title: 'Lissajous', sub: 'dithered gif', type: 'image' },
+  { file: 'MADE WITH HERMES/math_02_supertorus.mp4', title: 'Supertorus', sub: 'mathematical form', type: 'video' },
+  { file: 'MADE WITH HERMES/montage_01_morph3d.mp4', title: 'Morph 3D', sub: 'montage', type: 'video' },
+  { file: 'MADE WITH HERMES/montage_05_glitch_burst.mp4', title: 'Glitch Burst', sub: 'montage', type: 'video' },
 ];
 
-const allPieces = [...redPieces, ...whitePieces];
+const allPieces = [...claudePieces, ...hermesPieces];
 let currentIndex = -1;
 
+// Lazy load iframes for Claude HTML pieces
 const thumbObserver = new IntersectionObserver((entries) => {
   entries.forEach(entry => {
     const card = entry.target;
     if (entry.isIntersecting && !card.dataset.loaded) {
       card.dataset.loaded = '1';
-      const iframe = document.createElement('iframe');
-      iframe.src = card.dataset.file + '?mute=1';
-      iframe.allow = 'autoplay';
-      iframe.loading = 'lazy';
-      card.insertBefore(iframe, card.querySelector('.card-info'));
+      const type = card.dataset.type;
+      if (type === 'html') {
+        const iframe = document.createElement('iframe');
+        iframe.src = card.dataset.file + '?mute=1';
+        iframe.allow = 'autoplay';
+        iframe.loading = 'lazy';
+        card.insertBefore(iframe, card.querySelector('.card-info'));
+      } else if (type === 'video') {
+        const video = document.createElement('video');
+        video.src = card.dataset.file;
+        video.autoplay = true;
+        video.loop = true;
+        video.muted = true;
+        video.playsInline = true;
+        video.loading = 'lazy';
+        card.insertBefore(video, card.querySelector('.card-info'));
+      } else if (type === 'image') {
+        const img = document.createElement('img');
+        img.src = card.dataset.file;
+        img.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;';
+        card.insertBefore(img, card.querySelector('.card-info'));
+      }
     }
   });
 }, { rootMargin: '200px' });
 
-function buildGrid(pieces, gridId, isRed) {
+function buildGrid(pieces, gridId, offset) {
   const grid = document.getElementById(gridId);
   pieces.forEach((piece, i) => {
     const card = document.createElement('div');
     card.className = 'card';
     card.dataset.file = piece.file;
+    card.dataset.type = piece.type;
 
     const info = document.createElement('div');
     info.className = 'card-info';
     info.innerHTML = `<div class="card-title">${piece.title}</div><div class="card-sub">${piece.sub}</div>`;
     card.appendChild(info);
 
-    const globalIndex = isRed ? i : redPieces.length + i;
-    card.addEventListener('click', () => openPiece(globalIndex));
+    card.addEventListener('click', () => openPiece(offset + i));
     grid.appendChild(card);
 
     thumbObserver.observe(card);
@@ -325,13 +363,47 @@ const frame = document.getElementById('overlay-frame');
 function openPiece(index) {
   currentIndex = index;
   const piece = allPieces[index];
-  frame.src = piece.file;
   document.getElementById('overlay-title').textContent = piece.title;
+
+  if (piece.type === 'html') {
+    frame.src = piece.file;
+    frame.style.display = 'block';
+    // Remove any video/img overlay
+    const oldMedia = overlay.querySelector('.overlay-media');
+    if (oldMedia) oldMedia.remove();
+  } else {
+    frame.src = '';
+    frame.style.display = 'none';
+    // Remove old media
+    const oldMedia = overlay.querySelector('.overlay-media');
+    if (oldMedia) oldMedia.remove();
+
+    if (piece.type === 'video') {
+      const video = document.createElement('video');
+      video.className = 'overlay-media';
+      video.src = piece.file;
+      video.autoplay = true;
+      video.loop = true;
+      video.muted = false;
+      video.playsInline = true;
+      video.style.cssText = 'width:100%;height:100%;object-fit:contain;position:absolute;inset:0;';
+      overlay.appendChild(video);
+    } else if (piece.type === 'image') {
+      const img = document.createElement('img');
+      img.className = 'overlay-media';
+      img.src = piece.file;
+      img.style.cssText = 'width:100%;height:100%;object-fit:contain;position:absolute;inset:0;';
+      overlay.appendChild(img);
+    }
+  }
   overlay.classList.add('active');
 }
 
 function closePiece() {
   frame.src = '';
+  frame.style.display = 'block';
+  const oldMedia = overlay.querySelector('.overlay-media');
+  if (oldMedia) oldMedia.remove();
   overlay.classList.remove('active');
   currentIndex = -1;
 }
@@ -362,8 +434,8 @@ window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY
 document.querySelector('.nav-toggle').addEventListener('click', () => nav.classList.toggle('nav-open'));
 document.querySelectorAll('.nav-links a').forEach(a => a.addEventListener('click', () => nav.classList.remove('nav-open')));
 
-buildGrid(redPieces, 'red-grid', true);
-buildGrid(whitePieces, 'white-grid', false);
+buildGrid(claudePieces, 'claude-grid', 0);
+buildGrid(hermesPieces, 'hermes-grid', claudePieces.length);
 </script>
 </body>
 </html>

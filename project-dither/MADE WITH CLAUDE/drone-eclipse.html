@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sound Machine — Eclipse</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #000; overflow: hidden; }
+  canvas { display: block; image-rendering: pixelated; }
+  #start { position: fixed; inset: 0; z-index: 10; display: flex;
+    align-items: center; justify-content: center; background: #000; cursor: pointer; }
+  #start span { color: #999; font: 13px monospace; opacity: 0.5; }
+  .gone { display: none !important; }
+</style>
+</head>
+<body>
+<div id="start"><span>click to begin</span></div>
+<canvas id="c"></canvas>
+<script>
+const THUMB_MODE=new URLSearchParams(location.search).has('mute');
+const C = document.getElementById('c');
+const X = C.getContext('2d');
+const DUR = 20;
+const DS = 6;
+let T = 0, on = false;
+
+const OC = document.createElement('canvas');
+const OX = OC.getContext('2d', { willReadFrequently: true });
+let ow, oh;
+let densityBuf = new Float32Array(1);
+
+function sz() {
+  C.width = innerWidth; C.height = innerHeight;
+  ow = Math.floor(C.width / DS);
+  oh = Math.floor(C.height / DS);
+  OC.width = ow; OC.height = oh;
+  densityBuf = new Float32Array(ow * oh);
+}
+sz(); addEventListener('resize', sz);
+
+const PI = Math.PI, TWO_PI = PI * 2;
+
+// ═══════════════════════════════════════════════
+// PERLIN NOISE — inline implementation
+// ═══════════════════════════════════════════════
+const P = new Uint8Array(512);
+(function(){const p=new Uint8Array(256);for(let i=0;i<256;i++)p[i]=i;for(let i=255;i>0;i--){const j=Math.floor(Math.random()*(i+1));[p[i],p[j]]=[p[j],p[i]];}for(let i=0;i<512;i++)P[i]=p[i&255];})();
+function fade(t){return t*t*t*(t*(t*6-15)+10)}
+function lerp(a,b,t){return a+t*(b-a)}
+function grad(h,x,y){const v=h&3;return((v&1)?-x:x)+((v&2)?-y:y)}
+function perlin(x,y){const xi=Math.floor(x)&255,yi=Math.floor(y)&255,xf=x-Math.floor(x),yf=y-Math.floor(y),u=fade(xf),v=fade(yf);return lerp(lerp(grad(P[P[xi]+yi],xf,yf),grad(P[P[xi+1]+yi],xf-1,yf),u),lerp(grad(P[P[xi]+yi+1],xf,yf-1),grad(P[P[xi+1]+yi+1],xf-1,yf-1),u),v)}
+function fbm(x,y,o){let v=0,a=.5,f=1;for(let i=0;i<o;i++){v+=a*perlin(x*f,y*f);a*=.5;f*=2.1}return v}
+
+// ═══════════════════════════════════════════════
+// STARS — fixed positions with twinkle
+// ═══════════════════════════════════════════════
+const NUM_STARS = 50;
+const stars = [];
+(function(){
+  let s = 7919;
+  function sr(){ s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; }
+  for(let i = 0; i < NUM_STARS; i++){
+    stars.push({ x: sr(), y: sr(), seed: sr(), brightness: 0.2 + sr() * 0.4 });
+  }
+})();
+
+// ═══════════════════════════════════════════════
+// CORONA STREAMERS — fixed angular positions
+// ═══════════════════════════════════════════════
+const NUM_STREAMERS = 10;
+const streamers = [];
+(function(){
+  let s = 4231;
+  function sr(){ s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; }
+  for(let i = 0; i < NUM_STREAMERS; i++){
+    const angle = (i / NUM_STREAMERS) * TWO_PI + sr() * 0.4;
+    streamers.push({
+      angle: angle,
+      length: 0.6 + sr() * 1.2,
+      width: 0.03 + sr() * 0.05,
+      seed: sr()
+    });
+  }
+})();
+
+// ═══════════════════════════════════════════════
+// AUDIO — ominous industrial drone
+// ═══════════════════════════════════════════════
+let AC, masterGain, bus;
+let drones = [], noiseGain, noiseFilter;
+let metalFilter, metalGain;
+
+async function initAudio() {
+  AC = new AudioContext();
+
+  masterGain = AC.createGain();
+  masterGain.gain.value = 0.0;
+  masterGain.connect(AC.destination);
+
+  // ── Dark reverb — 6 second tail ──
+  const reverbNode = AC.createConvolver();
+  const revLen = AC.sampleRate * 6;
+  const revBuf = AC.createBuffer(2, revLen, AC.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = revBuf.getChannelData(ch);
+    for (let i = 0; i < revLen; i++) {
+      const noise = Math.random() * 2 - 1;
+      const decay = Math.exp(-i / (AC.sampleRate * 2.5));
+      const darkening = Math.exp(-i / (AC.sampleRate * 0.8));
+      data[i] = noise * decay * (0.4 + 0.6 * darkening);
+    }
+  }
+  reverbNode.buffer = revBuf;
+
+  const dryGain = AC.createGain();
+  dryGain.gain.value = 0.35;
+  const wetGain = AC.createGain();
+  wetGain.gain.value = 0.65;
+
+  // ── Waveshaper distortion ──
+  const distNode = AC.createWaveShaper();
+  const curve = new Float32Array(1024);
+  for (let i = 0; i < 1024; i++) {
+    const x = (i / 512) - 1;
+    curve[i] = Math.tanh(x * 2.5);
+  }
+  distNode.curve = curve;
+  distNode.oversample = '2x';
+
+  bus = AC.createGain();
+  bus.gain.value = 1;
+  bus.connect(distNode);
+  distNode.connect(dryGain);
+  distNode.connect(reverbNode);
+  reverbNode.connect(wetGain);
+  dryGain.connect(masterGain);
+  wetGain.connect(masterGain);
+
+  // ── Sub rumble — D#0 + A0 detuned pair ──
+  const subNotes = [
+    { freq: 19.45, detune: 0.10 },
+    { freq: 19.45, detune: -0.10 },
+    { freq: 27.50, detune: 0.08 },
+  ];
+  subNotes.forEach(({ freq, detune }) => {
+    const osc = AC.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.value = freq + detune;
+    const g = AC.createGain();
+    g.gain.value = 0.1;
+    const lp = AC.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 90;
+    lp.Q.value = 3;
+    osc.connect(lp);
+    lp.connect(g);
+    g.connect(bus);
+    osc.start();
+    drones.push({ osc, gain: g, filter: lp });
+  });
+
+  // ── Dark mid — minor 2nd cluster ──
+  const midNotes = [
+    { freq: 38.89, detune: 0 },
+    { freq: 41.20, detune: 0 },
+  ];
+  midNotes.forEach(({ freq, detune }) => {
+    const osc = AC.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.value = freq + detune;
+    const g = AC.createGain();
+    g.gain.value = 0.04;
+    const lp = AC.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 250;
+    lp.Q.value = 2;
+    osc.connect(lp);
+    lp.connect(g);
+    g.connect(bus);
+    osc.start();
+    drones.push({ osc, gain: g, filter: lp });
+  });
+
+  // ── Ghost tone — Eb3 ──
+  const ghostOsc = AC.createOscillator();
+  ghostOsc.type = 'sine';
+  ghostOsc.frequency.value = 155.56;
+  const ghostGain = AC.createGain();
+  ghostGain.gain.value = 0.012;
+  const ghostFilter = AC.createBiquadFilter();
+  ghostFilter.type = 'bandpass';
+  ghostFilter.frequency.value = 155.56;
+  ghostFilter.Q.value = 8;
+  ghostOsc.connect(ghostFilter);
+  ghostFilter.connect(ghostGain);
+  ghostGain.connect(bus);
+  ghostOsc.start();
+  drones.push({ osc: ghostOsc, gain: ghostGain, filter: ghostFilter });
+
+  // ── Noise ──
+  const noiseBuf = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate);
+  const nd = noiseBuf.getChannelData(0);
+  for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+
+  const noiseSrc = AC.createBufferSource();
+  noiseSrc.buffer = noiseBuf;
+  noiseSrc.loop = true;
+  noiseFilter = AC.createBiquadFilter();
+  noiseFilter.type = 'bandpass';
+  noiseFilter.frequency.value = 500;
+  noiseFilter.Q.value = 0.6;
+  noiseGain = AC.createGain();
+  noiseGain.gain.value = 0.035;
+  noiseSrc.connect(noiseFilter);
+  noiseFilter.connect(noiseGain);
+  noiseGain.connect(bus);
+  noiseSrc.start();
+
+  // ── Metallic scrape ──
+  const metalSrc = AC.createBufferSource();
+  metalSrc.buffer = noiseBuf;
+  metalSrc.loop = true;
+  metalFilter = AC.createBiquadFilter();
+  metalFilter.type = 'bandpass';
+  metalFilter.frequency.value = 1800;
+  metalFilter.Q.value = 45;
+  metalGain = AC.createGain();
+  metalGain.gain.value = 0.006;
+  metalSrc.connect(metalFilter);
+  metalFilter.connect(metalGain);
+  metalGain.connect(bus);
+  metalSrc.start();
+
+  // ── Second metal ──
+  const metal2Src = AC.createBufferSource();
+  metal2Src.buffer = noiseBuf;
+  metal2Src.loop = true;
+  const metal2Filter = AC.createBiquadFilter();
+  metal2Filter.type = 'bandpass';
+  metal2Filter.frequency.value = 900;
+  metal2Filter.Q.value = 35;
+  const metal2Gain = AC.createGain();
+  metal2Gain.gain.value = 0.008;
+  metal2Src.connect(metal2Filter);
+  metal2Filter.connect(metal2Gain);
+  metal2Gain.connect(bus);
+  metal2Src.start();
+
+  // ── LFOs — 1/DUR Hz = perfect loop sync ──
+  const lfo1 = AC.createOscillator();
+  lfo1.type = 'sine';
+  lfo1.frequency.value = 1 / DUR;
+  const lfo1G = AC.createGain();
+  lfo1G.gain.value = 150;
+  lfo1.connect(lfo1G);
+  lfo1G.connect(noiseFilter.frequency);
+  lfo1.start();
+
+  const lfo2 = AC.createOscillator();
+  lfo2.type = 'sine';
+  lfo2.frequency.value = 1 / DUR;
+  const lfo2G = AC.createGain();
+  lfo2G.gain.value = 500;
+  lfo2.connect(lfo2G);
+  lfo2G.connect(metalFilter.frequency);
+  lfo2G.connect(metal2Filter.frequency);
+  lfo2.start();
+
+  masterGain.gain.setTargetAtTime(0.35, AC.currentTime, 1.5);
+}
+
+function updateAudio(t, dis, env) {
+  if (!AC) return;
+  const now = AC.currentTime;
+
+  if (noiseGain) noiseGain.gain.setTargetAtTime(0.03 + dis * 0.15, now, 0.04);
+  if (metalGain) metalGain.gain.setTargetAtTime(0.004 + dis * 0.05, now, 0.02);
+
+  for (let i = 0; i < 3; i++) {
+    if (drones[i] && drones[i].filter)
+      drones[i].filter.frequency.setTargetAtTime(80 + dis * 200, now, 0.04);
+  }
+
+  const midCutoff = 200 + Math.sin(t * 0.4) * 80 + dis * 350;
+  for (let i = 3; i < 5; i++) {
+    if (drones[i] && drones[i].filter)
+      drones[i].filter.frequency.setTargetAtTime(midCutoff, now, 0.04);
+  }
+
+  if (drones[5]) drones[5].gain.gain.setTargetAtTime(0.008 + dis * 0.025, now, 0.05);
+  if (masterGain) masterGain.gain.setTargetAtTime(0.32 * env + 0.03, now, 0.15);
+}
+
+// ═══════════════════════════════════════════════
+// VISUALS — Solar Eclipse Corona
+// ═══════════════════════════════════════════════
+const B8 = [
+  0,32,8,40,2,34,10,42,  48,16,56,24,50,18,58,26,
+  12,44,4,36,14,46,6,38, 60,28,52,20,62,30,54,22,
+  3,35,11,43,1,33,9,41,  51,19,59,27,49,17,57,25,
+  15,47,7,39,13,45,5,37, 63,31,55,23,61,29,53,21
+].map(v => v / 64);
+
+function renderEclipse(phase, dis, env) {
+  densityBuf.fill(0);
+
+  const cx = ow / 2, cy = oh / 2;
+  const minDim = Math.min(ow, oh);
+  const moonR = minDim * 0.15;
+
+  // Moon oscillates slightly
+  const moonOx = Math.sin(phase * TWO_PI * 0.7) * minDim * 0.015;
+  const moonOy = Math.cos(phase * TWO_PI * 0.5) * minDim * 0.01;
+  const moonCx = cx + moonOx;
+  const moonCy = cy + moonOy;
+
+  // Rotation for streamers
+  const streamerRot = phase * TWO_PI * 0.1;
+
+  // Diamond ring effect during disruption
+  const diamondAngle = phase * TWO_PI * 1.3 + 0.7;
+  const diamondStrength = dis * 3.0;
+
+  for (let y = 0; y < oh; y++) {
+    for (let x = 0; x < ow; x++) {
+      const dx = x - moonCx;
+      const dy = y - moonCy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const angle = Math.atan2(dy, dx);
+
+      let val = 0;
+
+      // ── Inner and outer corona ──
+      if (dist > moonR * 0.95) {
+        // Corona intensity peaks just outside moon edge, falls off outward
+        const coronaDist = dist - moonR;
+        if (coronaDist > 0) {
+          // Sharp inner corona
+          const innerCorona = Math.exp(-coronaDist / (moonR * 0.3)) * 1.2;
+          // Softer outer corona
+          const outerCorona = Math.exp(-coronaDist / (moonR * 1.5)) * 0.5;
+          let corona = innerCorona + outerCorona;
+
+          // Angular noise for asymmetric flares
+          const angularNoise = fbm(angle * 2.0 + phase * 0.5, dist * 0.05 + phase * 0.3, 3);
+          corona *= (0.6 + angularNoise * 0.8);
+
+          val += corona;
+        }
+      }
+
+      // ── Corona streamers ──
+      for (let s = 0; s < NUM_STREAMERS; s++) {
+        const st = streamers[s];
+        const sa = st.angle + streamerRot;
+        let angleDiff = angle - sa;
+        // Wrap to [-PI, PI]
+        while (angleDiff > PI) angleDiff -= TWO_PI;
+        while (angleDiff < -PI) angleDiff += TWO_PI;
+
+        const angularFalloff = Math.exp(-(angleDiff * angleDiff) / (2 * st.width * st.width));
+        const streamerMaxR = moonR * (1.0 + st.length * (1.0 + 0.3 * Math.sin(phase * TWO_PI * st.seed * 2)));
+        const radialFalloff = dist > moonR ? Math.exp(-(dist - moonR) / (streamerMaxR - moonR + 0.01)) : 0;
+
+        // Perlin texture along streamer
+        const streamerNoise = 0.7 + 0.3 * perlin(angle * 3 + st.seed * 10, dist * 0.03 + phase);
+        val += angularFalloff * radialFalloff * 0.6 * streamerNoise;
+      }
+
+      // ── Diamond ring effect ──
+      if (diamondStrength > 0.1) {
+        let dAngle = angle - diamondAngle;
+        while (dAngle > PI) dAngle -= TWO_PI;
+        while (dAngle < -PI) dAngle += TWO_PI;
+        const dAngFalloff = Math.exp(-(dAngle * dAngle) / 0.04);
+        const dRadFalloff = Math.exp(-Math.abs(dist - moonR) / (moonR * 0.4));
+        val += dAngFalloff * dRadFalloff * diamondStrength;
+      }
+
+      // ── Black out the moon disc ──
+      if (dist < moonR * 0.97) {
+        val = 0;
+      } else if (dist < moonR) {
+        // Soft edge transition
+        val *= (dist - moonR * 0.97) / (moonR * 0.03);
+      }
+
+      val *= env;
+      densityBuf[y * ow + x] = Math.max(0, val);
+    }
+  }
+
+  // ── Background stars ──
+  for (let i = 0; i < stars.length; i++) {
+    const st = stars[i];
+    const sx = Math.floor(st.x * (ow - 1));
+    const sy = Math.floor(st.y * (oh - 1));
+    // Stars near corona are washed out
+    const sdx = sx - cx, sdy = sy - cy;
+    const sDist = Math.sqrt(sdx * sdx + sdy * sdy);
+    const starDim = sDist < moonR * 3 ? Math.max(0, (sDist - moonR) / (moonR * 2)) : 1;
+    const twinkle = 0.5 + 0.5 * Math.sin(phase * TWO_PI * st.seed);
+    const sval = st.brightness * twinkle * starDim;
+    if (sx >= 0 && sx < ow && sy >= 0 && sy < oh) {
+      densityBuf[sy * ow + sx] = Math.min(1.0, densityBuf[sy * ow + sx] + sval);
+    }
+  }
+
+  // ── Normalize density to 0-255 grayscale ──
+  let maxD = 0;
+  for (let i = 0; i < densityBuf.length; i++) {
+    if (densityBuf[i] > maxD) maxD = densityBuf[i];
+  }
+
+  OX.fillStyle = '#000';
+  OX.fillRect(0, 0, ow, oh);
+  const img = OX.getImageData(0, 0, ow, oh);
+  const d = img.data;
+
+  if (maxD > 0) {
+    const invMax = 1 / maxD;
+    for (let i = 0; i < densityBuf.length; i++) {
+      if (densityBuf[i] > 0) {
+        const norm = densityBuf[i] * invMax;
+        const val = Math.pow(norm, 0.65) * 255;
+        const idx = i * 4;
+        d[idx] = d[idx + 1] = d[idx + 2] = Math.min(255, val) | 0;
+      }
+    }
+  }
+
+  OX.putImageData(img, 0, 0);
+}
+
+function disruption(t) {
+  const phase = t / DUR;
+  let d = 0;
+  const beats = [0.0, 0.25, 0.5, 0.75];
+  for (const b of beats) {
+    let dist = Math.abs(phase - b);
+    dist = Math.min(dist, 1 - dist);
+    d += Math.exp(-dist * DUR * 5);
+  }
+  return d;
+}
+
+function envelope(t) {
+  const p = t / DUR;
+  if (p < 0.1) return p / 0.1;
+  if (p > 0.9) return (1 - p) / 0.1;
+  return 1;
+}
+
+function addGlow() {
+  const img = OX.getImageData(0, 0, ow, oh);
+  const d = img.data;
+  const src = new Uint8Array(ow * oh);
+  for (let i = 0; i < src.length; i++) src[i] = d[i * 4];
+  for (let y = 1; y < oh - 1; y++) {
+    for (let x = 1; x < ow - 1; x++) {
+      const i = y * ow + x;
+      const avg = (src[i-ow-1]+src[i-ow]+src[i-ow+1]+src[i-1]+src[i]+src[i+1]+src[i+ow-1]+src[i+ow]+src[i+ow+1]) / 9;
+      const idx = i * 4;
+      const v = Math.min(255, src[i] + (avg * 0.6) | 0);
+      d[idx] = d[idx+1] = d[idx+2] = v;
+    }
+  }
+  OX.putImageData(img, 0, 0);
+}
+
+function applyDither(time, dis) {
+  const img = OX.getImageData(0, 0, ow, oh);
+  const d = img.data;
+  const phase = Math.floor(time * 3) % 8;
+  for (let y = 0; y < oh; y++) {
+    for (let x = 0; x < ow; x++) {
+      const i = (y * ow + x) * 4;
+      const brightness = d[i] / 255;
+      const tx = (x + phase) % 8;
+      const ty = (y + phase) % 8;
+      let threshold = B8[ty * 8 + tx];
+      if (dis > 0.3 && (y + Math.floor(time * 13)) % 6 < dis * 1.8) {
+        threshold = 1 - threshold;
+      }
+      const br = brightness > threshold;
+      d[i] = d[i+1] = d[i+2] = br ? 255 : 0;
+      d[i+3] = 255;
+    }
+  }
+  OX.putImageData(img, 0, 0);
+}
+
+function render(t) {
+  const phase = t / DUR;
+  const env = envelope(t);
+  const dis = disruption(t);
+
+  renderEclipse(phase, dis, env);
+  addGlow();
+  applyDither(t, dis);
+
+  X.imageSmoothingEnabled = false;
+  X.drawImage(OC, 0, 0, ow, oh, 0, 0, C.width, C.height);
+
+  updateAudio(t, dis, env);
+}
+
+let last = 0;
+function frame() {
+  if (!on) return;
+  requestAnimationFrame(frame);
+  const now = performance.now();
+  const d = Math.min((now - last) / 1000, 0.05);
+  last = now;
+  T += d;
+  if (T >= DUR) T -= DUR;
+  render(T);
+}
+
+// Auto-start: try immediately, fall back to click
+async function autoStart() {
+  document.getElementById('start').classList.add('gone');
+  if(!THUMB_MODE) await initAudio();
+  on = true; last = performance.now();
+  frame();
+}
+// If in iframe with allow="autoplay", AudioContext works without gesture
+if (window.self !== window.top) {
+  autoStart();
+} else {
+  // Standalone: try auto, show click overlay if audio blocked
+  autoStart().catch(() => {
+    document.getElementById('start').classList.remove('gone');
+    document.getElementById('start').addEventListener('click', () => autoStart());
+  });
+}
+</script>
+</body>
+</html>
