@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAXIMALS — Symbol Gallery</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0a; color: #e4e1da; font-family: 'Courier New', monospace; padding: 40px; }
+h1 { font-size: 11px; letter-spacing: 6px; text-transform: uppercase; color: rgba(228,225,218,0.4); margin-bottom: 8px; }
+h2 { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: rgba(218,176,62,0.5); margin: 40px 0 16px; }
+p.sub { font-size: 9px; letter-spacing: 2px; color: rgba(228,225,218,0.2); margin-bottom: 32px; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 2px;
+}
+.cell {
+  aspect-ratio: 1;
+  background: #060608;
+  position: relative;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+.cell:hover { border-color: rgba(218,176,62,0.3); }
+.cell.selected { border-color: rgba(218,176,62,0.8); }
+.cell canvas { width: 100%; height: 100%; display: block; }
+.cell .label {
+  position: absolute; bottom: 3px; left: 5px;
+  font-size: 7px; letter-spacing: 1px; color: rgba(228,225,218,0.2);
+}
+.cell .idx {
+  position: absolute; top: 3px; right: 5px;
+  font-size: 7px; color: rgba(218,176,62,0.3);
+}
+#selection { margin-top: 24px; font-size: 9px; letter-spacing: 2px; color: rgba(218,176,62,0.6); min-height: 20px; }
+</style>
+</head>
+<body>
+
+<h1>MAXIMALS — SYMBOL EXTRACTION</h1>
+<p class="sub">click to select · extracted from your artwork</p>
+
+<h2>I. RUNIC CROSSES & ARROWS</h2>
+<div class="grid" id="grid-runes"></div>
+
+<h2>II. CURRENCY SIGILS</h2>
+<div class="grid" id="grid-currency"></div>
+
+<h2>III. ANGULAR SCRIPT</h2>
+<div class="grid" id="grid-script"></div>
+
+<h2>IV. CIRCUIT GLYPHS</h2>
+<div class="grid" id="grid-circuit"></div>
+
+<h2>V. SACRED MARKS</h2>
+<div class="grid" id="grid-sacred"></div>
+
+<h2>VI. REAPER RUNES (from robe)</h2>
+<div class="grid" id="grid-reaper"></div>
+
+<h2>VII. STONE SIGILS (compound / layered)</h2>
+<div class="grid" id="grid-stones"></div>
+
+<h2>VIII. ARROW COMPOUNDS</h2>
+<div class="grid" id="grid-arrows"></div>
+
+<h2>IX. CURRENCY FUSIONS</h2>
+<div class="grid" id="grid-fusions"></div>
+
+<div id="selection">Selected: none</div>
+
+<script>
+const selected = new Set();
+
+// Each symbol = array of stroke commands: [type, ...args]
+// M = moveTo, L = lineTo, A = arc, C = closePath
+// Coordinates normalized to 0-1 range
+
+const SYMBOLS = {
+
+// ── RUNIC CROSSES & ARROWS ──
+runes: [
+  { name: 'CROSS-ARROW', strokes: [
+    [[.5,.15],[.5,.85]], [[.2,.5],[.8,.5]], // cross
+    [[.5,.15],[.35,.28]], [[.5,.15],[.65,.28]], // top arrow
+  ]},
+  { name: 'COMPASS', strokes: [
+    [[.5,.1],[.5,.9]], [[.1,.5],[.9,.5]], // cross
+    [[.5,.1],[.4,.25]], [[.5,.1],[.6,.25]], // N arrow
+    [[.5,.9],[.4,.75]], [[.5,.9],[.6,.75]], // S arrow
+    [[.1,.5],[.25,.4]], [[.1,.5],[.25,.6]], // W arrow
+    [[.9,.5],[.75,.4]], [[.9,.5],[.75,.6]], // E arrow
+  ]},
+  { name: 'ANKH-X', strokes: [
+    [[.5,.2],[.5,.85]], [[.25,.45],[.75,.45]], // cross
+    [[.3,.2],[.5,.2],[.7,.2],[.7,.35],[.5,.42],[.3,.35],[.3,.2]], // top loop
+  ]},
+  { name: 'DAGGER', strokes: [
+    [[.5,.12],[.5,.88]], [[.3,.35],[.7,.35]],
+    [[.42,.3],[.42,.12]], [[.58,.3],[.58,.12]],
+  ]},
+  { name: 'TRIDENT', strokes: [
+    [[.5,.25],[.5,.88]], [[.3,.45],[.7,.45]],
+    [[.5,.25],[.3,.12]], [[.5,.25],[.7,.12]], [[.5,.12],[.5,.25]],
+  ]},
+  { name: 'STAR-CROSS', strokes: [
+    [[.5,.1],[.5,.9]], [[.1,.5],[.9,.5]],
+    [[.2,.2],[.8,.8]], [[.8,.2],[.2,.8]],
+  ]},
+  { name: 'ARROW-UP', strokes: [
+    [[.5,.15],[.5,.85]], [[.5,.15],[.25,.4]], [[.5,.15],[.75,.4]],
+    [[.35,.6],[.65,.6]],
+  ]},
+  { name: 'CHEVRON-STACK', strokes: [
+    [[.2,.3],[.5,.15],[.8,.3]], [[.2,.5],[.5,.35],[.8,.5]],
+    [[.2,.7],[.5,.55],[.8,.7]], [[.2,.9],[.5,.75],[.8,.9]],
+  ]},
+],
+
+// ── CURRENCY SIGILS ──
+currency: [
+  { name: 'DOLLAR-CROSS', strokes: [
+    [[.5,.1],[.5,.9]], // vertical
+    [[.7,.25],[.3,.25],[.3,.48],[.7,.48],[.7,.72],[.3,.72]], // S-path
+    [[.3,.15],[.7,.15]], [[.3,.85],[.7,.85]], // bars
+  ]},
+  { name: 'YEN-RUNE', strokes: [
+    [[.25,.15],[.5,.45]], [[.75,.15],[.5,.45]], [[.5,.45],[.5,.88]],
+    [[.3,.55],[.7,.55]], [[.3,.65],[.7,.65]],
+  ]},
+  { name: 'HASH-MARK', strokes: [
+    [[.3,.15],[.25,.85]], [[.7,.15],[.65,.85]],
+    [[.15,.35],[.85,.35]], [[.15,.65],[.85,.65]],
+  ]},
+  { name: 'BITCOIN-B', strokes: [
+    [[.35,.1],[.35,.9]], [[.45,.1],[.45,.9]],
+    [[.35,.1],[.6,.1],[.7,.2],[.7,.35],[.6,.45],[.35,.45]],
+    [[.35,.45],[.65,.45],[.75,.55],[.75,.72],[.6,.85],[.35,.85]],
+  ]},
+  { name: 'ETH-DIAMOND', strokes: [
+    [[.5,.1],[.8,.45],[.5,.6],[.2,.45],[.5,.1]], // top diamond
+    [[.5,.6],[.5,.9]], // tail
+    [[.2,.45],[.8,.45]], // cross
+    [[.25,.55],[.75,.55]],
+  ]},
+  { name: 'DOUBLE-STRIKE', strokes: [
+    [[.5,.1],[.5,.9]], [[.6,.1],[.6,.9]],
+    [[.2,.35],[.8,.35]], [[.2,.65],[.8,.65]],
+  ]},
+],
+
+// ── ANGULAR SCRIPT ──
+script: [
+  { name: 'GLYPH-A', strokes: [
+    [[.2,.85],[.5,.15],[.8,.85]], [[.3,.6],[.7,.6]],
+    [[.5,.15],[.5,.05]],
+  ]},
+  { name: 'GLYPH-K', strokes: [
+    [[.25,.15],[.25,.85]], [[.25,.5],[.75,.15]], [[.25,.5],[.75,.85]],
+  ]},
+  { name: 'GLYPH-PSI', strokes: [
+    [[.5,.15],[.5,.85]], [[.2,.25],[.2,.55],[.5,.65]], [[.8,.25],[.8,.55],[.5,.65]],
+  ]},
+  { name: 'GLYPH-SIGMA', strokes: [
+    [[.75,.2],[.25,.2],[.5,.5],[.25,.8],[.75,.8]],
+  ]},
+  { name: 'GLYPH-LAMBDA', strokes: [
+    [[.2,.85],[.5,.15],[.8,.85]], [[.35,.5],[.2,.5]],
+  ]},
+  { name: 'GLYPH-XI', strokes: [
+    [[.2,.2],[.8,.2]], [[.3,.5],[.7,.5]], [[.2,.8],[.8,.8]],
+    [[.5,.2],[.5,.8]],
+  ]},
+  { name: 'GLYPH-ZET', strokes: [
+    [[.2,.2],[.8,.2],[.2,.8],[.8,.8]],
+    [[.35,.2],[.35,.35]], [[.65,.65],[.65,.8]],
+  ]},
+  { name: 'GLYPH-OMEGA', strokes: [
+    [[.2,.8],[.2,.4],[.35,.2],[.65,.2],[.8,.4],[.8,.8]],
+    [[.15,.8],[.4,.8]], [[.6,.8],[.85,.8]],
+  ]},
+  { name: 'GLYPH-PHI', strokes: [
+    [[.5,.1],[.5,.9]],
+    'circle:.5,.5,.3',
+  ]},
+  { name: 'GLYPH-MU', strokes: [
+    [[.2,.15],[.2,.85]], [[.2,.85],[.5,.4],[.8,.85]], [[.8,.15],[.8,.85]],
+  ]},
+],
+
+// ── CIRCUIT GLYPHS ──
+circuit: [
+  { name: 'NODE-3', strokes: [
+    [[.5,.5],[.5,.1]], [[.5,.5],[.15,.8]], [[.5,.5],[.85,.8]],
+    'dot:.5,.5', 'dot:.5,.1', 'dot:.15,.8', 'dot:.85,.8',
+  ]},
+  { name: 'TRACE-L', strokes: [
+    [[.2,.2],[.2,.6],[.8,.6],[.8,.8]],
+    'dot:.2,.2', 'dot:.8,.8',
+  ]},
+  { name: 'GATE', strokes: [
+    [[.2,.3],[.5,.3],[.5,.7],[.8,.7]],
+    [[.5,.3],[.5,.15]], [[.5,.7],[.5,.85]],
+    'dot:.2,.3', 'dot:.8,.7',
+  ]},
+  { name: 'BUS', strokes: [
+    [[.15,.5],[.85,.5]],
+    [[.3,.5],[.3,.2]], [[.5,.5],[.5,.2]], [[.7,.5],[.7,.2]],
+    [[.3,.5],[.3,.8]], [[.5,.5],[.5,.8]], [[.7,.5],[.7,.8]],
+    'dot:.3,.2', 'dot:.5,.2', 'dot:.7,.2',
+    'dot:.3,.8', 'dot:.5,.8', 'dot:.7,.8',
+  ]},
+  { name: 'ZIGZAG', strokes: [
+    [[.15,.5],[.3,.2],[.45,.8],[.6,.2],[.75,.8],[.85,.5]],
+  ]},
+  { name: 'FORK', strokes: [
+    [[.5,.85],[.5,.4],[.2,.15]], [[.5,.4],[.8,.15]],
+    'dot:.5,.85', 'dot:.2,.15', 'dot:.8,.15',
+  ]},
+],
+
+// ── SACRED MARKS ──
+sacred: [
+  { name: 'EYE', strokes: [
+    [[.1,.5],[.3,.3],[.5,.25],[.7,.3],[.9,.5],[.7,.7],[.5,.75],[.3,.7],[.1,.5]],
+    'circle:.5,.5,.1',
+    'dot:.5,.5',
+  ]},
+  { name: 'VESICA', strokes: [
+    'arc:.35,.5,.3,-.7,.7', 'arc:.65,.5,.3,2.44,3.84',
+  ]},
+  { name: 'TRINITY', strokes: [
+    [[.5,.12],[.15,.82],[.85,.82],[.5,.12]],
+    'circle:.5,.55,.18',
+  ]},
+  { name: 'OUROBOROS', strokes: [
+    'circle:.5,.5,.35',
+    [[.5,.15],[.45,.22],[.55,.22],[.5,.15]], // head arrow
+    'dot:.5,.15',
+  ]},
+  { name: 'HEXAGRAM', strokes: [
+    [[.5,.12],[.15,.72],[.85,.72],[.5,.12]], // up triangle
+    [[.5,.88],[.15,.28],[.85,.28],[.5,.88]], // down triangle
+  ]},
+  { name: 'CRESCENT', strokes: [
+    'arc:.5,.5,.35,-1.2,1.2', 'arc:.6,.5,.28,-1.2,1.2',
+    'dot:.5,.18',
+  ]},
+  { name: 'HALO', strokes: [
+    'circle:.5,.35,.2',
+    [[.5,.55],[.5,.9]], [[.3,.65],[.7,.65]],
+  ]},
+  { name: 'INFINITY-X', strokes: [
+    [[.1,.5],[.35,.25],[.5,.5],[.65,.75],[.9,.5],[.65,.25],[.5,.5],[.35,.75],[.1,.5]],
+    [[.5,.2],[.5,.8]],
+  ]},
+],
+
+// ── REAPER RUNES (from the robe) ──
+reaper: [
+  { name: 'RUNE-01', strokes: [
+    [[.3,.15],[.7,.15],[.5,.45],[.7,.85],[.3,.85],[.5,.45]],
+  ]},
+  { name: 'RUNE-02', strokes: [
+    [[.5,.1],[.5,.9]], [[.2,.3],[.8,.3]], [[.2,.7],[.8,.7]],
+    [[.2,.3],[.5,.5],[.2,.7]], [[.8,.3],[.5,.5],[.8,.7]],
+  ]},
+  { name: 'RUNE-03', strokes: [
+    [[.25,.15],[.25,.85]], [[.25,.15],[.75,.5]], [[.25,.85],[.75,.5]],
+    [[.75,.5],[.75,.2]], [[.75,.5],[.75,.8]],
+  ]},
+  { name: 'RUNE-04', strokes: [
+    [[.2,.2],[.8,.2],[.8,.8],[.2,.8],[.2,.2]],
+    [[.2,.2],[.8,.8]], [[.8,.2],[.2,.8]],
+  ]},
+  { name: 'RUNE-05', strokes: [
+    [[.5,.1],[.8,.3],[.8,.7],[.5,.9],[.2,.7],[.2,.3],[.5,.1]],
+    'dot:.5,.5',
+  ]},
+  { name: 'RUNE-06', strokes: [
+    [[.2,.5],[.5,.15],[.8,.5]], [[.2,.5],[.5,.85],[.8,.5]],
+    [[.5,.15],[.5,.85]],
+  ]},
+  { name: 'RUNE-07', strokes: [
+    [[.3,.1],[.3,.9]], [[.7,.1],[.7,.9]],
+    [[.3,.3],[.7,.5]], [[.7,.5],[.3,.7]],
+  ]},
+  { name: 'RUNE-08', strokes: [
+    [[.5,.1],[.2,.4],[.35,.8],[.65,.8],[.8,.4],[.5,.1]],
+    [[.5,.1],[.5,.5]], [[.5,.5],[.35,.8]], [[.5,.5],[.65,.8]],
+  ]},
+  { name: 'RUNE-09', strokes: [
+    [[.15,.5],[.85,.5]],
+    [[.5,.15],[.5,.85]],
+    [[.5,.15],[.15,.5]], [[.5,.15],[.85,.5]],
+    [[.5,.85],[.15,.5]], [[.5,.85],[.85,.5]],
+  ]},
+  { name: 'RUNE-10', strokes: [
+    [[.3,.15],[.5,.5],[.3,.85]], [[.7,.15],[.5,.5],[.7,.85]],
+    [[.15,.4],[.85,.4]], [[.15,.6],[.85,.6]],
+  ]},
+],
+};
+
+function drawSymbol(canvas, strokes, color) {
+  const sz = canvas.width;
+  const ctx = canvas.getContext('2d');
+  const pad = sz * 0.12;
+  const s = sz - pad * 2;
+
+  ctx.fillStyle = '#060608';
+  ctx.fillRect(0, 0, sz, sz);
+
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = Math.max(1.5, sz * 0.018);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  for (let stroke of strokes) {
+    if (typeof stroke === 'string') {
+      // Special: circle, dot, arc
+      let parts = stroke.split(':');
+      let type = parts[0];
+      let args = parts[1].split(',').map(Number);
+      if (type === 'circle') {
+        ctx.beginPath();
+        ctx.arc(pad + args[0] * s, pad + args[1] * s, args[2] * s, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (type === 'dot') {
+        ctx.beginPath();
+        ctx.arc(pad + args[0] * s, pad + args[1] * s, sz * 0.025, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type === 'arc') {
+        ctx.beginPath();
+        ctx.arc(pad + args[0] * s, pad + args[1] * s, args[2] * s, args[3], args[4]);
+        ctx.stroke();
+      }
+    } else {
+      // Polyline
+      ctx.beginPath();
+      for (let i = 0; i < stroke.length; i++) {
+        let x = pad + stroke[i][0] * s;
+        let y = pad + stroke[i][1] * s;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+  }
+}
+
+function renderCategory(gridId, symbols, category) {
+  const grid = document.getElementById(gridId);
+  symbols.forEach((sym, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.dataset.id = category + '-' + i;
+    cell.dataset.name = sym.name;
+
+    const c = document.createElement('canvas');
+    c.width = 200; c.height = 200;
+    cell.appendChild(c);
+
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = sym.name;
+    cell.appendChild(label);
+
+    const idx = document.createElement('div');
+    idx.className = 'idx';
+    idx.textContent = (i + 1);
+    cell.appendChild(idx);
+
+    cell.addEventListener('click', () => {
+      cell.classList.toggle('selected');
+      let id = cell.dataset.id;
+      if (selected.has(id)) selected.delete(id);
+      else selected.add(id);
+      updateSelection();
+    });
+
+    grid.appendChild(cell);
+
+    // Draw in white and gold alternating
+    let color = (i % 3 === 2) ? '#dab03e' : '#e4e1da';
+    drawSymbol(c, sym.strokes || sym.s, color);
+  });
+}
+
+function updateSelection() {
+  let names = [...selected].map(id => {
+    let cell = document.querySelector(`[data-id="${id}"]`);
+    return cell ? cell.dataset.name : id;
+  });
+  document.getElementById('selection').textContent =
+    names.length ? 'Selected: ' + names.join(' · ') : 'Selected: none';
+}
+
+// Render all categories
+renderCategory('grid-runes', SYMBOLS.runes, 'runes');
+renderCategory('grid-currency', SYMBOLS.currency, 'currency');
+renderCategory('grid-script', SYMBOLS.script, 'script');
+renderCategory('grid-circuit', SYMBOLS.circuit, 'circuit');
+renderCategory('grid-sacred', SYMBOLS.sacred, 'sacred');
+renderCategory('grid-reaper', SYMBOLS.reaper, 'reaper');
+
+// ── NEW: STONE SIGILS — compound layered forms from painted stones ──
+SYMBOLS.stones = [
+  { name:'SIGIL-NEXUS', s:[ // dense overlapping cross + arrows + circles
+    [[.5,.15],[.5,.85]], [[.15,.5],[.85,.5]], // base cross
+    [[.3,.2],[.7,.8]], [[.7,.2],[.3,.8]], // X overlay
+    'circle:.5,.5,.2', 'circle:.5,.5,.08',
+    [[.5,.15],[.4,.25]],[[.5,.15],[.6,.25]], // top arrows
+    'dot:.3,.3','dot:.7,.3','dot:.3,.7','dot:.7,.7',
+  ]},
+  { name:'SIGIL-TOTEM', s:[ // vertical spine with branching marks
+    [[.5,.08],[.5,.92]], // spine
+    [[.5,.2],[.25,.35]],[[.5,.2],[.75,.35]], // top branches
+    [[.5,.5],[.2,.5]],[[.5,.5],[.8,.5]], // mid arms
+    [[.5,.75],[.3,.85]],[[.5,.75],[.7,.85]], // lower branches
+    'circle:.5,.2,.06', 'dot:.5,.5',
+    [[.2,.5],[.2,.35]],[[.8,.5],[.8,.35]], // upward ticks
+  ]},
+  { name:'SIGIL-ORACLE', s:[ // circle with radiating arrow-lines
+    'circle:.5,.5,.25',
+    [[.5,.25],[.5,.08]],[[.5,.08],[.42,.16]],[[.5,.08],[.58,.16]], // N arrow
+    [[.75,.5],[.92,.5]],[[.92,.5],[.84,.42]],[[.92,.5],[.84,.58]], // E arrow
+    [[.5,.75],[.5,.92]], // S line
+    [[.25,.5],[.08,.5]], // W line
+    [[.35,.35],[.18,.18]],[[.65,.35],[.82,.18]], // diag lines
+    'dot:.5,.5',
+  ]},
+  { name:'SIGIL-WARD', s:[ // triangle with internal marks and slash
+    [[.5,.12],[.15,.85],[.85,.85],[.5,.12]], // outer triangle
+    [[.5,.35],[.35,.7],[.65,.7],[.5,.35]], // inner triangle
+    [[.3,.12],[.7,.85]], // diagonal slash
+    'dot:.5,.5', 'dot:.5,.25',
+    [[.5,.7],[.5,.85]], // bottom tick
+  ]},
+  { name:'SIGIL-GATE', s:[ // arch/gateway with marks
+    [[.2,.85],[.2,.3],[.35,.15],[.65,.15],[.8,.3],[.8,.85]], // arch
+    [[.2,.5],[.8,.5]], // crossbar
+    [[.5,.15],[.5,.5]], // central drop
+    [[.35,.5],[.35,.85]],[[.65,.5],[.65,.85]], // inner pillars
+    'dot:.5,.15', 'dot:.35,.85', 'dot:.65,.85',
+  ]},
+  { name:'SIGIL-CIPHER', s:[ // overlapping loops + slash
+    'circle:.4,.4,.18', 'circle:.6,.6,.18', // overlapping circles
+    [[.2,.2],[.8,.8]], // diagonal slash through
+    [[.5,.1],[.5,.3]],[[.5,.7],[.5,.9]], // top/bottom ticks
+    'dot:.4,.4', 'dot:.6,.6',
+    [[.75,.25],[.85,.15]], // NE tick
+  ]},
+  { name:'SIGIL-CROWN', s:[ // zigzag crown top + vertical marks
+    [[.15,.35],[.3,.15],[.4,.3],[.5,.1],[.6,.3],[.7,.15],[.85,.35]], // crown
+    [[.2,.35],[.8,.35]], // brow line
+    [[.5,.35],[.5,.88]], // central spine
+    [[.35,.55],[.65,.55]], // cross
+    [[.35,.75],[.65,.75]], // lower cross
+    'dot:.5,.1',
+  ]},
+  { name:'SIGIL-ANCHOR', s:[ // anchor form with cross
+    [[.5,.1],[.5,.75]], // vertical
+    [[.3,.35],[.7,.35]], // crossbar
+    [[.5,.75],[.25,.9]],[[.5,.75],[.75,.9]], // flukes
+    'circle:.5,.18,.07', // top ring
+    [[.25,.9],[.25,.8]],[[.75,.9],[.75,.8]], // fluke ticks
+    'dot:.5,.75',
+  ]},
+  { name:'SIGIL-KNOT', s:[ // interlocking angular form
+    [[.2,.2],[.5,.4],[.8,.2]], // top V
+    [[.2,.8],[.5,.6],[.8,.8]], // bottom V
+    [[.2,.2],[.2,.8]],[[.8,.2],[.8,.8]], // verticals
+    [[.5,.4],[.5,.6]], // center link
+    [[.2,.5],[.5,.4]],[[.8,.5],[.5,.6]], // cross links
+  ]},
+  { name:'SIGIL-BLOOM', s:[ // radiating star-burst with circle
+    'circle:.5,.5,.12',
+    [[.5,.38],[.5,.08]],[[.5,.62],[.5,.92]], // N-S
+    [[.38,.5],[.08,.5]],[[.62,.5],[.92,.5]], // W-E
+    [[.41,.41],[.18,.18]],[[.59,.41],[.82,.18]], // NW-NE
+    [[.41,.59],[.18,.82]],[[.59,.59],[.82,.82]], // SW-SE
+    [[.5,.08],[.45,.15]],[[.5,.08],[.55,.15]], // N arrow
+    [[.92,.5],[.85,.45]],[[.92,.5],[.85,.55]], // E arrow
+  ]},
+];
+
+SYMBOLS.arrows = [
+  { name:'ARR-CHAOS', s:[ // chaotic multi-directional arrows
+    [[.5,.5],[.5,.1]],[[.5,.1],[.42,.2]],[[.5,.1],[.58,.2]], // N
+    [[.5,.5],[.85,.25]],[[.85,.25],[.75,.25]],[[.85,.25],[.82,.35]], // NE
+    [[.5,.5],[.15,.5]],[[.15,.5],[.25,.42]],[[.15,.5],[.25,.58]], // W
+    [[.5,.5],[.7,.85]],[[.7,.85],[.62,.78]],[[.7,.85],[.72,.75]], // SE
+    [[.5,.5],[.2,.8]], // SW line (no arrow)
+    'dot:.5,.5',
+  ]},
+  { name:'ARR-ASCEND', s:[ // three stacked upward arrows
+    [[.5,.08],[.5,.35]],[[.5,.08],[.4,.18]],[[.5,.08],[.6,.18]],
+    [[.3,.3],[.3,.6]],[[.3,.3],[.22,.42]],[[.3,.3],[.38,.42]],
+    [[.7,.3],[.7,.6]],[[.7,.3],[.62,.42]],[[.7,.3],[.78,.42]],
+    [[.3,.6],[.5,.85],[.7,.6]], // connecting base V
+  ]},
+  { name:'ARR-SPLIT', s:[ // single stem splitting into 3
+    [[.5,.85],[.5,.4]], // stem
+    [[.5,.4],[.2,.1]],[[.2,.1],[.25,.22]],[[.2,.1],[.12,.18]], // left arrow
+    [[.5,.4],[.5,.1]],[[.5,.1],[.43,.2]],[[.5,.1],[.57,.2]], // center arrow
+    [[.5,.4],[.8,.1]],[[.8,.1],[.75,.22]],[[.8,.1],[.88,.18]], // right arrow
+    'dot:.5,.85',
+  ]},
+  { name:'ARR-ORBIT', s:[ // circular arrow path
+    'circle:.5,.5,.28',
+    [[.5,.22],[.42,.28]],[[.5,.22],[.55,.28]], // top arrow on circle
+    [[.78,.5],[.72,.43]],[[.78,.5],[.72,.57]], // right arrow
+    [[.5,.78],[.55,.72]], // bottom
+    [[.22,.5],[.28,.55]], // left
+    'dot:.5,.5', // center dot
+    [[.5,.5],[.5,.35]],[[.5,.5],[.65,.5]], // internal cross
+  ]},
+  { name:'ARR-CONVERGE', s:[ // arrows pointing inward
+    [[.15,.15],[.42,.42]],[[.42,.42],[.42,.32]],[[.42,.42],[.32,.42]],
+    [[.85,.15],[.58,.42]],[[.58,.42],[.58,.32]],[[.58,.42],[.68,.42]],
+    [[.15,.85],[.42,.58]],[[.42,.58],[.32,.58]],[[.42,.58],[.42,.68]],
+    [[.85,.85],[.58,.58]],[[.58,.58],[.68,.58]],[[.58,.58],[.58,.68]],
+    'dot:.5,.5',
+  ]},
+  { name:'ARR-CASCADE', s:[ // waterfall arrows
+    [[.2,.1],[.2,.35]],[[.2,.35],[.12,.27]],[[.2,.35],[.28,.27]],
+    [[.4,.2],[.4,.5]],[[.4,.5],[.32,.42]],[[.4,.5],[.48,.42]],
+    [[.6,.3],[.6,.65]],[[.6,.65],[.52,.57]],[[.6,.65],[.68,.57]],
+    [[.8,.4],[.8,.8]],[[.8,.8],[.72,.72]],[[.8,.8],[.88,.72]],
+    [[.2,.35],[.4,.2]],[[.4,.5],[.6,.3]],[[.6,.65],[.8,.4]], // connecting
+  ]},
+];
+
+SYMBOLS.fusions = [
+  { name:'FUS-DOLLAR-CROSS', s:[ // $ fused with arrow cross
+    [[.5,.08],[.5,.92]], // vertical
+    [[.65,.2],[.35,.2],[.35,.45],[.65,.45],[.65,.7],[.35,.7]], // S-curve
+    [[.15,.5],[.85,.5]], // horizontal cross
+    [[.5,.08],[.4,.18]],[[.5,.08],[.6,.18]], // top arrow
+    [[.5,.92],[.4,.82]],[[.5,.92],[.6,.82]], // bottom arrow
+  ]},
+  { name:'FUS-YEN-STAR', s:[ // ¥ with radiating marks
+    [[.25,.1],[.5,.45]],[[.75,.1],[.5,.45]],[[.5,.45],[.5,.9]],
+    [[.3,.55],[.7,.55]],[[.3,.65],[.7,.65]],
+    [[.5,.1],[.5,.15]], // top tick
+    [[.15,.35],[.1,.3]],[[.85,.35],[.9,.3]], // side ticks
+    'dot:.5,.45',
+  ]},
+  { name:'FUS-999', s:[ // triple 9 / number mark
+    'circle:.25,.35,.12',[[.37,.35],[.37,.55]],[[.37,.55],[.25,.55]],
+    'circle:.5,.35,.12',[[.62,.35],[.62,.55]],[[.62,.55],[.5,.55]],
+    'circle:.75,.35,.12',[[.87,.35],[.87,.55]],[[.87,.55],[.75,.55]],
+    [[.15,.7],[.85,.7]], // underline
+    [[.15,.75],[.85,.75]], // double underline
+  ]},
+  { name:'FUS-M-RUNE', s:[ // letter M fused with rune marks
+    [[.15,.85],[.15,.15],[.4,.55],[.5,.25],[.6,.55],[.85,.15],[.85,.85]],
+    [[.15,.5],[.85,.5]], // crossbar
+    'dot:.5,.25', 'dot:.15,.15', 'dot:.85,.15',
+    [[.5,.55],[.5,.85]], // center drop
+  ]},
+  { name:'FUS-HASH-ARROW', s:[ // # with arrow tips
+    [[.35,.1],[.3,.9]],[[.65,.1],[.6,.9]], // verticals
+    [[.1,.35],[.9,.35]],[[.1,.65],[.9,.65]], // horizontals
+    [[.35,.1],[.28,.2]],[[.35,.1],[.42,.2]], // top left arrow
+    [[.65,.1],[.58,.2]],[[.65,.1],[.72,.2]], // top right arrow
+    [[.9,.35],[.82,.28]],[[.9,.65],[.82,.72]], // right arrows
+  ]},
+  { name:'FUS-ALEPH', s:[ // aleph-like with numbers
+    [[.3,.15],[.7,.85]], // main diagonal
+    [[.3,.15],[.3,.55]], // left arm down
+    [[.7,.85],[.7,.45]], // right arm up
+    [[.5,.5],[.2,.5]],[[.5,.5],[.8,.5]], // horizontal
+    'dot:.3,.15','dot:.7,.85','dot:.5,.5',
+    [[.15,.8],[.25,.8],[.25,.9]], // corner mark
+  ]},
+];
+
+renderCategory('grid-stones', SYMBOLS.stones, 'stones');
+renderCategory('grid-arrows', SYMBOLS.arrows, 'arrows');
+renderCategory('grid-fusions', SYMBOLS.fusions, 'fusions');
+</script>
+</body>
+</html>

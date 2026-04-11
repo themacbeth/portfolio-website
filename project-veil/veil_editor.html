@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>THE THRESHOLD — Sequence Editor</title>
+<style>
+:root{--bg:#0a0a0a;--panel:#0e0e0e;--border:#1a1a1a;--dim:#333;--mid:#666;--hi:#aaa;--accent:#ff3d00;--cyan:#00ccee;--blue:#3355dd;--red:#ee2200;--white:#fff;--teal:#00ffaa;--gold:#ffaa44}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--dim);font:10px/1.5 monospace;overflow:hidden;height:100vh}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#111}::-webkit-scrollbar-thumb{background:#222}
+input[type=range]{-webkit-appearance:none;background:#111;height:3px;border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;background:var(--accent);border-radius:50%;cursor:pointer}
+select{background:#111;color:var(--dim);border:1px solid var(--border);padding:3px 6px;font:9px monospace;outline:none}
+select:focus{border-color:var(--accent)}
+button{background:#111;color:var(--dim);border:1px solid var(--border);padding:4px 10px;font:8px monospace;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:all .2s}
+button:hover{color:var(--accent);border-color:var(--accent)}
+button.active{color:var(--accent);border-color:var(--accent)}
+input[type=number]{background:#111;color:var(--mid);border:1px solid var(--border);padding:3px 6px;font:9px monospace;width:50px;outline:none;text-align:center}
+input[type=number]:focus{border-color:var(--accent)}
+
+/* LAYOUT */
+#app{display:grid;grid-template-columns:200px 1fr 220px;grid-template-rows:32px 1fr 140px;height:100vh;gap:0}
+#topbar{grid-column:1/-1;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:12px}
+#topbar .title{color:var(--accent);letter-spacing:3px;font-size:9px;text-transform:uppercase}
+#topbar .sep{color:#1a1a1a}
+#topbar .time{color:var(--mid);font-size:11px;min-width:60px}
+#topbar button{padding:3px 12px}
+
+/* SCRIPT PANEL */
+#script{background:var(--panel);border-right:1px solid var(--border);overflow-y:auto;padding:0;grid-row:2/4}
+.script-section{border-bottom:1px solid var(--border);padding:0}
+.script-section summary{padding:6px 10px;cursor:pointer;color:var(--mid);font-size:8px;letter-spacing:2px;text-transform:uppercase;user-select:none;list-style:none}
+.script-section summary:hover{color:var(--accent)}
+.script-section summary::before{content:'+ ';color:#222}
+.script-section[open] summary::before{content:'- '}
+.script-line{padding:4px 10px 4px 16px;font:9px/1.6 Georgia,serif;color:#2a2a2a;cursor:pointer;transition:color .2s;border-bottom:1px solid #0c0c0c}
+.script-line:hover{color:var(--mid);background:#0c0c0c}
+.script-line .speaker{font:7px monospace;color:#222;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:1px}
+.script-line:hover .speaker{color:var(--accent)}
+
+/* CENTER — PREVIEW */
+#center{display:flex;align-items:center;justify-content:center;background:var(--bg);position:relative}
+#preview-wrap{position:relative}
+#preview{display:block;border:1px solid var(--border)}
+
+/* RIGHT PANEL — CONTROLS */
+#controls{background:var(--panel);border-left:1px solid var(--border);overflow-y:auto;padding:10px;grid-row:2/4}
+.ctrl-section{margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:10px}
+.ctrl-title{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#222;margin-bottom:8px}
+.ctrl-row{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.ctrl-row label{min-width:48px;color:#2a2a2a;font-size:8px;text-transform:uppercase;letter-spacing:1px}
+.ctrl-row input[type=range]{flex:1}
+.ctrl-row .val{min-width:24px;color:var(--dim);font-size:8px;text-align:right}
+.color-btns{display:flex;gap:4px;flex-wrap:wrap}
+.color-btn{width:16px;height:16px;border-radius:50%;border:1px solid #222;cursor:pointer;transition:border-color .2s}
+.color-btn:hover,.color-btn.active{border-color:var(--white)}
+.fold-btns{display:flex;gap:4px}
+.fold-btn{padding:2px 8px;font-size:8px}
+.sound-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.sound-btn{padding:6px 4px;font-size:7px;text-align:center}
+.add-row{display:flex;gap:4px;margin-top:6px;align-items:center}
+
+/* TIMELINE */
+#timeline{grid-column:2/3;background:#080808;border-top:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+#tl-header{display:flex;align-items:center;padding:4px 8px;gap:8px;border-bottom:1px solid #111;flex-shrink:0}
+#tl-header label{font-size:7px;color:#222;letter-spacing:1px;text-transform:uppercase}
+#tl-tracks{flex:1;overflow-y:auto;position:relative}
+.tl-track{height:28px;border-bottom:1px solid #0e0e0e;position:relative;display:flex;align-items:center}
+.tl-track-label{width:40px;font-size:7px;color:#1a1a1a;letter-spacing:1px;text-transform:uppercase;padding-left:6px;flex-shrink:0}
+.tl-track-bar{flex:1;height:100%;position:relative;overflow:hidden}
+.tl-clip{position:absolute;top:3px;height:22px;border-radius:2px;font-size:7px;color:#444;padding:0 4px;display:flex;align-items:center;cursor:pointer;overflow:hidden;white-space:nowrap;border:1px solid transparent;min-width:4px}
+.tl-clip:hover{border-color:#333}
+.tl-clip.selected{border-color:var(--accent)}
+.tl-clip.vis{background:#0a1a1a}
+.tl-clip.vox{background:#1a0a0a}
+.tl-clip.sfx{background:#0a0a1a}
+#tl-playhead{position:absolute;top:0;bottom:0;width:1px;background:var(--accent);pointer-events:none;z-index:5}
+#tl-ruler{height:16px;border-bottom:1px solid #111;position:relative;flex-shrink:0;cursor:pointer}
+.tl-tick{position:absolute;top:0;height:100%;border-left:1px solid #111;font-size:7px;color:#1a1a1a;padding-left:3px;padding-top:2px}
+#tl-cursor{position:absolute;top:0;bottom:0;width:1px;background:var(--accent);opacity:0.5;pointer-events:none;z-index:5}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <span class="title">The Threshold</span>
+    <span class="sep">|</span>
+    <button id="btn-play" onclick="togglePlay()">PLAY</button>
+    <button onclick="stopPlay()">STOP</button>
+    <span class="time" id="time-display">0:00.0</span>
+    <span class="sep">|</span>
+    <label style="font-size:8px;color:#333">DUR</label>
+    <input type="number" id="total-dur" value="240" min="30" max="600" style="width:45px" onchange="totalDur=+this.value;renderTimeline()">
+    <span style="font-size:8px;color:#222">sec</span>
+    <span class="sep">|</span>
+    <button onclick="exportJSON()">EXPORT</button>
+    <button onclick="importJSON()">IMPORT</button>
+    <button onclick="clearAll()">CLEAR</button>
+  </div>
+
+  <!-- SCRIPT PANEL -->
+  <div id="script"></div>
+
+  <!-- CENTER PREVIEW -->
+  <div id="center">
+    <div id="preview-wrap">
+      <canvas id="preview"></canvas>
+    </div>
+  </div>
+
+  <!-- CONTROLS PANEL -->
+  <div id="controls">
+    <!-- SHAPE -->
+    <div class="ctrl-section">
+      <div class="ctrl-title">Animation</div>
+      <div class="ctrl-row">
+        <label>Shape</label>
+        <select id="sel-shape" onchange="updatePreview()">
+          <option value="dot">Dot</option>
+          <option value="h_line">H Line</option>
+          <option value="v_line">V Line</option>
+          <option value="cross">Cross</option>
+          <option value="circle">Circle</option>
+          <option value="octahedron" selected>Octahedron</option>
+          <option value="triangle">Triangle</option>
+          <option value="sine">Sine Wave</option>
+          <option value="lissajous">Lissajous</option>
+          <option value="starburst">Starburst</option>
+        </select>
+      </div>
+      <div class="ctrl-row"><label>Size</label><input type="range" id="sl-size" min="5" max="100" value="50" oninput="updatePreview()"><span class="val" id="vl-size">50</span></div>
+      <div class="ctrl-row"><label>Speed</label><input type="range" id="sl-speed" min="0" max="200" value="40" oninput="updatePreview()"><span class="val" id="vl-speed">40</span></div>
+      <div class="ctrl-row"><label>Bright</label><input type="range" id="sl-intensity" min="5" max="100" value="80" oninput="updatePreview()"><span class="val" id="vl-intensity">80</span></div>
+      <div class="ctrl-row"><label>Rotate</label><input type="range" id="sl-rotate" min="0" max="360" value="0" oninput="updatePreview()"><span class="val" id="vl-rotate">0</span></div>
+      <div class="ctrl-row">
+        <label>Color</label>
+        <div class="color-btns">
+          <div class="color-btn active" style="background:#00ccee" data-color="#00ccee" onclick="pickColor(this)"></div>
+          <div class="color-btn" style="background:#3355dd" data-color="#3355dd" onclick="pickColor(this)"></div>
+          <div class="color-btn" style="background:#00ffaa" data-color="#00ffaa" onclick="pickColor(this)"></div>
+          <div class="color-btn" style="background:#ee2200" data-color="#ee2200" onclick="pickColor(this)"></div>
+          <div class="color-btn" style="background:#ffffff" data-color="#ffffff" onclick="pickColor(this)"></div>
+          <div class="color-btn" style="background:#ffaa44" data-color="#ffaa44" onclick="pickColor(this)"></div>
+        </div>
+      </div>
+      <div class="ctrl-row">
+        <label>Fold</label>
+        <div class="fold-btns">
+          <button class="fold-btn active" data-fold="1" onclick="pickFold(this)">1</button>
+          <button class="fold-btn" data-fold="2" onclick="pickFold(this)">2</button>
+          <button class="fold-btn" data-fold="4" onclick="pickFold(this)">4</button>
+          <button class="fold-btn" data-fold="8" onclick="pickFold(this)">8</button>
+        </div>
+      </div>
+      <div class="add-row">
+        <label style="font-size:7px;color:#222;letter-spacing:1px">AT</label>
+        <input type="number" id="add-time" value="0" min="0" step="0.5">
+        <label style="font-size:7px;color:#222;letter-spacing:1px">DUR</label>
+        <input type="number" id="add-dur" value="10" min="0.5" step="0.5">
+      </div>
+      <div class="add-row">
+        <button onclick="addVisualClip()" style="flex:1">+ ADD TO TIMELINE</button>
+      </div>
+    </div>
+
+    <!-- SOUNDBOARD -->
+    <div class="ctrl-section">
+      <div class="ctrl-title">Soundboard</div>
+      <div class="sound-grid">
+        <button class="sound-btn" onclick="sfx('drone')">DRONE</button>
+        <button class="sound-btn" onclick="sfx('tone')">TONE</button>
+        <button class="sound-btn" onclick="sfx('impact')">IMPACT</button>
+        <button class="sound-btn" onclick="sfx('knock')">KNOCK</button>
+        <button class="sound-btn" onclick="sfx('chord')">CHORD</button>
+        <button class="sound-btn" onclick="sfx('dissonance')">DISSONANCE</button>
+        <button class="sound-btn" onclick="sfx('sub')">SUB BASS</button>
+        <button class="sound-btn" onclick="sfx('crystal')">CRYSTAL</button>
+      </div>
+      <div class="ctrl-row" style="margin-top:6px"><label>Freq</label><input type="range" id="sl-freq" min="20" max="800" value="80"><span class="val" id="vl-freq">80</span></div>
+      <div class="ctrl-row"><label>Vol</label><input type="range" id="sl-vol" min="1" max="100" value="40"><span class="val" id="vl-vol">40</span></div>
+      <div class="ctrl-row"><label>Dur</label><input type="range" id="sl-sdur" min="1" max="120" value="20"><span class="val" id="vl-sdur">2.0</span></div>
+      <div class="add-row">
+        <button onclick="addSoundClip()" style="flex:1">+ ADD SOUND CUE</button>
+      </div>
+    </div>
+
+    <!-- SELECTED CLIP -->
+    <div class="ctrl-section" id="clip-info" style="display:none">
+      <div class="ctrl-title">Selected Clip</div>
+      <div id="clip-details" style="font-size:8px;color:#333;line-height:1.8"></div>
+      <div class="add-row">
+        <button onclick="deleteSelected()" style="flex:1;color:#ee2200;border-color:#331111">DELETE CLIP</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIMELINE -->
+  <div id="timeline">
+    <div id="tl-ruler" onclick="seekTimeline(event)"></div>
+    <div id="tl-tracks">
+      <div class="tl-track"><div class="tl-track-label">vis</div><div class="tl-track-bar" id="track-vis"></div></div>
+      <div class="tl-track"><div class="tl-track-label">vox</div><div class="tl-track-bar" id="track-vox"></div></div>
+      <div class="tl-track"><div class="tl-track-label">sfx</div><div class="tl-track-bar" id="track-sfx"></div></div>
+      <div id="tl-playhead" style="left:40px"></div>
+      <div id="tl-cursor" style="left:-10px"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+let totalDur = 240;
+let playing = false;
+let playStart = null;
+let playOffset = 0;
+let currentTime = 0;
+let selectedClip = null;
+let lastSoundType = 'drone';
+
+const timeline = {
+  vis: [],  // { start, dur, shape, size, speed, intensity, rotate, color, fold }
+  vox: [],  // { start, text, speaker, rate, pitch }
+  sfx: []   // { start, dur, type, freq, vol }
+};
+
+const firedVox = new Set();
+const firedSfx = new Set();
+
+// ═══════════════════════════════════════════════════
+// CANVAS
+// ═══════════════════════════════════════════════════
+const canvas = document.getElementById('preview');
+const ctx = canvas.getContext('2d');
+let S, mid, u;
+
+function sizeCanvas() {
+  const center = document.getElementById('center');
+  S = Math.min(center.clientWidth, center.clientHeight) - 40;
+  S = Math.max(200, S);
+  canvas.width = canvas.height = S;
+  mid = S / 2;
+  u = S / 8;
+}
+sizeCanvas();
+addEventListener('resize', () => { sizeCanvas(); renderTimeline(); });
+
+// ═══════════════════════════════════════════════════
+// AUDIO
+// ═══════════════════════════════════════════════════
+let audioCtx, masterGain, reverbNode, reverbGain;
+const activeDrones = [];
+
+function ensureAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const comp = audioCtx.createDynamicsCompressor();
+  comp.threshold.value = -24; comp.ratio.value = 4;
+  comp.connect(audioCtx.destination);
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.6;
+  masterGain.connect(comp);
+  const len = audioCtx.sampleRate * 4;
+  const imp = audioCtx.createBuffer(2, len, audioCtx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) { const d = imp.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random()*2-1)*Math.pow(1-i/len, 2.5); }
+  reverbNode = audioCtx.createConvolver(); reverbNode.buffer = imp;
+  reverbGain = audioCtx.createGain(); reverbGain.gain.value = 0.25;
+  reverbNode.connect(reverbGain); reverbGain.connect(masterGain);
+}
+
+function playDrone(freq, vol, dur) {
+  ensureAudio();
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = 'sine'; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, audioCtx.currentTime);
+  g.gain.linearRampToValueAtTime(vol, audioCtx.currentTime + 2);
+  g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + dur);
+  o.connect(g); g.connect(masterGain); o.start(); o.stop(audioCtx.currentTime + dur + 0.5);
+}
+
+function playTone(freq, dur, vol, type = 'sine') {
+  ensureAudio();
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(vol, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+  o.connect(g); g.connect(reverbNode); o.start(); o.stop(audioCtx.currentTime + dur + 0.1);
+}
+
+function playImpact(freq, dur, vol) {
+  ensureAudio();
+  const bufLen = audioCtx.sampleRate * dur;
+  const buf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < bufLen; i++) d[i] = (Math.random()*2-1)*Math.pow(1-i/bufLen, 4);
+  const src = audioCtx.createBufferSource(); src.buffer = buf;
+  const filt = audioCtx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = freq; filt.Q.value = 18;
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(vol, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+  src.connect(filt); filt.connect(g); g.connect(masterGain); g.connect(reverbNode); src.start();
+}
+
+function sfx(type) {
+  ensureAudio();
+  lastSoundType = type;
+  const freq = +document.getElementById('sl-freq').value;
+  const vol = +document.getElementById('sl-vol').value / 100;
+  const dur = +document.getElementById('sl-sdur').value / 10;
+  switch(type) {
+    case 'drone':    playDrone(freq, vol * 0.3, dur * 3); break;
+    case 'tone':     playTone(freq, dur, vol * 0.2); break;
+    case 'impact':   playImpact(freq, dur, vol); break;
+    case 'knock':    playImpact(90, 1.4, 0.5); playTone(55, 2, 0.15); break;
+    case 'chord':    [1,1.5,2,3,4,6,8].forEach((m,i) => playTone(freq*m, dur*2, vol*0.1-i*0.01)); break;
+    case 'dissonance': [freq, freq*1.05, freq*1.58, freq*1.67].forEach(f => playTone(f, dur, vol*0.08, 'sawtooth')); break;
+    case 'sub':      playDrone(freq, vol * 0.4, dur * 2); playDrone(freq+1, vol * 0.35, dur * 2); break;
+    case 'crystal':  playTone(freq*4, dur, vol*0.08); playTone(freq*6, dur*0.8, vol*0.06); break;
+  }
+}
+
+function triggerSfxClip(clip) {
+  ensureAudio();
+  const vol = clip.vol;
+  const freq = clip.freq;
+  const dur = clip.dur;
+  switch(clip.type) {
+    case 'drone':    playDrone(freq, vol*0.3, dur*3); break;
+    case 'tone':     playTone(freq, dur, vol*0.2); break;
+    case 'impact':   playImpact(freq, dur, vol); break;
+    case 'knock':    playImpact(90, 1.4, 0.5); playTone(55, 2, 0.15); break;
+    case 'chord':    [1,1.5,2,3,4,6,8].forEach((m,i) => playTone(freq*m, dur*2, vol*0.1-i*0.01)); break;
+    case 'dissonance': [freq, freq*1.05, freq*1.58, freq*1.67].forEach(f => playTone(f, dur, vol*0.08, 'sawtooth')); break;
+    case 'sub':      playDrone(freq, vol*0.4, dur*2); playDrone(freq+1, vol*0.35, dur*2); break;
+    case 'crystal':  playTone(freq*4, dur, vol*0.08); playTone(freq*6, dur*0.8, vol*0.06); break;
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// VOICE
+// ═══════════════════════════════════════════════════
+let voicesReady = false;
+if (speechSynthesis.getVoices().length) voicesReady = true;
+speechSynthesis.onvoiceschanged = () => { voicesReady = true; };
+
+function speak(text, rate = 0.7, pitch = 0.8) {
+  if (!voicesReady) return;
+  const ut = new SpeechSynthesisUtterance(text);
+  const voices = speechSynthesis.getVoices();
+  ut.voice = voices.find(v => v.name.includes('Daniel')) ||
+             voices.find(v => v.name.includes('Google UK English Male')) ||
+             voices.find(v => v.lang.startsWith('en') && v.localService) ||
+             voices.find(v => v.lang.startsWith('en')) || voices[0];
+  ut.rate = rate; ut.pitch = pitch; ut.volume = 0.85;
+  speechSynthesis.speak(ut);
+}
+
+// ═══════════════════════════════════════════════════
+// LASER RENDERER
+// ═══════════════════════════════════════════════════
+function laserLine(x1, y1, x2, y2, color, intensity) {
+  if (intensity < 0.01) return;
+  const a = Math.min(1, intensity);
+  ctx.lineCap = 'round'; ctx.strokeStyle = color;
+  ctx.globalAlpha = 0.06*a; ctx.lineWidth = 8;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.globalAlpha = 0.15*a; ctx.lineWidth = 4; ctx.stroke();
+  ctx.globalAlpha = 0.4*a; ctx.lineWidth = 2; ctx.stroke();
+  ctx.strokeStyle = '#fff';
+  ctx.globalAlpha = 0.9*a; ctx.lineWidth = 1; ctx.stroke();
+}
+
+function laserPath(pts, color, intensity) {
+  if (pts.length < 2 || intensity < 0.01) return;
+  const a = Math.min(1, intensity);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  function trace() { ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]); for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]); }
+  ctx.strokeStyle = color;
+  ctx.globalAlpha = 0.06*a; ctx.lineWidth = 7; trace(); ctx.stroke();
+  ctx.globalAlpha = 0.15*a; ctx.lineWidth = 3.5; ctx.stroke();
+  ctx.globalAlpha = 0.4*a; ctx.lineWidth = 1.8; ctx.stroke();
+  ctx.strokeStyle = '#fff';
+  ctx.globalAlpha = 0.85*a; ctx.lineWidth = 0.8; ctx.stroke();
+}
+
+function laserDot(x, y, color, intensity, r = 3) {
+  if (intensity < 0.01) return;
+  const a = Math.min(1, intensity);
+  ctx.fillStyle = color;
+  ctx.globalAlpha = 0.08*a; ctx.beginPath(); ctx.arc(x,y,r*4,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha = 0.2*a; ctx.beginPath(); ctx.arc(x,y,r*2,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.globalAlpha = 0.9*a; ctx.beginPath(); ctx.arc(x,y,r*0.6,0,Math.PI*2); ctx.fill();
+}
+
+// ═══════════════════════════════════════════════════
+// SHAPE LIBRARY
+// ═══════════════════════════════════════════════════
+function rot3(x,y,z,rx,ry,rz) {
+  let y1=y*Math.cos(rx)-z*Math.sin(rx), z1=y*Math.sin(rx)+z*Math.cos(rx);
+  let x1=x*Math.cos(ry)+z1*Math.sin(ry), z2=-x*Math.sin(ry)+z1*Math.cos(ry);
+  let x2=x1*Math.cos(rz)-y1*Math.sin(rz), y2=x1*Math.sin(rz)+y1*Math.cos(rz);
+  return [x2,y2,z2];
+}
+const OV=[[0,1,0],[0,-1,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]];
+const OE=[[0,2],[0,3],[0,4],[0,5],[1,2],[1,3],[1,4],[1,5],[2,4],[4,3],[3,5],[5,2]];
+
+function drawShape(t, shape, params) {
+  const { size, speed, intensity, rotate, color, fold } = params;
+  const sz = size / 100 * u * 3;
+  const spd = speed / 100;
+  const a = intensity / 100;
+  const rot = rotate * Math.PI / 180;
+
+  // apply fold symmetry
+  for (let f = 0; f < fold; f++) {
+    const fAngle = (f / fold) * Math.PI * 2;
+    ctx.save();
+    ctx.translate(mid, mid);
+    ctx.rotate(fAngle);
+    ctx.translate(-mid, -mid);
+
+    switch(shape) {
+      case 'dot':
+        laserDot(mid, mid, color, a, sz / 3 + 2);
+        break;
+
+      case 'h_line': {
+        const len = sz + Math.sin(t * spd) * sz * 0.1;
+        laserLine(mid - len, mid, mid + len, mid, color, a);
+        break;
+      }
+      case 'v_line': {
+        const len = sz + Math.sin(t * spd) * sz * 0.1;
+        laserLine(mid, mid - len, mid, mid + len, color, a);
+        break;
+      }
+      case 'cross': {
+        laserLine(mid - sz, mid, mid + sz, mid, color, a);
+        laserLine(mid, mid - sz, mid, mid + sz, color, a);
+        break;
+      }
+      case 'circle': {
+        const pts = [];
+        const steps = 36;
+        for (let i = 0; i <= steps; i++) {
+          const ang = (i/steps)*Math.PI*2 + t*spd;
+          pts.push([mid + Math.cos(ang)*sz, mid + Math.sin(ang)*sz]);
+        }
+        laserPath(pts, color, a);
+        break;
+      }
+      case 'octahedron': {
+        const rx = t*spd*0.5 + rot, ry = t*spd*0.35, rz = 0;
+        const verts = OV.map(v => {
+          const r = rot3(v[0],v[1],v[2],rx,ry,rz);
+          const s = sz / (1+r[2]*0.25);
+          return [mid+r[0]*s, mid-r[1]*s];
+        });
+        OE.forEach(([i,j]) => laserLine(verts[i][0],verts[i][1],verts[j][0],verts[j][1],color,a));
+        break;
+      }
+      case 'triangle': {
+        const pts = [];
+        for (let i = 0; i < 3; i++) {
+          const ang = rot + (i/3)*Math.PI*2 - Math.PI/2 + t*spd*0.2;
+          pts.push([mid + Math.cos(ang)*sz, mid + Math.sin(ang)*sz]);
+        }
+        pts.push(pts[0].slice());
+        laserPath(pts, color, a);
+        break;
+      }
+      case 'sine': {
+        const pts = [];
+        const margin = u * 0.5;
+        for (let i = 0; i <= 50; i++) {
+          const x = margin + (S - margin*2)*(i/50);
+          const y = mid + Math.sin(i/50*Math.PI*2*2 + t*spd*2)*sz;
+          pts.push([x, y]);
+        }
+        laserPath(pts, color, a);
+        break;
+      }
+      case 'lissajous': {
+        const pts = [];
+        for (let i = 0; i <= 100; i++) {
+          const p = (i/100)*Math.PI*2;
+          pts.push([mid + Math.sin(3*p + t*spd)*sz, mid + Math.sin(2*p + Math.PI/4)*sz]);
+        }
+        laserPath(pts, color, a);
+        break;
+      }
+      case 'starburst': {
+        const count = 8;
+        for (let i = 0; i < count; i++) {
+          const ang = (i/count)*Math.PI*2 + t*spd*0.15 + rot;
+          laserLine(mid, mid, mid+Math.cos(ang)*sz, mid+Math.sin(ang)*sz, color, a);
+        }
+        laserDot(mid, mid, color, a * 0.6, 3);
+        break;
+      }
+    }
+    ctx.restore();
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════════
+function getParams() {
+  return {
+    shape: document.getElementById('sel-shape').value,
+    size: +document.getElementById('sl-size').value,
+    speed: +document.getElementById('sl-speed').value,
+    intensity: +document.getElementById('sl-intensity').value,
+    rotate: +document.getElementById('sl-rotate').value,
+    color: document.querySelector('.color-btn.active').dataset.color,
+    fold: +document.querySelector('.fold-btn.active').dataset.fold
+  };
+}
+
+function pickColor(el) {
+  document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  updatePreview();
+}
+
+function pickFold(el) {
+  document.querySelectorAll('.fold-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  updatePreview();
+}
+
+function updatePreview() {
+  // update value displays
+  ['size','speed','intensity','rotate'].forEach(k => {
+    document.getElementById('vl-'+k).textContent = document.getElementById('sl-'+k).value;
+  });
+  document.getElementById('vl-freq').textContent = document.getElementById('sl-freq').value;
+  document.getElementById('vl-vol').textContent = document.getElementById('sl-vol').value;
+  document.getElementById('vl-sdur').textContent = (+document.getElementById('sl-sdur').value / 10).toFixed(1);
+}
+updatePreview();
+
+// ═══════════════════════════════════════════════════
+// TIMELINE DATA OPS
+// ═══════════════════════════════════════════════════
+function addVisualClip() {
+  const p = getParams();
+  timeline.vis.push({
+    start: +document.getElementById('add-time').value,
+    dur: +document.getElementById('add-dur').value,
+    ...p
+  });
+  timeline.vis.sort((a,b) => a.start - b.start);
+  renderTimeline();
+}
+
+function addVoiceClip(text, speaker, rate, pitch) {
+  timeline.vox.push({
+    start: +document.getElementById('add-time').value,
+    text, speaker, rate: rate || 0.65, pitch: pitch || 0.5
+  });
+  timeline.vox.sort((a,b) => a.start - b.start);
+  renderTimeline();
+}
+
+function addSoundClip() {
+  timeline.sfx.push({
+    start: +document.getElementById('add-time').value,
+    dur: +document.getElementById('sl-sdur').value / 10,
+    type: lastSoundType,
+    freq: +document.getElementById('sl-freq').value,
+    vol: +document.getElementById('sl-vol').value / 100
+  });
+  timeline.sfx.sort((a,b) => a.start - b.start);
+  renderTimeline();
+}
+
+function selectClip(track, index) {
+  selectedClip = { track, index };
+  const clip = timeline[track][index];
+  document.querySelectorAll('.tl-clip').forEach(el => el.classList.remove('selected'));
+  const el = document.querySelector(`.tl-clip[data-track="${track}"][data-idx="${index}"]`);
+  if (el) el.classList.add('selected');
+  const info = document.getElementById('clip-info');
+  info.style.display = 'block';
+  let html = '';
+  if (track === 'vis') html = `<b>${clip.shape}</b> @ ${clip.start}s, ${clip.dur}s<br>size:${clip.size} spd:${clip.speed} int:${clip.intensity}`;
+  else if (track === 'vox') html = `<b>${clip.speaker}</b> @ ${clip.start}s<br>"${clip.text.slice(0,50)}..."`;
+  else html = `<b>${clip.type}</b> @ ${clip.start}s<br>freq:${clip.freq} vol:${(clip.vol*100).toFixed(0)}%`;
+  document.getElementById('clip-details').innerHTML = html;
+}
+
+function deleteSelected() {
+  if (!selectedClip) return;
+  timeline[selectedClip.track].splice(selectedClip.index, 1);
+  selectedClip = null;
+  document.getElementById('clip-info').style.display = 'none';
+  renderTimeline();
+}
+
+// ═══════════════════════════════════════════════════
+// TIMELINE RENDER
+// ═══════════════════════════════════════════════════
+function renderTimeline() {
+  // ruler
+  const ruler = document.getElementById('tl-ruler');
+  ruler.innerHTML = '';
+  const rulerW = ruler.clientWidth - 40;
+  const step = totalDur <= 60 ? 5 : (totalDur <= 180 ? 10 : 30);
+  for (let t = 0; t <= totalDur; t += step) {
+    const el = document.createElement('div');
+    el.className = 'tl-tick';
+    el.style.left = (40 + t / totalDur * rulerW) + 'px';
+    el.textContent = Math.floor(t/60) + ':' + String(t%60).padStart(2,'0');
+    ruler.appendChild(el);
+  }
+
+  // clips
+  ['vis','vox','sfx'].forEach(track => {
+    const bar = document.getElementById('track-' + track);
+    bar.innerHTML = '';
+    const barW = bar.clientWidth;
+    timeline[track].forEach((clip, i) => {
+      const el = document.createElement('div');
+      el.className = 'tl-clip ' + track;
+      el.dataset.track = track;
+      el.dataset.idx = i;
+      const left = (clip.start / totalDur) * barW;
+      const dur = clip.dur || (track === 'vox' ? 5 : 2);
+      const width = Math.max(4, (dur / totalDur) * barW);
+      el.style.left = left + 'px';
+      el.style.width = width + 'px';
+      el.textContent = track === 'vis' ? clip.shape : (track === 'vox' ? clip.text.slice(0,12) : clip.type);
+      el.onclick = () => selectClip(track, i);
+      bar.appendChild(el);
+    });
+  });
+}
+
+function seekTimeline(e) {
+  const ruler = document.getElementById('tl-ruler');
+  const rect = ruler.getBoundingClientRect();
+  const x = e.clientX - rect.left - 40;
+  const rulerW = rect.width - 40;
+  const t = Math.max(0, Math.min(totalDur, (x / rulerW) * totalDur));
+  playOffset = t;
+  currentTime = t;
+  if (playing) playStart = performance.now() - t * 1000;
+  updatePlayhead();
+}
+
+function updatePlayhead() {
+  const tracks = document.getElementById('tl-tracks');
+  const w = tracks.clientWidth - 40;
+  const x = 40 + (currentTime / totalDur) * w;
+  document.getElementById('tl-playhead').style.left = x + 'px';
+  const m = Math.floor(currentTime / 60);
+  const s = (currentTime % 60).toFixed(1);
+  document.getElementById('time-display').textContent = m + ':' + String(s).padStart(4, '0');
+}
+
+// ═══════════════════════════════════════════════════
+// PLAYBACK
+// ═══════════════════════════════════════════════════
+function togglePlay() {
+  if (playing) { playing = false; document.getElementById('btn-play').textContent = 'PLAY'; return; }
+  ensureAudio();
+  playing = true;
+  playStart = performance.now() - playOffset * 1000;
+  firedVox.clear();
+  firedSfx.clear();
+  document.getElementById('btn-play').textContent = 'PAUSE';
+  document.getElementById('btn-play').classList.add('active');
+}
+
+function stopPlay() {
+  playing = false;
+  playOffset = 0;
+  currentTime = 0;
+  speechSynthesis.cancel();
+  document.getElementById('btn-play').textContent = 'PLAY';
+  document.getElementById('btn-play').classList.remove('active');
+  updatePlayhead();
+}
+
+// ═══════════════════════════════════════════════════
+// EXPORT / IMPORT
+// ═══════════════════════════════════════════════════
+function exportJSON() {
+  const data = JSON.stringify({ totalDur, timeline }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'threshold_sequence.json';
+  a.click();
+}
+
+function importJSON() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = (e) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        totalDur = data.totalDur || 240;
+        document.getElementById('total-dur').value = totalDur;
+        timeline.vis = data.timeline.vis || [];
+        timeline.vox = data.timeline.vox || [];
+        timeline.sfx = data.timeline.sfx || [];
+        renderTimeline();
+      } catch(err) { alert('Invalid JSON'); }
+    };
+    reader.readAsText(e.target.files[0]);
+  };
+  input.click();
+}
+
+function clearAll() {
+  if (!confirm('Clear all clips?')) return;
+  timeline.vis.length = 0;
+  timeline.vox.length = 0;
+  timeline.sfx.length = 0;
+  selectedClip = null;
+  document.getElementById('clip-info').style.display = 'none';
+  renderTimeline();
+}
+
+// ═══════════════════════════════════════════════════
+// CEREMONY SCRIPT DATA
+// ═══════════════════════════════════════════════════
+const SCRIPT = [
+  { section: 'Creation', lines: [
+    { speaker:'ELOHIM', text:"See — yonder is matter unorganized.", rate:0.65, pitch:0.4 },
+    { speaker:'ELOHIM', text:"Go ye down and organize it into a world like unto the worlds that we have heretofore formed.", rate:0.65, pitch:0.4 },
+    { speaker:'JEHOVAH', text:"It shall be done, Elohim. Come, Michael, let us go down.", rate:0.7, pitch:0.6 },
+    { speaker:'MICHAEL', text:"We will go down, Jehovah.", rate:0.7, pitch:0.7 },
+    { speaker:'ELOHIM', text:"It is well.", rate:0.55, pitch:0.35 },
+    { speaker:'ELOHIM', text:"Let us go down and form man in our own likeness and in our own image, male and female.", rate:0.6, pitch:0.4 },
+  ]},
+  { section: 'The Garden', lines: [
+    { speaker:'ELOHIM', text:"We have created for you this earth and have placed upon it all manner of life.", rate:0.6, pitch:0.4 },
+    { speaker:'ELOHIM', text:"Of every tree of the garden thou mayest freely eat.", rate:0.6, pitch:0.4 },
+    { speaker:'ELOHIM', text:"But of the tree of knowledge of good and evil, thou shalt not eat.", rate:0.6, pitch:0.35 },
+    { speaker:'ELOHIM', text:"Nevertheless, thou mayest choose for thyself, for it is given unto thee.", rate:0.6, pitch:0.4 },
+    { speaker:'ELOHIM', text:"But remember that I forbid it, for in the day thou eatest thereof thou shalt surely die.", rate:0.55, pitch:0.35 },
+    { speaker:'LUCIFER', text:"You must eat some of the fruit of this tree.", rate:0.82, pitch:0.65 },
+    { speaker:'ADAM', text:"I will not partake of that fruit. Father told me that in the day I should partake of it, I should surely die.", rate:0.65, pitch:0.75 },
+  ]},
+  { section: 'The Fall', lines: [
+    { speaker:'LUCIFER', text:"It will make you wise. It is delicious to the taste and very desirable.", rate:0.82, pitch:0.65 },
+    { speaker:'EVE', text:"Who are you?", rate:0.75, pitch:1.3 },
+    { speaker:'LUCIFER', text:"I am your brother.", rate:0.82, pitch:0.65 },
+    { speaker:'EVE', text:"Is there no other way?", rate:0.75, pitch:1.3 },
+    { speaker:'LUCIFER', text:"There is no other way.", rate:0.82, pitch:0.65 },
+    { speaker:'EVE', text:"Then I will partake.", rate:0.7, pitch:1.2 },
+    { speaker:'ADAM', text:"I see that this must be so. I will partake that man may be.", rate:0.65, pitch:0.75 },
+    { speaker:'LUCIFER', text:"See — you are naked.", rate:0.82, pitch:0.65 },
+    { speaker:'ELOHIM', text:"Adam! Adam! Where art thou?", rate:0.5, pitch:0.35 },
+    { speaker:'ADAM', text:"I heard thy voice and hid myself, because I was naked.", rate:0.65, pitch:0.75 },
+    { speaker:'LUCIFER', text:"I have been doing that which has been done on other worlds.", rate:0.82, pitch:0.65 },
+    { speaker:'ELOHIM', text:"Depart!", rate:0.45, pitch:0.3 },
+  ]},
+  { section: 'Telestial World', lines: [
+    { speaker:'ADAM', text:"Oh God, hear the words of my mouth.", rate:0.55, pitch:0.7 },
+    { speaker:'ADAM', text:"Hear the words of my mouth.", rate:0.5, pitch:0.65 },
+    { speaker:'LUCIFER', text:"Now is the great day of my power. I reign from the rivers to the ends of the earth.", rate:0.82, pitch:0.65 },
+    { speaker:'LUCIFER', text:"There is none who dares to molest or make afraid.", rate:0.82, pitch:0.65 },
+    { speaker:'LUCIFER', text:"You can buy anything in this world for money.", rate:0.85, pitch:0.65 },
+    { speaker:'ADAM', text:"I have them, but I do not sell them for money. I hold them sacred.", rate:0.65, pitch:0.75 },
+    { speaker:'ADAM', text:"I am looking for the further light and knowledge Father promised to send me.", rate:0.65, pitch:0.75 },
+    { speaker:'PETER', text:"We commend you for your integrity.", rate:0.68, pitch:0.85 },
+    { speaker:'LUCIFER', text:"A religion made of the philosophies of men, mingled with scripture.", rate:0.82, pitch:0.65 },
+  ]},
+  { section: 'Terrestrial World', lines: [
+    { speaker:'PETER', text:"You do consecrate yourselves, your time, talents, and everything with which the Lord has blessed you.", rate:0.68, pitch:0.85 },
+    { speaker:'PETER', text:"Or with which he may bless you, to the Church of Jesus Christ of Latter-day Saints.", rate:0.68, pitch:0.85 },
+    { speaker:'PETER', text:"For the building up of the kingdom of God on the earth and for the establishment of Zion.", rate:0.68, pitch:0.85 },
+  ]},
+  { section: 'The Veil', lines: [
+    { speaker:'THE LORD', text:"What is wanted?", rate:0.5, pitch:0.3 },
+    { speaker:'PETER', text:"Having been true and faithful in all things, desires further light and knowledge by conversing with the Lord through the veil.", rate:0.65, pitch:0.8 },
+    { speaker:'THE LORD', text:"Present him at the veil, and his request shall be granted.", rate:0.5, pitch:0.3 },
+    { speaker:'THE LORD', text:"You shall receive it upon the five points of fellowship through the veil.", rate:0.5, pitch:0.3 },
+    { speaker:'THE LORD', text:"That is correct.", rate:0.5, pitch:0.3 },
+    { speaker:'THE LORD', text:"Let him enter.", rate:0.45, pitch:0.25 },
+  ]},
+  { section: 'Celestial', lines: [
+    { speaker:'ELOHIM', text:"Your endowment is to receive all those ordinances in the house of the Lord.", rate:0.55, pitch:0.4 },
+    { speaker:'ELOHIM', text:"Which are necessary for you, after you have departed this life.", rate:0.55, pitch:0.4 },
+    { speaker:'ELOHIM', text:"To enable you to walk back to the presence of the Father.", rate:0.55, pitch:0.4 },
+    { speaker:'ELOHIM', text:"Passing the angels who stand as sentinels.", rate:0.55, pitch:0.4 },
+    { speaker:'ELOHIM', text:"Being enabled to give them the keywords, the signs and tokens, pertaining to the holy priesthood.", rate:0.55, pitch:0.4 },
+    { speaker:'ELOHIM', text:"And gain your eternal exaltation.", rate:0.5, pitch:0.35 },
+  ]},
+];
+
+// ═══════════════════════════════════════════════════
+// SCRIPT PANEL RENDER
+// ═══════════════════════════════════════════════════
+function buildScriptPanel() {
+  const el = document.getElementById('script');
+  el.innerHTML = '';
+  SCRIPT.forEach(section => {
+    const details = document.createElement('details');
+    details.className = 'script-section';
+    details.open = false;
+    const summary = document.createElement('summary');
+    summary.textContent = section.section;
+    details.appendChild(summary);
+    section.lines.forEach(line => {
+      const div = document.createElement('div');
+      div.className = 'script-line';
+      div.innerHTML = `<span class="speaker">${line.speaker}</span>${line.text}`;
+      div.onclick = () => {
+        // preview speak
+        speechSynthesis.cancel();
+        speak(line.text, line.rate, line.pitch);
+      };
+      div.ondblclick = () => {
+        // add to voice timeline
+        addVoiceClip(line.text, line.speaker, line.rate, line.pitch);
+      };
+      div.title = 'Click to preview | Double-click to add to timeline';
+      details.appendChild(div);
+    });
+    el.appendChild(details);
+  });
+}
+buildScriptPanel();
+
+// ═══════════════════════════════════════════════════
+// MAIN LOOP
+// ═══════════════════════════════════════════════════
+function loop(ts) {
+  requestAnimationFrame(loop);
+
+  // update time
+  if (playing) {
+    currentTime = (ts - playStart) / 1000;
+    if (currentTime >= totalDur) { stopPlay(); return; }
+    playOffset = currentTime;
+    updatePlayhead();
+
+    // fire voice cues
+    timeline.vox.forEach((clip, i) => {
+      if (currentTime >= clip.start && !firedVox.has(i)) {
+        firedVox.add(i);
+        speak(clip.text, clip.rate, clip.pitch);
+      }
+    });
+
+    // fire sound cues
+    timeline.sfx.forEach((clip, i) => {
+      if (currentTime >= clip.start && !firedSfx.has(i)) {
+        firedSfx.add(i);
+        triggerSfxClip(clip);
+      }
+    });
+  }
+
+  // render canvas
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.clearRect(0, 0, S, S);
+  ctx.globalCompositeOperation = 'lighter';
+
+  if (playing) {
+    // render active visual clips
+    const t = currentTime;
+    timeline.vis.forEach(clip => {
+      if (t >= clip.start && t < clip.start + clip.dur) {
+        const p = (t - clip.start) / clip.dur;
+        const fadeIn = Math.min(1, p * 8);
+        const fadeOut = Math.min(1, (1 - p) * 8);
+        const env = fadeIn * fadeOut;
+        drawShape(t, clip.shape, {
+          size: clip.size * env,
+          speed: clip.speed,
+          intensity: clip.intensity * env,
+          rotate: clip.rotate,
+          color: clip.color,
+          fold: clip.fold
+        });
+      }
+    });
+  } else {
+    // live preview from sliders
+    const p = getParams();
+    drawShape(performance.now() / 1000, p.shape, p);
+  }
+}
+requestAnimationFrame(loop);
+
+// initial timeline render
+setTimeout(renderTimeline, 100);
+
+// keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+  if (e.code === 'Delete' || e.code === 'Backspace') { if (selectedClip) deleteSelected(); }
+});
+</script>
+</body>
+</html>

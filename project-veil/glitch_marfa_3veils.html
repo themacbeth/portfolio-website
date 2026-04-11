@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+*{margin:0;padding:0;background:#000}
+canvas{display:block}
+#info{position:fixed;top:12px;left:16px;font:11px/1.6 monospace;color:#666;pointer-events:none;z-index:10}
+#info strong{color:#ff3d00}
+#info .dim{color:#333}
+#controls{position:fixed;bottom:16px;left:16px;font:10px monospace;color:#444;z-index:10}
+#controls span{color:#666;cursor:pointer;margin-right:12px;padding:4px 8px;border:1px solid #222}
+#controls span:hover{color:#ff3d00;border-color:#ff3d00}
+#controls span.active{color:#ff3d00;border-color:#ff3d00}
+</style>
+</head>
+<body>
+<div id="info">
+  <strong>THE THRESHOLD — Glitch Marfa</strong><br>
+  3 veils installation mockup<br>
+  <span class="dim">25ft × 30ft × 14ft — drag to orbit, scroll to zoom</span>
+</div>
+<div id="controls">
+  <span class="active" onclick="setView('overview',this)">Overview</span>
+  <span onclick="setView('viewer',this)">Viewer POV</span>
+  <span onclick="setView('top',this)">Top Down</span>
+  <span onclick="setView('side',this)">Side</span>
+  <span onclick="setView('behind',this)">Behind Veil 3</span>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x040410,.003);
+
+const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,200);
+camera.position.set(20,12,22);
+camera.lookAt(12,5,15);
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.8;
+document.body.appendChild(renderer.domElement);
+
+// ── Units: 1 unit = 1 foot ──
+const RW=25,RD=30,RH=14;
+
+// ── Room ──
+// Floor
+const floorGeo=new THREE.PlaneGeometry(RW,RD);
+const floorMat=new THREE.MeshStandardMaterial({color:0x2a2a2a,roughness:.85,metalness:.1});
+const floor=new THREE.Mesh(floorGeo,floorMat);
+floor.rotation.x=-Math.PI/2;floor.position.set(RW/2,0,RD/2);
+scene.add(floor);
+
+// Red rug
+const rugGeo=new THREE.PlaneGeometry(10,12);
+const rugMat=new THREE.MeshStandardMaterial({color:0x4a1515,roughness:.9});
+const rug=new THREE.Mesh(rugGeo,rugMat);
+rug.rotation.x=-Math.PI/2;rug.position.set(RW/2,.01,RD/2);
+scene.add(rug);
+
+// Walls
+const wallMat=new THREE.MeshStandardMaterial({color:0x333333,roughness:.9,side:THREE.DoubleSide});
+// Walls removed for visibility
+
+// Room boundary outline on floor
+const roomOutlineGeo=new THREE.EdgesGeometry(new THREE.PlaneGeometry(RW,RD));
+const roomOutline=new THREE.LineSegments(roomOutlineGeo,new THREE.LineBasicMaterial({color:0x555555,transparent:true,opacity:.5}));
+roomOutline.rotation.x=-Math.PI/2;roomOutline.position.set(RW/2,.02,RD/2);
+scene.add(roomOutline);
+
+// Vertical corner posts to show room height
+[[0,0],[RW,0],[0,RD],[RW,RD]].forEach(([cx,cz])=>{
+  const post=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,RH,4),new THREE.MeshBasicMaterial({color:0x444444,transparent:true,opacity:.3}));
+  post.position.set(cx,RH/2,cz);scene.add(post);
+});
+
+// Ceiling baffles (white slats)
+for(let i=0;i<12;i++){
+  const slat=new THREE.Mesh(
+    new THREE.BoxGeometry(RW-.5,.15,.4),
+    new THREE.MeshStandardMaterial({color:0x999999,roughness:.7})
+  );
+  slat.position.set(RW/2,RH-.3,2+i*(RD-4)/11);
+  scene.add(slat);
+}
+
+// ── Veils ──
+const veilData=[
+  {z:10,name:'V1 — Telestial',opacity:.55,color:0xaaaaff},
+  {z:17,name:'V2 — Terrestrial',opacity:.35,color:0xbbbbff},
+  {z:23,name:'V3 — Celestial',opacity:.18,color:0xccccff}
+];
+
+const veils=[];
+veilData.forEach((v,i)=>{
+  // Main fabric
+  const veilGeo=new THREE.PlaneGeometry(6,8);
+  const veilMat=new THREE.MeshStandardMaterial({
+    color:0xffffff,
+    transparent:true,
+    opacity:v.opacity,
+    side:THREE.DoubleSide,
+    roughness:.6,
+    depthWrite:false
+  });
+  const veil=new THREE.Mesh(veilGeo,veilMat);
+  veil.position.set(RW/2,5,v.z);
+  scene.add(veil);
+  veils.push(veil);
+
+  // Hanging rod at top
+  const rod=new THREE.Mesh(
+    new THREE.CylinderGeometry(.05,.05,6.5,8),
+    new THREE.MeshStandardMaterial({color:0x444444})
+  );
+  rod.rotation.z=Math.PI/2;
+  rod.position.set(RW/2,9,v.z);
+  scene.add(rod);
+
+  // Hanging lines
+  for(let s=-1;s<=1;s+=2){
+    const line=new THREE.Mesh(
+      new THREE.CylinderGeometry(.01,.01,RH-9,4),
+      new THREE.MeshStandardMaterial({color:0x333333})
+    );
+    line.position.set(RW/2+s*3,(RH+9)/2,v.z);
+    scene.add(line);
+  }
+
+  // Label
+  // (labels handled in HUD overlay)
+});
+
+// ── Laser unit ──
+const laserBody=new THREE.Mesh(
+  new THREE.BoxGeometry(.8,.5,1),
+  new THREE.MeshStandardMaterial({color:0x111111,metalness:.5,roughness:.3})
+);
+laserBody.position.set(RW/2,4,2);
+scene.add(laserBody);
+
+// Laser lens
+const lens=new THREE.Mesh(
+  new THREE.CircleGeometry(.12,16),
+  new THREE.MeshStandardMaterial({color:0x00ff88,emissive:0x00ff44,emissiveIntensity:2})
+);
+lens.position.set(RW/2,4,2.51);
+scene.add(lens);
+
+// ── Beam rays (the core visual) ──
+// Multiple beam lines from laser through each veil
+const beamGroup=new THREE.Group();
+scene.add(beamGroup);
+
+function createBeamRays(){
+  // Clear existing
+  while(beamGroup.children.length)beamGroup.remove(beamGroup.children[0]);
+
+  const laserPos=new THREE.Vector3(RW/2,4,2.5);
+  const beamColors=[0x4466ff,0x5577ff,0x3355ee,0x6688ff,0x2244dd,0x4488ff,0x3366cc];
+
+  // Fan of beams from laser through the veils to back wall
+  for(let i=0;i<25;i++){
+    const angle=(i/24-.5)*0.35; // horizontal spread
+    const vAngle=(Math.random()-.5)*.25; // vertical variation
+    const endX=RW/2+Math.tan(angle)*(RD-3);
+    const endY=4+Math.tan(vAngle)*(RD-3);
+    const endZ=RD-.5;
+
+    const points=[
+      laserPos,
+      new THREE.Vector3(
+        THREE.MathUtils.lerp(laserPos.x,endX,1),
+        THREE.MathUtils.lerp(laserPos.y,endY,1),
+        endZ
+      )
+    ];
+
+    const geo=new THREE.BufferGeometry().setFromPoints(points);
+    const mat=new THREE.LineBasicMaterial({
+      color:beamColors[i%beamColors.length],
+      transparent:true,
+      opacity:.18+Math.random()*.1,
+      blending:THREE.AdditiveBlending
+    });
+    beamGroup.add(new THREE.Line(geo,mat));
+  }
+
+  // Brighter center beams
+  for(let i=0;i<8;i++){
+    const a=(i/7-.5)*.12;
+    const va=(i/7-.5)*.08;
+    const points=[
+      laserPos,
+      new THREE.Vector3(RW/2+Math.tan(a)*(RD-3),4+Math.tan(va)*(RD-3),RD-.5)
+    ];
+    const geo=new THREE.BufferGeometry().setFromPoints(points);
+    const mat=new THREE.LineBasicMaterial({
+      color:0x88aaff,transparent:true,opacity:.35,blending:THREE.AdditiveBlending
+    });
+    beamGroup.add(new THREE.Line(geo,mat));
+  }
+}
+createBeamRays();
+
+// ── Glow on each veil where beams hit ──
+veilData.forEach((v,i)=>{
+  // Point light at each veil to simulate laser illumination
+  const light=new THREE.PointLight(v.color,1.5-i*.3,12);
+  light.position.set(RW/2,5,v.z);
+  scene.add(light);
+
+  // Small bright spot
+  const spot=new THREE.Mesh(
+    new THREE.PlaneGeometry(3-i*.5,4-i*.5),
+    new THREE.MeshBasicMaterial({
+      color:v.color,
+      transparent:true,
+      opacity:.2-i*.04,
+      side:THREE.DoubleSide,
+      blending:THREE.AdditiveBlending,
+      depthWrite:false
+    })
+  );
+  spot.position.set(RW/2,5,v.z+(i===0?-.01:.01));
+  scene.add(spot);
+});
+
+// ── Haze volume (atmospheric fog particles) ──
+const hazeGeo=new THREE.BufferGeometry();
+const hazeCount=2000;
+const hazePos=new Float32Array(hazeCount*3);
+for(let i=0;i<hazeCount;i++){
+  hazePos[i*3]=Math.random()*RW;
+  hazePos[i*3+1]=Math.random()*RH;
+  hazePos[i*3+2]=Math.random()*RD;
+}
+hazeGeo.setAttribute('position',new THREE.BufferAttribute(hazePos,3));
+const hazeMat=new THREE.PointsMaterial({
+  color:0x5566aa,size:.08,transparent:true,opacity:.3,
+  blending:THREE.AdditiveBlending,depthWrite:false
+});
+scene.add(new THREE.Points(hazeGeo,hazeMat));
+
+// ── Viewer zone markers ──
+// Show safe viewing area on floor
+const zoneGeo=new THREE.PlaneGeometry(8,20);
+const zoneMat=new THREE.MeshBasicMaterial({
+  color:0x005500,transparent:true,opacity:.12,side:THREE.DoubleSide
+});
+const zone=new THREE.Mesh(zoneGeo,zoneMat);
+zone.rotation.x=-Math.PI/2;
+zone.position.set(RW/2+8,.02,RD/2);
+scene.add(zone);
+
+// Zone border
+const zoneBorder=new THREE.EdgesGeometry(zoneGeo);
+const zoneLines=new THREE.LineSegments(zoneBorder,new THREE.LineBasicMaterial({color:0x008800,transparent:true,opacity:.5}));
+zoneLines.rotation.x=-Math.PI/2;
+zoneLines.position.set(RW/2+8,.03,RD/2);
+scene.add(zoneLines);
+
+// ── Speaker ──
+const speaker=new THREE.Mesh(
+  new THREE.BoxGeometry(.8,1.2,.6),
+  new THREE.MeshStandardMaterial({color:0x1a1a1a,roughness:.8})
+);
+speaker.position.set(RW-2,2.5,RD/2);
+scene.add(speaker);
+
+// ── Ambient light ──
+scene.add(new THREE.AmbientLight(0x222244,.8));
+
+// Subtle blue fill from laser direction
+const laserAmbient=new THREE.SpotLight(0x4466cc,1.2,40,Math.PI*.25,.5);
+laserAmbient.position.set(RW/2,6,1);
+laserAmbient.target.position.set(RW/2,4,20);
+scene.add(laserAmbient);scene.add(laserAmbient.target);
+
+// ── Floor labels (3D text sprites) ──
+function makeLabel(text,x,y,z,color){
+  const canvas=document.createElement('canvas');
+  canvas.width=512;canvas.height=64;
+  const ctx=canvas.getContext('2d');
+  ctx.font='24px monospace';
+  ctx.fillStyle=color||'#444';
+  ctx.textAlign='center';
+  ctx.fillText(text,256,40);
+  const tex=new THREE.CanvasTexture(canvas);
+  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,opacity:.7,depthTest:false});
+  const sprite=new THREE.Sprite(mat);
+  sprite.position.set(x,y,z);
+  sprite.scale.set(5,.6,1);
+  scene.add(sprite);
+}
+
+makeLabel('LASER',RW/2,.3,2,'#ff5500');
+makeLabel('V1 — TELESTIAL',RW/2,.3,10,'#8888cc');
+makeLabel('V2 — TERRESTRIAL',RW/2,.3,17,'#9999dd');
+makeLabel('V3 — CELESTIAL',RW/2,.3,23,'#aaaaee');
+makeLabel('VIEWER ZONE',RW/2+8,.3,RD/2,'#44aa44');
+makeLabel('SPEAKER',RW-2,.3,RD/2+2,'#666');
+makeLabel('← 25 ft →',RW/2,.3,RD+1,'#555');
+makeLabel('↑ 30 ft ↓',1,.3,RD/2,'#555');
+
+// ── Distance markers on floor ──
+for(let d=5;d<=25;d+=5){
+  const tick=new THREE.Mesh(
+    new THREE.PlaneGeometry(RW,.02),
+    new THREE.MeshBasicMaterial({color:0x222222,transparent:true,opacity:.3,side:THREE.DoubleSide})
+  );
+  tick.rotation.x=-Math.PI/2;tick.position.set(RW/2,.005,d);
+  scene.add(tick);
+  makeLabel(d+"ft",1,.3,d,'#2a2a2a');
+}
+
+// ── Camera orbit ──
+let isDragging=false,prevX=0,prevY=0;
+let camTheta=.5,camPhi=.4,camDist=28;
+let targetTheta=camTheta,targetPhi=camPhi,targetDist=camDist;
+let lookAt=new THREE.Vector3(RW/2,4,RD/2);
+let targetLookAt=lookAt.clone();
+
+renderer.domElement.addEventListener('mousedown',e=>{isDragging=true;prevX=e.clientX;prevY=e.clientY});
+renderer.domElement.addEventListener('mousemove',e=>{
+  if(!isDragging)return;
+  targetTheta+=(e.clientX-prevX)*.005;
+  targetPhi=Math.max(.1,Math.min(Math.PI/2-.05,targetPhi-(e.clientY-prevY)*.005));
+  prevX=e.clientX;prevY=e.clientY;
+});
+renderer.domElement.addEventListener('mouseup',()=>isDragging=false);
+renderer.domElement.addEventListener('wheel',e=>{targetDist=Math.max(5,Math.min(100,targetDist+e.deltaY*.03))});
+
+// Touch
+let touchDist=0;
+renderer.domElement.addEventListener('touchstart',e=>{
+  if(e.touches.length===1){isDragging=true;prevX=e.touches[0].clientX;prevY=e.touches[0].clientY}
+  if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX;const dy=e.touches[0].clientY-e.touches[1].clientY;touchDist=Math.sqrt(dx*dx+dy*dy)}
+});
+renderer.domElement.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(e.touches.length===1&&isDragging){
+    targetTheta+=(e.touches[0].clientX-prevX)*.005;
+    targetPhi=Math.max(.1,Math.min(Math.PI/2-.05,targetPhi-(e.touches[0].clientY-prevY)*.005));
+    prevX=e.touches[0].clientX;prevY=e.touches[0].clientY;
+  }
+  if(e.touches.length===2){
+    const dx=e.touches[0].clientX-e.touches[1].clientX;const dy=e.touches[0].clientY-e.touches[1].clientY;
+    const d=Math.sqrt(dx*dx+dy*dy);targetDist=Math.max(5,Math.min(100,targetDist-(d-touchDist)*.05));touchDist=d;
+  }
+},{passive:false});
+renderer.domElement.addEventListener('touchend',()=>isDragging=false);
+
+// Preset views
+function setView(name,el){
+  document.querySelectorAll('#controls span').forEach(s=>s.classList.remove('active'));
+  if(el)el.classList.add('active');
+  if(name==='overview'){targetTheta=.5;targetPhi=.4;targetDist=28;targetLookAt.set(RW/2,4,RD/2)}
+  else if(name==='viewer'){targetTheta=-.3;targetPhi=.15;targetDist=12;targetLookAt.set(RW/2,4,15)}
+  else if(name==='top'){targetTheta=0;targetPhi=1.5;targetDist=32;targetLookAt.set(RW/2,0,RD/2)}
+  else if(name==='side'){targetTheta=Math.PI/2;targetPhi=.2;targetDist=22;targetLookAt.set(RW/2,5,RD/2)}
+  else if(name==='behind'){targetTheta=Math.PI;targetPhi=.2;targetDist=10;targetLookAt.set(RW/2,5,20)}
+}
+
+// ── Animate ──
+function animate(time){
+  requestAnimationFrame(animate);
+  const t=time*.001;
+
+  // Smooth camera
+  camTheta+=(targetTheta-camTheta)*.06;
+  camPhi+=(targetPhi-camPhi)*.06;
+  camDist+=(targetDist-camDist)*.06;
+  lookAt.lerp(targetLookAt,.04);
+
+  camera.position.set(
+    lookAt.x+Math.sin(camTheta)*Math.cos(camPhi)*camDist,
+    lookAt.y+Math.sin(camPhi)*camDist,
+    lookAt.z+Math.cos(camTheta)*Math.cos(camPhi)*camDist
+  );
+  camera.lookAt(lookAt);
+
+  // Animate beam opacity (breathing)
+  beamGroup.children.forEach((beam,i)=>{
+    beam.material.opacity=(.18+Math.sin(t*1.5+i*.3)*.06)*(1+Math.sin(t*.3)*.2);
+  });
+
+  // Subtle veil shimmer
+  veils.forEach((v,i)=>{
+    v.material.opacity=veilData[i].opacity+Math.sin(t*1.2+i*2)*.02;
+  });
+
+  // Laser glow pulse
+  lens.material.emissiveIntensity=2+Math.sin(t*3)*.5;
+
+  renderer.render(scene,camera);
+}
+
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+
+animate(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,237 @@
+<html>
+<head>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0a;color:#ccc;font-family:monospace;padding:20px}
+h1{font-size:14px;color:#ff3d00;margin-bottom:4px}
+.sub{font-size:10px;color:#555;margin-bottom:20px}
+canvas{display:block;margin:0 auto 20px}
+.table{max-width:700px;margin:0 auto 20px;font-size:11px}
+.table table{width:100%;border-collapse:collapse}
+.table th{text-align:left;padding:6px 10px;border-bottom:1px solid #333;color:#ff3d00;font-weight:normal}
+.table td{padding:5px 10px;border-bottom:1px solid #1a1a1a}
+.table tr:hover td{background:#111}
+.highlight{color:#fff}
+.dim{color:#555}
+.note{max-width:700px;margin:0 auto;font-size:10px;color:#444;line-height:1.6}
+.controls{max-width:700px;margin:0 auto 15px;display:flex;gap:20px;align-items:center;font-size:11px}
+.controls label{color:#666}
+.controls input{width:120px}
+.controls span{color:#ff3d00;min-width:40px}
+</style>
+</head>
+<body>
+<h1>LASER THROW / BEAM SPREAD — Nova Diode 3000</h1>
+<div class="sub">ILDA scan angle vs distance → usable projection area for mesh frame sizing</div>
+
+<div class="controls">
+  <label>Scan angle: <input type="range" id="angleSlider" min="20" max="70" value="50" oninput="update()"> <span id="angleVal">50°</span></label>
+  <label>Max distance: <input type="range" id="distSlider" min="8" max="30" value="20" oninput="update()"> <span id="distVal">20 ft</span></label>
+</div>
+
+<canvas id="c" width="700" height="420"></canvas>
+
+<div class="table" id="tableWrap"></div>
+
+<div class="note" id="notes"></div>
+
+<script>
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+
+function update(){
+  const angle=parseInt(document.getElementById('angleSlider').value);
+  const maxDist=parseInt(document.getElementById('distSlider').value);
+  document.getElementById('angleVal').textContent=angle+'°';
+  document.getElementById('distVal').textContent=maxDist+' ft';
+  draw(angle,maxDist);
+  buildTable(angle,maxDist);
+  buildNotes(angle,maxDist);
+}
+
+function draw(angleDeg,maxDist){
+  const W=700,H=420;
+  ctx.fillStyle='#0a0a0a';ctx.fillRect(0,0,W,H);
+
+  const margin={l:60,r:40,t:30,b:50};
+  const gw=W-margin.l-margin.r;
+  const gh=H-margin.t-margin.b;
+
+  // Laser source position
+  const srcX=margin.l;
+  const srcY=margin.t+gh/2;
+
+  // Scale: maxDist ft = gw pixels
+  const ftToPx=gw/maxDist;
+
+  // Half angle in radians
+  const halfAngle=angleDeg/2*Math.PI/180;
+
+  // Draw cone
+  const endX=srcX+gw;
+  const spreadAtMax=maxDist*Math.tan(halfAngle)*2;
+  const spreadPx=spreadAtMax*ftToPx;
+
+  // Cone fill
+  ctx.fillStyle='rgba(255,61,0,.04)';
+  ctx.beginPath();
+  ctx.moveTo(srcX,srcY);
+  ctx.lineTo(endX,srcY-spreadPx/2);
+  ctx.lineTo(endX,srcY+spreadPx/2);
+  ctx.closePath();
+  ctx.fill();
+
+  // Cone edges
+  ctx.strokeStyle='rgba(255,61,0,.3)';
+  ctx.lineWidth=1;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  ctx.moveTo(srcX,srcY);ctx.lineTo(endX,srcY-spreadPx/2);
+  ctx.moveTo(srcX,srcY);ctx.lineTo(endX,srcY+spreadPx/2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Center line
+  ctx.strokeStyle='rgba(255,61,0,.15)';
+  ctx.lineWidth=.5;
+  ctx.beginPath();ctx.moveTo(srcX,srcY);ctx.lineTo(endX,srcY);ctx.stroke();
+
+  // Distance markers and spread lines
+  const distances=[4,6,8,10,12,14,16,18,20,22,24,26,28,30].filter(d=>d<=maxDist);
+
+  distances.forEach(d=>{
+    const x=srcX+d*ftToPx;
+    const spread=d*Math.tan(halfAngle)*2;
+    const spreadPxD=spread*ftToPx;
+    const halfSpreadPx=spreadPxD/2;
+
+    // Vertical line at this distance
+    ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=.5;
+    ctx.beginPath();ctx.moveTo(x,margin.t);ctx.lineTo(x,H-margin.b);ctx.stroke();
+
+    // Spread indicator — horizontal line showing width
+    ctx.strokeStyle='rgba(100,180,255,.3)';ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(x,srcY-halfSpreadPx);ctx.lineTo(x,srcY+halfSpreadPx);
+    ctx.stroke();
+
+    // Dots at edges
+    ctx.fillStyle='rgba(100,180,255,.5)';
+    ctx.beginPath();ctx.arc(x,srcY-halfSpreadPx,2,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(x,srcY+halfSpreadPx,2,0,Math.PI*2);ctx.fill();
+
+    // Distance label
+    ctx.fillStyle='rgba(255,255,255,.25)';ctx.font='9px monospace';ctx.textAlign='center';
+    ctx.fillText(d+"'",x,H-margin.b+15);
+
+    // Spread label
+    ctx.fillStyle='rgba(100,180,255,.5)';ctx.font='9px monospace';
+    ctx.fillText(spread.toFixed(1)+"'",x,srcY-halfSpreadPx-8);
+
+    // Recommended max square frame at this distance (80% of spread)
+    const frameSize=spread*.8;
+    const framePx=frameSize*ftToPx;
+    if(d%4===0||distances.length<10){
+      ctx.strokeStyle='rgba(80,255,120,.15)';ctx.lineWidth=1;
+      ctx.strokeRect(x-framePx/2,srcY-framePx/2,framePx,framePx);
+      ctx.fillStyle='rgba(80,255,120,.25)';ctx.font='8px monospace';
+      ctx.fillText(frameSize.toFixed(1)+"' frame",x,srcY+framePx/2+12);
+    }
+  });
+
+  // Laser source icon
+  ctx.fillStyle='#ff3d00';
+  ctx.beginPath();ctx.arc(srcX,srcY,5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(255,61,0,.3)';
+  ctx.beginPath();ctx.arc(srcX,srcY,10,0,Math.PI*2);ctx.fill();
+
+  // Labels
+  ctx.fillStyle='#ff3d00';ctx.font='10px monospace';ctx.textAlign='left';
+  ctx.fillText('LASER',srcX-5,srcY+22);
+
+  ctx.fillStyle='rgba(255,255,255,.15)';ctx.font='9px monospace';ctx.textAlign='center';
+  ctx.fillText('distance (ft)',margin.l+gw/2,H-margin.b+30);
+
+  // Angle label
+  ctx.fillStyle='rgba(255,61,0,.5)';ctx.font='10px monospace';ctx.textAlign='left';
+  ctx.fillText(angleDeg+'° cone',srcX+20,srcY-15);
+
+  // Legend
+  ctx.fillStyle='rgba(100,180,255,.4)';ctx.font='9px monospace';ctx.textAlign='right';
+  ctx.fillText('— beam spread',W-margin.r,margin.t+12);
+  ctx.fillStyle='rgba(80,255,120,.3)';
+  ctx.fillText('□ 80% safe frame',W-margin.r,margin.t+24);
+}
+
+function buildTable(angleDeg,maxDist){
+  const halfAngle=angleDeg/2*Math.PI/180;
+  const distances=[4,6,8,10,12,14,16,18,20,24,28].filter(d=>d<=maxDist);
+
+  let html='<table><tr><th>Distance</th><th>Beam spread</th><th>Max frame (80%)</th><th>Pixels @ 60/m</th><th>Universes</th><th>Notes</th></tr>';
+
+  distances.forEach(d=>{
+    const spread=d*Math.tan(halfAngle)*2;
+    const frame=spread*.8;
+    const frameFt=frame;
+    const frameIn=frame*12;
+    const perimeter=frameFt*4;
+    const perimeterM=perimeter*.3048;
+    const pixels=Math.round(perimeterM*60);
+    const universes=Math.ceil(pixels/170);
+
+    let note='';
+    if(frameFt<3)note='<span class="dim">Very small — tight patterns only</span>';
+    else if(frameFt<5)note='Compact — portable, suitcase-friendly';
+    else if(frameFt<7)note='<span class="highlight">Sweet spot — visible, buildable</span>';
+    else if(frameFt<10)note='Large — strong presence, needs rigging';
+    else note='<span class="dim">Huge — multi-section build</span>';
+
+    const isSweet=frameFt>=5&&frameFt<8;
+    const rowStyle=isSweet?' style="background:#111"':'';
+
+    html+=`<tr${rowStyle}>
+      <td>${d} ft</td>
+      <td>${spread.toFixed(1)} ft (${(spread*12).toFixed(0)}")</td>
+      <td class="${isSweet?'highlight':''}">${frameFt.toFixed(1)} ft (${(frameIn).toFixed(0)}")</td>
+      <td>${pixels}px</td>
+      <td>${universes}</td>
+      <td>${note}</td>
+    </tr>`;
+  });
+
+  html+='</table>';
+  document.getElementById('tableWrap').innerHTML=html;
+}
+
+function buildNotes(angleDeg,maxDist){
+  const halfAngle=angleDeg/2*Math.PI/180;
+  const spread20=20*Math.tan(halfAngle)*2;
+  const frame20=spread20*.8;
+
+  document.getElementById('notes').innerHTML=`
+    <p><strong style="color:#666">ASSUMPTIONS</strong></p>
+    <p>• Nova Diode 3000 (Laserworld DS-3000RGB MK4) confirmed specs: <strong style="color:#aaa">3,000mW RGB</strong> (650mW red 638nm / 900mW green 520nm / 1,600mW blue 450nm)</p>
+    <p>• Beam: <strong style="color:#aaa">4mm diameter, 0.9 mrad divergence</strong>. Scanner: <strong style="color:#aaa">40 kpps @ 8° ILDA</strong></p>
+    <p>• <strong style="color:#ff3d00">Max scan angle: 50°</strong> (MK4 spec). At maximum scan angle, pattern detail decreases — sweet spot for graphics is ~40°. Use full 50° for beam effects.</p>
+    <p>• <strong style="color:#aaa">80% rule</strong>: frame should be ≤80% of beam spread to avoid edge distortion and keep full coverage. The outer 10% each side gets weak and distorted.</p>
+    <p>• <strong style="color:#aaa">Pixel count</strong>: based on SK6812 RGBW @ 60 LEDs/m around the full perimeter of a square frame.</p>
+    <p>• <strong style="color:#aaa">Universes</strong>: Art-Net, 170 pixels per universe (510 channels / 3 channels per pixel).</p>
+    <p style="margin-top:10px"><strong style="color:#666">AT YOUR DISTANCE (${maxDist} ft)</strong></p>
+    <p>• Beam spread: <strong style="color:#ff3d00">${spread20.toFixed(1)} ft</strong> (${(spread20*12).toFixed(0)}")</p>
+    <p>• Max recommended frame: <strong style="color:#ff3d00">${frame20.toFixed(1)} ft</strong> (${(frame20*12).toFixed(0)}") square</p>
+    <p>• At Glitch Marfa (~25ft wide × 30ft deep × 14ft ceiling), a <strong style="color:#aaa">6-7ft</strong> square frame centered on the back wall gives you clean coverage with margin. At 20ft throw with 50° scan angle, beam spread is ${spread20.toFixed(1)}ft — your frame sits well within that.</p>
+    <p style="margin-top:10px"><strong style="color:#666">MESH MATERIAL OPTIONS</strong></p>
+    <p>• Bridal tulle — cheapest (~$2/yd), good diffusion, very transparent. Fragile.</p>
+    <p>• Theatrical scrim (sharkstooth) — pro-grade, durable, best beam-through. ~$15/yd.</p>
+    <p>• Frosted shower curtain — cheap, heavier diffusion, less beam passthrough.</p>
+    <p>• Rear-projection film — adhesive, attach to acrylic sheet. Sharpest image but blocks beams.</p>
+    <p style="margin-top:10px"><strong style="color:#666">YOUR CONTROL PIPELINE</strong></p>
+    <p>• ShowNET interface at <strong style="color:#aaa">169.254.24.55</strong> — direct ILDA streaming from TouchDesigner via Script SOP → ShowNET</p>
+    <p>• 40 kpps is enough for smooth curves (sine waves, Lissajous, helixes). For detailed graphics, stay under ~30% of scan area.</p>
+    <p>• At 50° full angle, the usable "graphics zone" for clean shapes is roughly 40° — the outer 5° each side gets wobbly at speed.</p>
+  `;
+}
+
+update();
+</script>
+</body>
+</html>

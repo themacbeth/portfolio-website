@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VAR 1 — PROCESSION</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #000; cursor: pointer; }
+canvas { display: block; }
+#start { position: fixed; inset: 0; background: #000; z-index: 10; display: flex; align-items: center; justify-content: center; }
+#start span { font-family: 'Courier New', monospace; font-size: 10px; letter-spacing: 4px; color: rgba(228,225,218,0.25); text-transform: uppercase; }
+</style>
+</head>
+<body>
+<div id="start" onclick="begin()"><span>click to play</span></div>
+<script>
+// ═══════════════════════════════════════════════════════
+// VAR 1 — PROCESSION
+// One symbol at a time, large, centered, ceremonial draw-on.
+// Each symbol holds ~1s then next draws on over it.
+// 30 seconds. Audio-reactive.
+// ═══════════════════════════════════════════════════════
+
+const PI=Math.PI,TAU=PI*2;
+const c=document.createElement('canvas');
+const ctx=c.getContext('2d');
+document.body.prepend(c);
+let W,H,CX,CY,SC;
+function resize(){W=c.width=innerWidth;H=c.height=innerHeight;CX=W/2;CY=H/2;SC=Math.min(W,H)*0.32;}
+resize(); window.addEventListener('resize',resize);
+
+// 31 selected symbols
+const G=[
+{n:'CROSS-ARROW',s:[[[.5,.15],[.5,.85]],[[.2,.5],[.8,.5]],[[.5,.15],[.35,.28]],[[.5,.15],[.65,.28]]]},
+{n:'COMPASS',s:[[[.5,.1],[.5,.9]],[[.1,.5],[.9,.5]],[[.5,.1],[.4,.25]],[[.5,.1],[.6,.25]],[[.5,.9],[.4,.75]],[[.5,.9],[.6,.75]],[[.1,.5],[.25,.4]],[[.1,.5],[.25,.6]],[[.9,.5],[.75,.4]],[[.9,.5],[.75,.6]]]},
+{n:'ANKH-X',s:[[[.5,.2],[.5,.85]],[[.25,.45],[.75,.45]],[[.3,.2],[.5,.2],[.7,.2],[.7,.35],[.5,.42],[.3,.35],[.3,.2]]]},
+{n:'STAR-CROSS',s:[[[.5,.1],[.5,.9]],[[.1,.5],[.9,.5]],[[.2,.2],[.8,.8]],[[.8,.2],[.2,.8]]]},
+{n:'CHEVRON-STACK',s:[[[.2,.3],[.5,.15],[.8,.3]],[[.2,.5],[.5,.35],[.8,.5]],[[.2,.7],[.5,.55],[.8,.7]],[[.2,.9],[.5,.75],[.8,.9]]]},
+{n:'GLYPH-PSI',s:[[[.5,.15],[.5,.85]],[[.2,.25],[.2,.55],[.5,.65]],[[.8,.25],[.8,.55],[.5,.65]]]},
+{n:'GLYPH-XI',s:[[[.2,.2],[.8,.2]],[[.3,.5],[.7,.5]],[[.2,.8],[.8,.8]],[[.5,.2],[.5,.8]]]},
+{n:'GLYPH-PHI',s:[[[.5,.1],[.5,.9]],'circle:.5,.5,.25']},
+{n:'GATE',s:[[[.2,.3],[.5,.3],[.5,.7],[.8,.7]],[[.5,.3],[.5,.15]],[[.5,.7],[.5,.85]],'dot:.2,.3','dot:.8,.7']},
+{n:'FORK',s:[[[.5,.85],[.5,.4],[.2,.15]],[[.5,.4],[.8,.15]],'dot:.5,.85','dot:.2,.15','dot:.8,.15']},
+{n:'TRINITY',s:[[[.5,.12],[.15,.82],[.85,.82],[.5,.12]],'circle:.5,.55,.18']},
+{n:'RUNE-02',s:[[[.5,.1],[.5,.9]],[[.2,.3],[.8,.3]],[[.2,.7],[.8,.7]],[[.2,.3],[.5,.5],[.2,.7]],[[.8,.3],[.5,.5],[.8,.7]]]},
+{n:'RUNE-06',s:[[[.2,.5],[.5,.15],[.8,.5]],[[.2,.5],[.5,.85],[.8,.5]],[[.5,.15],[.5,.85]]]},
+{n:'RUNE-08',s:[[[.5,.1],[.2,.4],[.35,.8],[.65,.8],[.8,.4],[.5,.1]],[[.5,.1],[.5,.5]],[[.5,.5],[.35,.8]],[[.5,.5],[.65,.8]]]},
+{n:'SIGIL-NEXUS',s:[[[.5,.15],[.5,.85]],[[.15,.5],[.85,.5]],[[.3,.2],[.7,.8]],[[.7,.2],[.3,.8]],'circle:.5,.5,.2','circle:.5,.5,.08',[[.5,.15],[.4,.25]],[[.5,.15],[.6,.25]],'dot:.3,.3','dot:.7,.3','dot:.3,.7','dot:.7,.7']},
+{n:'SIGIL-TOTEM',s:[[[.5,.08],[.5,.92]],[[.5,.2],[.25,.35]],[[.5,.2],[.75,.35]],[[.5,.5],[.2,.5]],[[.5,.5],[.8,.5]],[[.5,.75],[.3,.85]],[[.5,.75],[.7,.85]],'circle:.5,.2,.06','dot:.5,.5',[[.2,.5],[.2,.35]],[[.8,.5],[.8,.35]]]},
+{n:'SIGIL-ORACLE',s:['circle:.5,.5,.25',[[.5,.25],[.5,.08]],[[.5,.08],[.42,.16]],[[.5,.08],[.58,.16]],[[.75,.5],[.92,.5]],[[.92,.5],[.84,.42]],[[.92,.5],[.84,.58]],[[.5,.75],[.5,.92]],[[.25,.5],[.08,.5]],[[.35,.35],[.18,.18]],[[.65,.35],[.82,.18]],'dot:.5,.5']},
+{n:'SIGIL-WARD',s:[[[.5,.12],[.15,.85],[.85,.85],[.5,.12]],[[.5,.35],[.35,.7],[.65,.7],[.5,.35]],[[.3,.12],[.7,.85]],'dot:.5,.5','dot:.5,.25',[[.5,.7],[.5,.85]]]},
+{n:'SIGIL-CIPHER',s:['circle:.4,.4,.18','circle:.6,.6,.18',[[.2,.2],[.8,.8]],[[.5,.1],[.5,.3]],[[.5,.7],[.5,.9]],'dot:.4,.4','dot:.6,.6',[[.75,.25],[.85,.15]]]},
+{n:'SIGIL-CROWN',s:[[[.15,.35],[.3,.15],[.4,.3],[.5,.1],[.6,.3],[.7,.15],[.85,.35]],[[.2,.35],[.8,.35]],[[.5,.35],[.5,.88]],[[.35,.55],[.65,.55]],[[.35,.75],[.65,.75]],'dot:.5,.1']},
+{n:'SIGIL-KNOT',s:[[[.2,.2],[.5,.4],[.8,.2]],[[.2,.8],[.5,.6],[.8,.8]],[[.2,.2],[.2,.8]],[[.8,.2],[.8,.8]],[[.5,.4],[.5,.6]],[[.2,.5],[.5,.4]],[[.8,.5],[.5,.6]]]},
+{n:'SIGIL-BLOOM',s:['circle:.5,.5,.12',[[.5,.38],[.5,.08]],[[.5,.62],[.5,.92]],[[.38,.5],[.08,.5]],[[.62,.5],[.92,.5]],[[.41,.41],[.18,.18]],[[.59,.41],[.82,.18]],[[.41,.59],[.18,.82]],[[.59,.59],[.82,.82]],[[.5,.08],[.45,.15]],[[.5,.08],[.55,.15]],[[.92,.5],[.85,.45]],[[.92,.5],[.85,.55]]]},
+{n:'SIGIL-ANCHOR',s:[[[.5,.1],[.5,.75]],[[.3,.35],[.7,.35]],[[.5,.75],[.25,.9]],[[.5,.75],[.75,.9]],'circle:.5,.18,.07',[[.25,.9],[.25,.8]],[[.75,.9],[.75,.8]],'dot:.5,.75']},
+{n:'ARR-CHAOS',s:[[[.5,.5],[.5,.1]],[[.5,.1],[.42,.2]],[[.5,.1],[.58,.2]],[[.5,.5],[.85,.25]],[[.85,.25],[.75,.25]],[[.85,.25],[.82,.35]],[[.5,.5],[.15,.5]],[[.15,.5],[.25,.42]],[[.15,.5],[.25,.58]],[[.5,.5],[.7,.85]],[[.7,.85],[.62,.78]],[[.7,.85],[.72,.75]],[[.5,.5],[.2,.8]],'dot:.5,.5']},
+{n:'ARR-SPLIT',s:[[[.5,.85],[.5,.4]],[[.5,.4],[.2,.1]],[[.2,.1],[.25,.22]],[[.2,.1],[.12,.18]],[[.5,.4],[.5,.1]],[[.5,.1],[.43,.2]],[[.5,.1],[.57,.2]],[[.5,.4],[.8,.1]],[[.8,.1],[.75,.22]],[[.8,.1],[.88,.18]],'dot:.5,.85']},
+{n:'ARR-CONVERGE',s:[[[.15,.15],[.42,.42]],[[.42,.42],[.42,.32]],[[.42,.42],[.32,.42]],[[.85,.15],[.58,.42]],[[.58,.42],[.58,.32]],[[.58,.42],[.68,.42]],[[.15,.85],[.42,.58]],[[.42,.58],[.32,.58]],[[.42,.58],[.42,.68]],[[.85,.85],[.58,.58]],[[.58,.58],[.68,.58]],[[.58,.58],[.58,.68]],'dot:.5,.5']},
+{n:'ARR-CASCADE',s:[[[.2,.1],[.2,.35]],[[.2,.35],[.12,.27]],[[.2,.35],[.28,.27]],[[.4,.2],[.4,.5]],[[.4,.5],[.32,.42]],[[.4,.5],[.48,.42]],[[.6,.3],[.6,.65]],[[.6,.65],[.52,.57]],[[.6,.65],[.68,.57]],[[.8,.4],[.8,.8]],[[.8,.8],[.72,.72]],[[.8,.8],[.88,.72]],[[.2,.35],[.4,.2]],[[.4,.5],[.6,.3]],[[.6,.65],[.8,.4]]]},
+{n:'FUS-DOLLAR-CROSS',s:[[[.5,.08],[.5,.92]],[[.65,.2],[.35,.2],[.35,.45],[.65,.45],[.65,.7],[.35,.7]],[[.15,.5],[.85,.5]],[[.5,.08],[.4,.18]],[[.5,.08],[.6,.18]],[[.5,.92],[.4,.82]],[[.5,.92],[.6,.82]]]},
+{n:'FUS-999',s:['circle:.25,.35,.12',[[.37,.35],[.37,.55]],[[.37,.55],[.25,.55]],'circle:.5,.35,.12',[[.62,.35],[.62,.55]],[[.62,.55],[.5,.55]],'circle:.75,.35,.12',[[.87,.35],[.87,.55]],[[.87,.55],[.75,.55]],[[.15,.7],[.85,.7]],[[.15,.75],[.85,.75]]]},
+{n:'FUS-M-RUNE',s:[[[.15,.85],[.15,.15],[.4,.55],[.5,.25],[.6,.55],[.85,.15],[.85,.85]],[[.15,.5],[.85,.5]],'dot:.5,.25','dot:.15,.15','dot:.85,.15',[[.5,.55],[.5,.85]]]},
+{n:'FUS-ALEPH',s:[[[.3,.15],[.7,.85]],[[.3,.15],[.3,.55]],[[.7,.85],[.7,.45]],[[.5,.5],[.2,.5]],[[.5,.5],[.8,.5]],'dot:.3,.15','dot:.7,.85','dot:.5,.5',[[.15,.8],[.25,.8],[.25,.9]]]},
+];
+
+// Audio
+let audioCtx,analyser,freqData,bands={kick:0,low:0,mid:0,high:0,all:0};
+function initAudio(){
+  audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  let el=new Audio('coconut.mp3');el.crossOrigin='anonymous';el.loop=false;
+  let src=audioCtx.createMediaElementSource(el);
+  analyser=audioCtx.createAnalyser();analyser.fftSize=1024;analyser.smoothingTimeConstant=0.8;
+  freqData=new Uint8Array(analyser.frequencyBinCount);
+  src.connect(analyser);analyser.connect(audioCtx.destination);
+  el.play();
+}
+function analyse(){
+  if(!analyser)return;analyser.getByteFrequencyData(freqData);
+  let k=0,l=0,m=0,h=0;
+  for(let i=0;i<=2;i++)k+=freqData[i];k/=765;
+  for(let i=3;i<=9;i++)l+=freqData[i];l/=1785;
+  for(let i=10;i<=46;i++)m+=freqData[i];m/=9435;
+  for(let i=47;i<=120;i++)h+=freqData[i];h/=18870;
+  let s=0.15;
+  bands.kick+=(k-bands.kick)*s;bands.low+=(l-bands.low)*s;
+  bands.mid+=(m-bands.mid)*s;bands.high+=(h-bands.high)*s;
+  bands.all=(bands.kick+bands.low+bands.mid+bands.high)/4;
+}
+
+// Draw glyph with staggered per-stroke draw-on
+function draw(g,cx,cy,sc,drawOn,col,wt){
+  if(drawOn<=0)return;
+  ctx.save();ctx.translate(cx,cy);
+  ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=wt;ctx.lineCap='round';ctx.lineJoin='round';
+  let tot=g.s.length;
+  for(let si=0;si<tot;si++){
+    let st=si/tot, en=(si+1.5)/tot;
+    let sd=drawOn<=st?0:drawOn>=en?1:(drawOn-st)/(en-st);
+    sd=sd*sd*(3-2*sd); // smoothstep
+    if(sd<=0)continue;
+    let stroke=g.s[si];
+    if(typeof stroke==='string'){
+      let p=stroke.split(':'),a=p[1].split(',').map(Number);
+      if(p[0]==='circle'){ctx.beginPath();ctx.arc((a[0]-.5)*sc,(a[1]-.5)*sc,a[2]*sc,0,TAU*sd);ctx.stroke();}
+      else if(p[0]==='dot'&&sd>0.5){ctx.beginPath();ctx.arc((a[0]-.5)*sc,(a[1]-.5)*sc,wt*1.5,0,TAU);ctx.fill();}
+    }else{
+      ctx.beginPath();
+      for(let i=0;i<stroke.length;i++){
+        if(i/(stroke.length-1)>sd)break;
+        let x=(stroke[i][0]-.5)*sc,y=(stroke[i][1]-.5)*sc;
+        i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+let frame=0,started=false;
+const FPS=30,DURATION=30*FPS; // 30 sec
+const GLYPH_TIME=DURATION/G.length; // time per glyph
+
+function render(){
+  if(!started){requestAnimationFrame(render);return;}
+  frame++;
+  if(frame>DURATION)frame=DURATION;
+  analyse();
+
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+
+  // Which glyph?
+  let gi=Math.min(G.length-1,Math.floor(frame/GLYPH_TIME));
+  let localT=(frame-gi*GLYPH_TIME)/GLYPH_TIME;
+
+  // Draw-on: accelerating ease
+  let drawOn=localT<0.7 ? (localT/0.7) : 1;
+  drawOn=drawOn*drawOn*(3-2*drawOn); // smoothstep
+
+  // Audio-reactive scale
+  let kick=1+bands.kick*0.2;
+  let scale=SC*2.2*kick;
+
+  // Color: alternate white/gold
+  let col=gi%3===0?'#dab03e':'#e4e1da';
+
+  draw(G[gi],CX,CY,scale,drawOn,col,2.5);
+
+  // Registration marks
+  ctx.strokeStyle='rgba(228,225,218,0.04)';ctx.lineWidth=0.5;
+  let m=25,l=12;
+  ctx.beginPath();
+  ctx.moveTo(m+l,m);ctx.lineTo(m,m);ctx.lineTo(m,m+l);
+  ctx.moveTo(W-m-l,m);ctx.lineTo(W-m,m);ctx.lineTo(W-m,m+l);
+  ctx.moveTo(m+l,H-m);ctx.lineTo(m,H-m);ctx.lineTo(m,H-m-l);
+  ctx.moveTo(W-m-l,H-m);ctx.lineTo(W-m,H-m);ctx.lineTo(W-m,H-m-l);
+  ctx.stroke();
+
+  requestAnimationFrame(render);
+}
+
+function begin(){
+  if(started)return;started=true;
+  document.getElementById('start').style.display='none';
+  initAudio();frame=0;
+}
+render();
+</script>
+</body>
+</html>
