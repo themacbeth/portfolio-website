@@ -1,5 +1,5 @@
 1:"$Sreact.fragment"
 2:I[97367,["/the-clearing/_next/static/chunks/01xlw8hd842-c.js","/the-clearing/_next/static/chunks/0d3shmwh5_nmn.js"],"OutletBoundary"]
 3:"$Sreact.suspense"
-0:{"rsc":["$","$1","c",{"children":[["$","div",null,{"className":"room-25-stage","children":["$","div",null,{"className":"room-25-image"}]}],null,["$","$L2",null,{"children":["$","$3",null,{"name":"Next.MetadataOutlet","children":"$@4"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"x8lvneUh9vGBfaO1TLXTx"}
+0:{"rsc":["$","$1","c",{"children":[["$","div",null,{"className":"room-25-stage","children":["$","div",null,{"className":"room-25-image"}]}],null,["$","$L2",null,{"children":["$","$3",null,{"name":"Next.MetadataOutlet","children":"$@4"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"PPjleYVHoh3RPMotzfj5H"}
 4:null
