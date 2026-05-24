@@ -92,11 +92,10 @@
 </style>
 <div id="controls">
   <label>THRONE</label>
-  <input id="throneNum" type="number" min="0" max="143" value="0" placeholder="000">
+  <input id="throneNum" type="number" min="0" max="128" value="0" placeholder="000">
   <button id="throneGo">GO</button>
 </div>
 <div id="galaxyTools">
-  <button class="gtBtn" id="gtGpu" title="Exalt — 2× particle density">EXALT</button>
   <button class="gtBtn" id="gtBright" title="Enlighten — brightness boost [b]">ENLIGHTEN</button>
   <button class="gtBtn" id="gtCinema" title="Slideshow [c]">▶</button>
 </div>
@@ -118,6 +117,32 @@
   @media(max-width:600px){#galaxyTools{right:8px;bottom:16px}}
 </style>
 <div id="back">← BACK</div>
+<button id="advanceBtn">ADVANCE ▸</button>
+<div id="reward"></div>
+<div id="veil"></div>
+<style>
+  #advanceBtn{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:130;
+    display:none;background:rgba(255,255,255,.94);color:#000;border:0;padding:11px 24px;
+    border-radius:3px;font:10px/1 ui-monospace,monospace;letter-spacing:.22em;cursor:pointer;
+    -webkit-tap-highlight-color:transparent}
+  #advanceBtn:hover{background:#fff}#advanceBtn:active{background:#cfe0ff}
+  #reward{position:fixed;left:50%;bottom:74px;transform:translateX(-50%) translateY(8px);z-index:260;
+    font:10px/1.5 ui-monospace,monospace;letter-spacing:.14em;color:#eaf0f7;text-align:center;
+    background:rgba(0,0,0,.62);border:1px solid rgba(255,255,255,.22);padding:9px 15px;border-radius:4px;
+    opacity:0;transition:opacity .4s,transform .4s;pointer-events:none;max-width:90vw}
+  #reward.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #veil{position:fixed;inset:0;z-index:300;pointer-events:none;opacity:0}
+  #veil.go{animation:veilpass 1.7s ease-in-out forwards}
+  @keyframes veilpass{
+    0%{opacity:0}
+    34%{opacity:1;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.25),rgba(20,26,40,.2) 60%,transparent)}
+    50%{opacity:1;backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+        background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.93),rgba(170,195,230,.55) 38%,rgba(8,10,18,.9) 78%)}
+    66%{opacity:1}
+    100%{opacity:0;backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0)}}
+  @media(max-width:600px){#advanceBtn{bottom:62px;font-size:9px;padding:11px 18px}
+    #reward{bottom:106px}}
+</style>
 <script>
 "use strict";
 // On ArtBlocks, tokenData is injected per token. Off-platform we default to a
@@ -228,7 +253,9 @@ function cluster(sx,sy,r,base,count,rot,PX,plot){
 
 // THE GALAXY
 var ARMS=GRND.pick([2,2,3,4]), WIND=GRND.rng(1.9,3.0), BARANG=GRND()*TAU;
-var N=48000, gpuN=24000, gN=gpuN; // default 24 K, GPU mode 48 K
+// phones can't push the full particle count — render fewer automatically
+var IS_MOBILE=(typeof matchMedia!=="undefined"&&matchMedia('(max-width:760px),(pointer:coarse)').matches)||false;
+var N=48000, gpuN=IS_MOBILE?11000:24000, gN=gpuN;
 var gR=new Float32Array(N),gA=new Float32Array(N),gZ=new Float32Array(N),
     gRev=new Int16Array(N),gK=new Uint8Array(N),gLv=new Uint8Array(N);
 for(var i=0;i<gpuN;i++){
@@ -319,17 +346,20 @@ var WORMS=[];
 for(i=0;i<260;i++){var wr=mk(8000+i*31);
   WORMS.push({r:1.04+wr()*0.4,a:wr()*TAU,ph:wr()*TAU});}
 
-// 100 thrones with tier info
+// 129 thrones (0-128) + 15 core = 144 total. Every throne mints TELESTIAL;
+// the collector pays to advance Terrestrial → Celestial (persisted per token).
 var NODES=[];
-var TIER_NAMES=["CELESTIAL","TERRESTRIAL","TELESTIAL"];
+var TIER_NAMES=["CELESTIAL","TERRESTRIAL","TELESTIAL"];   // 0 richest → 2 base
 var TIER_COL=[[255,225,110],[255,110,210],[110,215,255]];
-for(i=0;i<144;i++){
+function unlockKey(i){return 'kolob:'+tokenData.hash.slice(2,10)+':'+i;}
+function tierOf(i){var v=null;try{v=localStorage.getItem(unlockKey(i));}catch(e){}
+  return v===null?2:Math.max(0,Math.min(2,+v));}              // 2 = telestial base
+function advanceTier(i){var t=tierOf(i);if(t>0){t--;try{localStorage.setItem(unlockKey(i),t);}catch(e){}}return t;}
+for(i=0;i<129;i++){
   var nr=mk(hashSeed(tokenData.hash)+(i+1)*8675309);
   var arm=nr.int(0,ARMS-1),rad=0.15+Math.pow(nr(),0.7)*0.76;
-  // 144 thrones — 0-44 TELESTIAL · 45-100 TERRESTRIAL · 101-143 CELESTIAL
-  var tier=i<45?2:i<101?1:0;
   NODES.push({r:rad,a:arm*TAU/ARMS+WIND*TAU*rad+nr.g()*0.06,
-    z:nr.g()*0.05,rev:Math.max(1,Math.min(14,Math.round(0.42*Math.pow(rad,-1.5)))),star:pickStar(nr),tier:tier,
+    z:nr.g()*0.05,rev:Math.max(1,Math.min(14,Math.round(0.42*Math.pow(rad,-1.5)))),star:pickStar(nr),
     seed:(hashSeed(tokenData.hash)^Math.imul(i+1,2654435761))>>>0,
     spin:nr()*TAU,sx:0,sy:0});
 }
@@ -488,7 +518,7 @@ function exitCinematic(){
 function buildSlideshowQueue(){
   slideshowQueue=[];
   var r2=mk(hashSeed(tokenData.hash)*7+131),visited={};
-  for(var si=0;si<12;si++){var ti;do{ti=r2.int(0,143);}while(visited[ti]);visited[ti]=true;
+  for(var si=0;si<12;si++){var ti;do{ti=r2.int(0,128);}while(visited[ti]);visited[ti]=true;
     slideshowQueue.push({node:ti,type:'throne'});}
   var widths=[0.4,0.65,0.85,1.1,0.55];
   for(si=0;si<5;si++) slideshowQueue.push({node:-1,type:'galaxy',w:widths[si]});
@@ -625,24 +655,61 @@ document.querySelectorAll('.menuItem').forEach(function(item){
   });
 });
 
+// rewards granted by advancing inward through the veils
+function applyRelics(sys,tier,r){
+  if(tier===0) sys.scheme=[[255,206,120],[255,168,86]];        // celestial — gold palette
+  else if(tier===1) sys.scheme=[[255,128,150],[255,96,120]];   // terrestrial — warm palette
+  if(tier<=1 && sys.planets.length){                            // signature ringed giant
+    var g=sys.planets[Math.min(1,sys.planets.length-1)];
+    g.type=1; g.ring=true; g.szMul*=1.5;
+  }
+  if(tier===0){                                                 // binary companion + comet swarm
+    if(sys.stars.length<2){var s2=Math.min(6,sys.stars[0].cls+1);
+      sys.stars.push({cls:s2}); sys.binary=true; sys.sep=0.12; sys.binRev=10;
+      var mm=STAR[sys.stars[0].cls].rad+STAR[s2].rad;
+      sys.stars[0].off=sys.sep*STAR[s2].rad/mm; sys.stars[1].off=-sys.sep*STAR[sys.stars[0].cls].rad/mm;}
+    for(var i=0;i<10;i++) sys.comets.push({a:r.rng(1.1,2.1),e:r.rng(0.6,0.92),
+      peri:r()*TAU,inc:r.g()*0.5,rev:r.pick([3,4,5]),M0:r()*TAU});
+  }
+}
 function goGalaxy(){mode="galaxy";zoom=1;az=0;tilt=0.52;
   if(!cinematic){$back.style.display='none';
     $throneNum.disabled=false;$throneGo.disabled=false;}
   else {$back.style.display='none';}}
 function goSystem(idx){
-  if(idx<0||idx>143)return;
+  if(idx<0||idx>128)return;
   curNode=idx;coreView=-1;var nd=NODES[idx];
-  system=buildSystem(nd.seed,nd.tier);
+  system=buildSystem(nd.seed,tierOf(idx));
+  applyRelics(system,tierOf(idx),mk((nd.seed^0x9E5C17)>>>0));
   mode="system";zoom=1;az=0;tilt=0.52;clock=0;
   $back.style.display='block';
   $throneNum.value=idx;$throneNum.disabled=false;$throneGo.disabled=false;}
 $back.addEventListener('click',goGalaxy);
 $back.addEventListener('touchend',function(e){e.preventDefault();goGalaxy();});
 $throneGo.addEventListener('click',function(){var v=parseInt($throneNum.value);
-  if(!isNaN(v)&&v>=0&&v<=143)goSystem(v);});
+  if(!isNaN(v)&&v>=0&&v<=128)goSystem(v);});
 $throneNum.addEventListener('keydown',function(e){if(e.key==='Enter'){
   var v=parseInt($throneNum.value);
-  if(!isNaN(v)&&v>=0&&v<=143)goSystem(v);}});
+  if(!isNaN(v)&&v>=0&&v<=128)goSystem(v);}});
+
+// ── KINGDOM ADVANCE — pass through the veil to the next kingdom ──────────
+var $advanceBtn=document.getElementById('advanceBtn');
+var $veil=document.getElementById('veil');
+var $reward=document.getElementById('reward');
+var veilBusy=false,rewardTO=0;
+var REWARD={1:"TERRESTRIAL · ringed relic · warmer palette · richer worlds",
+            0:"CELESTIAL · binary companion · comet swarm · gold palette"};
+function showReward(t){ if(!$reward)return; $reward.textContent=REWARD[t]||"";
+  $reward.classList.add('show'); clearTimeout(rewardTO);
+  rewardTO=setTimeout(function(){$reward.classList.remove('show');},3600); }
+function doAdvance(){
+  if(veilBusy||mode!=="system"||coreView>=0) return;
+  var i=curNode; if(tierOf(i)<=0) return;
+  veilBusy=true; if($veil)$veil.classList.add('go');
+  setTimeout(function(){ var t=advanceTier(i); goSystem(i); showReward(t); },850);
+  setTimeout(function(){ if($veil)$veil.classList.remove('go'); veilBusy=false; },1700);
+}
+if($advanceBtn) $advanceBtn.addEventListener('click',function(e){e.stopPropagation();doAdvance();});
 
 // Wheel
 cv.addEventListener('wheel',function(e){e.preventDefault();
@@ -733,7 +800,7 @@ addEventListener('keydown',function(e){var k=e.key.toLowerCase();
   // ←/→ step through thrones · ↑/↓ orbit around the galaxy
   else if(k==="arrowleft"||k==="arrowright"){
     var step=(k==="arrowright")?1:-1;
-    keySel=(keySel<0)?0:Math.max(0,Math.min(143,keySel+step));
+    keySel=(keySel<0)?0:Math.max(0,Math.min(128,keySel+step));
     hover=keySel;keyHeld=true;e.preventDefault();   // same state as mouse hover
   }
   else if(k==="arrowup"||k==="arrowdown"){
@@ -913,7 +980,7 @@ function renderGalaxy(){
     var sp=project(nd.r*Math.cos(ang),nd.r*Math.sin(ang),nd.z,cosP,sinP,scale);
     nd.sx=sp[0];nd.sy=sp[1];
     var col=STAR[nd.star].col,gr=PX*(i===hover?3.4:i===keySel?2.8:2.4);
-    var tc=TIER_COL[nd.tier];
+    var tc=TIER_COL[tierOf(i)];
     var bcol=mix(col,tc,0.6);            // tier-tinted body — cores still read white
     if(i===hover || i===keySel){
       var glowR=gr*(i===keySel?2.0:2.2);
@@ -928,7 +995,7 @@ function renderGalaxy(){
     var h="";
     var hi=(keySel>=0?keySel:hover);
     if(hi>=0) h="<span class=\"throne\">THRONE "+("00"+hi).slice(-3)+"</span>\n"+
-      "<span class=\"tier\">"+TIER_NAMES[NODES[hi].tier]+"</span>";
+      "<span class=\"tier\">"+TIER_NAMES[tierOf(hi)]+"</span>";
     else if(hoverStar>=0) h="<span class=\"throne\">"+JOSEPH_15[hoverStar]+"</span>\n"+
       "<span class=\"tier\">"+(hoverStar<3?"GREAT STAR":"CORE")+"</span>";
     document.getElementById('hud').innerHTML=h;
@@ -1043,7 +1110,7 @@ function norm(v){var l=Math.hypot(v[0],v[1],v[2])||1;return [v[0]/l,v[1]/l,v[2]/
 
 function buildStar(seed){
   var r=mk(seed>>>0),i;sunStrands=[];sunOrbits=[];
-  var nS=gpuMode?6000:3600, nO=gpuMode?760:400;
+  var nS=IS_MOBILE?1600:3600, nO=IS_MOBILE?240:400;
   for(i=0;i<nS;i++){                                  // strands rooted on the surface
     var u=r()*TAU,ct=2*r()-1,st=Math.sqrt(1-ct*ct);
     var d=[st*Math.cos(u),st*Math.sin(u),ct];
@@ -1090,7 +1157,7 @@ function renderStar(){
   var cosS=Math.cos(sunSpin),sinS=Math.sin(sunSpin);
   var t=clock*0.013*SUN.speed, s=REF*zoom*SUN.size;
   var i,k,u,f,amp,na,nb,px,py,pz,pl,rr,sp,a,rx,rz;
-  var NK=gpuMode?60:40, INV=1/(NK-1);
+  var NK=IS_MOBILE?26:40, INV=1/(NK-1);
   var aS=Math.round(sunStrands.length*SUN.density);
   var aO=Math.round(sunOrbits.length*SUN.orbit);
   for(i=0;i<aS;i++){var sd=sunStrands[i];                 // surface shell + flares
@@ -1232,7 +1299,14 @@ function loop(){
     zoom=0.8+0.6*(0.5+0.5*Math.sin(cinematicTime*0.000015+2.1));
   }
   idleCheck();
-  if($galaxyTools) $galaxyTools.style.display='flex';   // same controls in every view
+  if($galaxyTools) $galaxyTools.style.display=cinematic?'none':'flex';
+  // throne-jump only in the galaxy; ADVANCE only in an upgradeable throne
+  if($controls) $controls.style.display=(mode==='galaxy'&&!cinematic)?'flex':'none';
+  if($advanceBtn){
+    var up=(mode==='system'&&coreView<0&&!cinematic&&tierOf(curNode)>0);
+    $advanceBtn.style.display=up?'block':'none';
+    if(up) $advanceBtn.textContent="ADVANCE TO "+TIER_NAMES[tierOf(curNode)-1]+" ▸";
+  }
   if(mode=='galaxy') renderGalaxy();
   else if(mode=='star') renderStar();
   else renderSystem();
@@ -1247,7 +1321,7 @@ function applyHash(){
   var m;
   if((m=h.match(/^sun=(\d+)/))){ var s=+m[1]; if(s>=0&&s<3)goStar(s); return; }
   if((m=h.match(/^core=(\d+)/))){ var c=+m[1]; if(c>=0&&c<12)goCore(c); return; }
-  if((m=h.match(/^throne=(\d+)/))){ var n=+m[1]; if(n>=0&&n<=143)goSystem(n); return; }
+  if((m=h.match(/^throne=(\d+)/))){ var n=+m[1]; if(n>=0&&n<=128)goSystem(n); return; }
 }
 addEventListener('hashchange',applyHash);
 applyHash();

@@ -20,7 +20,7 @@
 
 <section class="wrap" style="padding-top:130px;padding-bottom:20px">
   <p class="eyebrow">The Collection</p>
-  <h1 style="font-size:clamp(40px,6vw,68px)">144 Thrones</h1>
+  <h1 style="font-size:clamp(40px,6vw,68px)">129 Thrones</h1>
   <p class="lede" style="margin-top:22px;max-width:42ch">A system of its own, each.
   Filter, then enter.</p>
   <p style="margin-top:18px"><a class="btn ghost" href="core15.html">THE CORE 15 ▸</a></p>
@@ -28,7 +28,7 @@
 
 <section class="wrap" style="padding-top:8px">
   <div class="filters" id="filters">
-    <button data-t="all" class="on">ALL · 144</button>
+    <button data-t="all" class="on">ALL · 129</button>
     <button data-t="2">TELESTIAL</button>
     <button data-t="1">TERRESTRIAL</button>
     <button data-t="0">CELESTIAL</button>
@@ -66,15 +66,17 @@ function pickStar(r){var x=r()*STARW.t;for(var i=0;i<STARW.a.length;i++) if(x<ST
 var TIER_NAMES=["CELESTIAL","TERRESTRIAL","TELESTIAL"];
 var TIER_COL=[[255,225,110],[255,110,210],[110,215,255]];
 
+// every throne mints Telestial; reflect any upgrades saved by the explorer
+function tierOf(i){var v=null;try{v=localStorage.getItem('kolob:'+HASH.slice(2,10)+':'+i);}catch(e){}
+  return v===null?2:Math.max(0,Math.min(2,+v));}
 var H0=hashSeed(HASH),NODES=[];
-for(var i=0;i<144;i++){
+for(var i=0;i<129;i++){
   var nr=mk((H0+(i+1)*8675309)>>>0);
   nr.int(0,3);          // arm  (consume, value unused)
   nr();                 // radius
   nr.g(); nr.g();       // a, z
   var star=pickStar(nr);
-  var tier=i<45?2:i<101?1:0;     // matches the pod
-  NODES.push({i:i,star:star,tier:tier});
+  NODES.push({i:i,star:star,tier:tierOf(i)});
 }
 function rs(c){return"rgb("+c[0]+","+c[1]+","+c[2]+")";}
 function build(filter){
