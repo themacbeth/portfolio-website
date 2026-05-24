@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>KOLOB — An Ordered Cosmos</title>
+<title>KOLOB</title>
 <link rel="stylesheet" href="site.css">
 <script defer src="site.js"></script>
 </head>
@@ -11,110 +11,57 @@
 
 <nav class="nav">
   <a class="brand" href="index.html">KOLOB</a>
-  <a href="theorem.html">THE THEOREM</a>
+  <a href="theorem.html">THEOREM</a>
   <a href="core15.html">CORE 15</a>
   <a href="collection.html">COLLECTION</a>
-  <a href="explainer.html">GUIDE</a>
+  <a href="mint.html">MINT</a>
   <a class="enter" href="kolob-pod-1d.html">ENTER ▸</a>
 </nav>
 
-<!-- ── HERO: live galaxy, ambient ──────────────────────────────────────── -->
 <header class="hero">
-  <iframe class="hero-bg" src="kolob-pod-1d.html#cinematic" tabindex="-1" title="Kolob galaxy"></iframe>
+  <iframe class="hero-bg" src="kolob-pod-1d.html#cinematic" tabindex="-1" title="Kolob"></iframe>
   <div class="hero-in">
-    <p class="sub">A Generative Star-Chart</p>
     <h1>KOLOB</h1>
-    <p class="tag">The Milky Way rendered as an ordered cosmos — living thrones, generated from pure code.</p>
+    <p class="tag">The galaxy as one ordered cosmos.</p>
     <div>
-      <a class="btn primary" href="kolob-pod-1d.html">ENTER THE GALAXY</a>
-      <a class="btn ghost" href="theorem.html">READ THE THEOREM</a>
+      <a class="btn primary" href="kolob-pod-1d.html">ENTER</a>
+      <a class="btn ghost" href="theorem.html">THE THEOREM</a>
     </div>
   </div>
 </header>
 
-<!-- ── intro ───────────────────────────────────────────────────────────── -->
 <section class="wrap">
-  <p class="eyebrow">The Premise</p>
-  <h2>What does the Milky Way look like as a work of art?</h2>
-  <p class="lede">In KOLOB the galaxy is one ordered cosmos: a blazing core at the centre, three
-  concentric kingdoms of light, two veils of dust between them, and the long migration of a single
-  world from the core to the rim and home again. Each token is one throne in that cosmos, generated
-  deterministically from its hash.</p>
+  <p class="eyebrow">159 Thrones · Drawn live from code</p>
+  <h2>One galaxy. Three kingdoms. A sealed core.</h2>
 </section>
 
-<hr class="rule">
-
-<!-- ── three kingdoms ──────────────────────────────────────────────────── -->
-<section class="wrap">
-  <p class="eyebrow">The Three Kingdoms</p>
+<section class="wrap" style="padding-top:0">
   <div class="grid cols-3">
-    <div class="card">
-      <div class="swatch sys" style="--c:var(--gold)"></div>
-      <span class="k">Inner ring</span><h3>Celestial</h3>
-      <p>The white-gold hub, nearest Kolob. The densest, rarest systems — and the locked Core 15.</p>
-    </div>
-    <div class="card">
-      <div class="swatch sys" style="--c:var(--mag)"></div>
-      <span class="k">Middle ring</span><h3>Terrestrial</h3>
-      <p>The balanced middle kingdom — where worlds pass through the veil.</p>
-    </div>
-    <div class="card">
-      <div class="swatch sys" style="--c:var(--cyan)"></div>
-      <span class="k">Outer ring</span><h3>Telestial</h3>
-      <p>The sparse outer rim where every throne begins its journey.</p>
-    </div>
+    <div class="card"><span class="chip t-cel">Celestial</span><h3 style="margin-top:14px">Core</h3>
+      <p>The gold hub. Densest, rarest — and the locked Core 15.</p></div>
+    <div class="card"><span class="chip t-ter">Terrestrial</span><h3 style="margin-top:14px">Middle</h3>
+      <p>The richer ring, beyond the veil.</p></div>
+    <div class="card"><span class="chip t-tel">Telestial</span><h3 style="margin-top:14px">Rim</h3>
+      <p>The sparse edge. Every throne begins here.</p></div>
   </div>
 </section>
 
-<!-- ── core 15 teaser ──────────────────────────────────────────────────── -->
-<section class="wrap">
-  <p class="eyebrow">The Locked Core</p>
-  <h2>The Core 15 — the throne stars</h2>
-  <p class="dim">Three great suns bound in affinity, ringed by twelve governing systems. Hand-sealed,
-  identical across the collection, and impossible for any throne to ever equal.</p>
-  <div class="grid cols-3" style="margin-top:26px">
-    <a class="card" href="core15.html">
-      <div class="swatch sun" style="--c:#f7e7a8"></div>
-      <span class="k">Great Star 1 / 3</span><h3>Kolob</h3>
-      <p>The vast gold throne — the blazing centre of all things.</p>
-    </a>
-    <a class="card" href="core15.html">
-      <div class="swatch sun" style="--c:#7fc8ff"></div>
-      <span class="k">Great Star 2 / 3</span><h3>Oleblish</h3>
-      <p>Blue, restless, ringed with countless orbiting elements.</p>
-    </a>
-    <a class="card" href="core15.html">
-      <div class="swatch sun" style="--c:#ff8a52"></div>
-      <span class="k">Great Star 3 / 3</span><h3>Enish-go-on-dosh</h3>
-      <p>The red giant — slow, lazy, curling tongues of flame.</p>
-    </a>
+<section class="wrap" style="padding-top:0">
+  <div class="grid cols-2">
+    <a class="card" href="core15.html"><span class="k">The locked core</span>
+      <h3 style="margin-top:12px">Core 15 ▸</h3><p>Three great suns. Twelve governing systems.</p></a>
+    <a class="card" href="collection.html"><span class="k">Browse</span>
+      <h3 style="margin-top:12px">144 Thrones ▸</h3><p>Each a system of its own.</p></a>
   </div>
-  <p style="margin-top:26px"><a class="btn ghost" href="core15.html">SEE ALL 15 ▸</a></p>
-</section>
-
-<hr class="rule">
-
-<!-- ── collection teaser ───────────────────────────────────────────────── -->
-<section class="wrap">
-  <p class="eyebrow">The Collection</p>
-  <h2>144 thrones, each a world-system of its own</h2>
-  <p class="dim">Every throne is a unique planetary system — Keplerian orbits in mean-motion
-  resonance, asteroid belts with Kirkwood gaps, comets, moons, worlds in embryo. Browse the full
-  index and step into any one of them.</p>
-  <p style="margin-top:24px">
-    <a class="btn primary" href="collection.html">BROWSE THE COLLECTION</a>
-    <a class="btn ghost" href="kolob-pod-1d.html">EXPLORE LIVE ▸</a>
-  </p>
 </section>
 
 <footer class="foot">
   <div class="links">
-    <a href="theorem.html">The Theorem</a>
-    <a href="core15.html">Core 15</a>
-    <a href="collection.html">Collection</a>
-    <a href="kolob-pod-1d.html">Explorer</a>
+    <a href="theorem.html">Theorem</a><a href="core15.html">Core 15</a>
+    <a href="collection.html">Collection</a><a href="explainer.html">Guide</a>
+    <a href="mint.html">Mint</a><a href="kolob-pod-1d.html">Explorer</a>
   </div>
-  KOLOB · a generative cosmogram · pure code, no assets
+  KOLOB · pure code, no assets
 </footer>
 
 </body>

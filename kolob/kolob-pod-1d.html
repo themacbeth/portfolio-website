@@ -31,8 +31,7 @@
     font:12px ui-monospace,monospace;cursor:pointer;display:none;
     -webkit-tap-highlight-color:transparent;user-select:none}
   #back:active{background:rgba(60,60,90,0.9)}
-  #mintInfo{position:fixed;right:14px;top:12px;z-index:100;text-align:right;
-    pointer-events:none;white-space:pre;font:10px ui-monospace,monospace;color:#555}
+  #mintInfo{display:none}
   /* SLIDESHOW CONTROLS OVERLAY */
   #slideshowUI{
     position:fixed;right:14px;bottom:72px;z-index:205;
@@ -83,9 +82,8 @@
 <!-- EDITOR / MINT MENU -->
 <button id="menuToggle" style="position:fixed;right:14px;top:14px;z-index:210;width:28px;height:26px;background:rgba(20,20,35,0.92);border:1px solid rgba(255,255,255,0.15);border-radius:4px;color:#999;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;user-select:none" title="Editor / Mint">☰</button>
 <div id="menuPanel" style="position:fixed;right:14px;top:44px;z-index:210;background:rgba(12,12,22,0.95);border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:6px 0;min-width:140px;display:none;flex-direction:column;gap:1px">
-  <button class="menuItem" data-goto="editor" style="background:none;border:none;color:#ccf;padding:6px 14px;text-align:left;cursor:pointer;font:11px monospace;display:flex;align-items:center;gap:6px"><span style="opacity:.6">◈</span> EDITOR</button>
-  <button class="menuItem" data-goto="mint" style="background:none;border:none;color:#ccf;padding:6px 14px;text-align:left;cursor:pointer;font:11px monospace;display:flex;align-items:center;gap:6px"><span style="opacity:.6">◆</span> MINT</button>
-  <button id="menuDl" class="menuItem" style="background:none;border:none;color:#998;padding:6px 14px;text-align:left;cursor:pointer;font:11px monospace;display:flex;align-items:center;gap:6px"><span style="opacity:.5">↧</span> DOWNLOAD EDITOR</button>
+  <button class="menuItem" data-goto="home" style="background:none;border:none;color:#ccf;padding:8px 16px;text-align:left;cursor:pointer;font:11px monospace;letter-spacing:.12em;display:flex;align-items:center;gap:8px"><span style="opacity:.6">⌂</span> INDEX</button>
+  <button class="menuItem" data-goto="mint" style="background:none;border:none;color:#ccf;padding:8px 16px;text-align:left;cursor:pointer;font:11px monospace;letter-spacing:.12em;display:flex;align-items:center;gap:8px"><span style="opacity:.6">◆</span> MINT</button>
 </div>
 <style>
   .menuItem:hover{background:rgba(60,60,110,.7);color:#fff}
@@ -98,23 +96,21 @@
   <button id="throneGo">GO</button>
 </div>
 <div id="galaxyTools">
-  <button class="gtBtn" id="gtGpu" title="Enhance — 2× particle density">ENHANCE</button>
-  <button class="gtBtn" id="gtBright" title="Lumen — brightness boost [b]">LUMEN</button>
-  <button class="gtBtn" id="gtCinema" title="Cinema — slideshow options [c]">◐ CINEMA</button>
+  <button class="gtBtn" id="gtGpu" title="Exalt — 2× particle density">EXALT</button>
+  <button class="gtBtn" id="gtBright" title="Enlighten — brightness boost [b]">ENLIGHTEN</button>
+  <button class="gtBtn" id="gtCinema" title="Slideshow [c]">▶</button>
 </div>
 <style>
   #galaxyTools{position:fixed;right:14px;bottom:22px;z-index:120;display:flex;
     flex-wrap:wrap;justify-content:flex-end;gap:6px;max-width:calc(100vw - 28px);
     transition:opacity .4s}
-  .gtBtn{background:rgba(20,20,35,0.9);border:1px solid rgba(255,255,255,0.15);
-    color:#9a9aae;padding:9px 14px;min-height:34px;border-radius:5px;
-    font:11px/1 ui-monospace,monospace;letter-spacing:.08em;
+  .gtBtn{background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.18);
+    color:#c2cbdb;padding:6px 11px;min-height:27px;border-radius:3px;
+    font:9px/1 ui-monospace,monospace;letter-spacing:.14em;
     cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;
     transition:background .15s,color .15s,border-color .15s}
   .gtBtn:hover{background:rgba(50,50,90,0.95);color:#ddd}
-  .gtBtn.on{background:rgba(150,120,255,0.92);color:#fff;border-color:rgba(190,170,255,0.6)}
-  #gtBright.on{background:rgba(255,210,90,0.92);color:#1a1400;border-color:rgba(255,235,160,0.7)}
-  #gtCinema.on{background:rgba(110,180,255,0.92);color:#06121f;border-color:rgba(170,210,255,0.75)}
+  .gtBtn.on{background:#fff;color:#000;border-color:#fff}
   body.idle #hud,body.idle #controls,body.idle #mintInfo,body.idle #slideshowUI,
   body.idle #menuToggle,body.idle #menuPanel,body.idle #galaxyTools,body.idle #back{
     opacity:0 !important;pointer-events:none !important;transition:opacity .5s}
@@ -623,14 +619,10 @@ document.addEventListener('click',function(e){
 document.querySelectorAll('.menuItem').forEach(function(item){
   item.addEventListener('click',function(){
     var goto=this.dataset.goto;
-    if(goto==='editor') window.open('kolob-editor.html','_blank');
-    if(goto==='mint')  window.open('kolob-editor.html#mint','_blank');
+    if(goto==='home') location.href='index.html';
+    if(goto==='mint') location.href='mint.html';
     $menuPanel.style.display='none';
   });
-});
-document.getElementById('menuDl').addEventListener('click',function(){
-  var a=document.createElement('a');a.href='kolob-editor.html';a.download='kolob-editor.html';a.click();
-  $menuPanel.style.display='none';
 });
 
 function goGalaxy(){mode="galaxy";zoom=1;az=0;tilt=0.52;
@@ -931,21 +923,17 @@ function renderGalaxy(){
     body(sp[0],sp[1],gr,brightBoost?sh(bcol,1.4):bcol,nd.spin+clock*0.013);
   }
 
+  // top-left appears only while hovering a throne or a core star
   if(hud){
-    var palName=PALETTES[palIdx].name;
-    var hudTxt="<b>KOLOB</b>\ntoken "+tokenData.hash.slice(0,10)+
-     "\npalette <b>"+palName+"</b> [LOCKED]\n\n"+
-     "144 thrones · ←/→ select · ↑/↓ orbit\n"+
-     (keySel>=0?"▸ throne "+keySel+" — enter to visit\n":"")+
-     (hover>=0?"\n<b>THRONE "+hover+"</b>\n<span class=\"tier\">"+TIER_NAMES[NODES[hover].tier]+"</span>":
-      "hover a throne")+
-     "\n\ndrag · pinch · [ ] x"+speed.toFixed(2)+
-     (paused?" [PAUSED]":"")+" · h · s";
-    if(hover>=0) hudTxt+="\n\n<span class=\"throne\">THRONE "+hover+"</span>";
-    document.getElementById('hud').innerHTML=hudTxt;
+    var h="";
+    var hi=(keySel>=0?keySel:hover);
+    if(hi>=0) h="<span class=\"throne\">THRONE "+("00"+hi).slice(-3)+"</span>\n"+
+      "<span class=\"tier\">"+TIER_NAMES[NODES[hi].tier]+"</span>";
+    else if(hoverStar>=0) h="<span class=\"throne\">"+JOSEPH_15[hoverStar]+"</span>\n"+
+      "<span class=\"tier\">"+(hoverStar<3?"GREAT STAR":"CORE")+"</span>";
+    document.getElementById('hud').innerHTML=h;
   }
-  // Mint info overlay
-  $mintInfo.innerHTML="THRONE 000-143\ninner ── CELESTIAL\nmid ──── TERRESTRIAL\nouter ── TELESTIAL";
+  $mintInfo.innerHTML="";
 }
 
 // SYSTEM VIEW
@@ -1028,24 +1016,10 @@ function renderSystem(){
     body(sp[0],sp[1],PX*1.5,[205,238,255],clock*0.06);}
 
   if(hud){
-    var res="";
-    for(i=0;i<sy.planets.length-1;i++) res+=sy.planets[i].rev+":"+sy.planets[i+1].rev+" ";
-    var sHead=coreView>=0
-     ? "<b>"+sy.coreName+"</b>\n<span class=\"tier\">CORE "+(coreView+1)+"/12 · "+sy.coreProfile+" · LOCKED</span>"
-     : "<b>THRONE "+curNode+"</b>\nseed "+("00000000"+NODES[curNode].seed.toString(16)).slice(-8)+
-       "\n<span class=\"tier\">"+TIER_NAMES[system.wealth]+"</span>";
-    document.getElementById('hud').innerHTML=
-     sHead+
-     "\n"+(sy.binary?"binary":"single")+" "+
-     sy.stars.map(function(x){return STAR[x.cls].c;}).join("+")+
-     " · "+sy.stars.map(function(x){return STAR[x.cls].t;}).join("+")+
-     "\n"+sy.planets.length+" planets · "+sy.embryos.length+" embryo"+
-     (sy.embryos.length!==1?"s":"")+" · "+sy.comets.length+" comets"+
-     (sy.asteroids.length?" · "+sy.asteroids.length+" asteroids":"")+
-     "\nresonance "+res+
-     "\n\nWorlds:\n"+sy.planets.map(function(p,i){return (i+1)+"."+["rocky","gas","ice","hot"][p.type];}).join(" · ")+
-     "\n\ndrag · pinch · [ ] x"+speed.toFixed(2)+
-     "\n<b>← BACK</b> · h · s";
+    document.getElementById('hud').innerHTML= coreView>=0
+     ? "<span class=\"throne\">"+sy.coreName+"</span>\n<span class=\"tier\">CORE</span>"
+     : "<span class=\"throne\">THRONE "+("00"+curNode).slice(-3)+"</span>\n"+
+       "<span class=\"tier\">"+TIER_NAMES[system.wealth]+"</span>";
   }
 }
 
@@ -1150,8 +1124,7 @@ function renderStar(){
   $mintInfo.innerHTML="";
   if(hud){
     document.getElementById('hud').innerHTML=
-     "<b>"+JOSEPH_15[starIdx]+"</b>\n<span class=\"tier\">GREAT STAR "+(starIdx+1)+"/3 · LOCKED</span>\n\n"+
-     aS+" strands · "+aO+" orbiters\n\ndrag · pinch · scroll\n<b>← BACK</b> · h · g";
+     "<span class=\"throne\">"+JOSEPH_15[starIdx]+"</span>\n<span class=\"tier\">GREAT STAR</span>";
   }
 }
 
@@ -1259,8 +1232,7 @@ function loop(){
     zoom=0.8+0.6*(0.5+0.5*Math.sin(cinematicTime*0.000015+2.1));
   }
   idleCheck();
-  if($galaxyTools) $galaxyTools.style.display=
-    (mode==='galaxy'||mode==='star'||(mode==='system'&&coreView>=0))?'flex':'none';
+  if($galaxyTools) $galaxyTools.style.display='flex';   // same controls in every view
   if(mode=='galaxy') renderGalaxy();
   else if(mode=='star') renderStar();
   else renderSystem();
