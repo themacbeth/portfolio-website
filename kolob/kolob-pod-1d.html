@@ -96,6 +96,7 @@
   <button id="throneGo">GO</button>
 </div>
 <div id="galaxyTools">
+  <button class="gtBtn" id="gtGpu" title="Exalt — 2× particle density (desktop only)">EXALT</button>
   <button class="gtBtn" id="gtBright" title="Enlighten — brightness boost [b]">ENLIGHTEN</button>
   <button class="gtBtn" id="gtCinema" title="Slideshow [c]">▶</button>
 </div>
@@ -115,6 +116,8 @@
     opacity:0 !important;pointer-events:none !important;transition:opacity .5s}
   body.idle #c{cursor:none}
   @media(max-width:600px){#galaxyTools{right:8px;bottom:16px}}
+  /* EXALT (2× particles) is desktop-only — phones can't push the count */
+  @media(max-width:760px),(pointer:coarse){#gtGpu{display:none!important}}
 </style>
 <div id="back">← BACK</div>
 <button id="advanceBtn">ADVANCE ▸</button>
@@ -1110,7 +1113,7 @@ function norm(v){var l=Math.hypot(v[0],v[1],v[2])||1;return [v[0]/l,v[1]/l,v[2]/
 
 function buildStar(seed){
   var r=mk(seed>>>0),i;sunStrands=[];sunOrbits=[];
-  var nS=IS_MOBILE?1600:3600, nO=IS_MOBILE?240:400;
+  var nS=gpuMode?6000:(IS_MOBILE?1600:3600), nO=gpuMode?760:(IS_MOBILE?240:400);
   for(i=0;i<nS;i++){                                  // strands rooted on the surface
     var u=r()*TAU,ct=2*r()-1,st=Math.sqrt(1-ct*ct);
     var d=[st*Math.cos(u),st*Math.sin(u),ct];
@@ -1157,7 +1160,7 @@ function renderStar(){
   var cosS=Math.cos(sunSpin),sinS=Math.sin(sunSpin);
   var t=clock*0.013*SUN.speed, s=REF*zoom*SUN.size;
   var i,k,u,f,amp,na,nb,px,py,pz,pl,rr,sp,a,rx,rz;
-  var NK=IS_MOBILE?26:40, INV=1/(NK-1);
+  var NK=gpuMode?60:(IS_MOBILE?26:40), INV=1/(NK-1);
   var aS=Math.round(sunStrands.length*SUN.density);
   var aO=Math.round(sunOrbits.length*SUN.orbit);
   for(i=0;i<aS;i++){var sd=sunStrands[i];                 // surface shell + flares
