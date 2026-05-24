@@ -122,7 +122,6 @@
 <div id="back">← BACK</div>
 <button id="advanceBtn">ADVANCE ▸</button>
 <div id="reward"></div>
-<div id="veil"></div>
 <style>
   #advanceBtn{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:130;
     display:none;background:rgba(255,255,255,.94);color:#000;border:0;padding:11px 24px;
@@ -132,17 +131,12 @@
   #reward{position:fixed;left:50%;bottom:74px;transform:translateX(-50%) translateY(8px);z-index:260;
     font:10px/1.5 ui-monospace,monospace;letter-spacing:.14em;color:#eaf0f7;text-align:center;
     background:rgba(0,0,0,.62);border:1px solid rgba(255,255,255,.22);padding:9px 15px;border-radius:4px;
-    opacity:0;transition:opacity .4s,transform .4s;pointer-events:none;max-width:90vw}
+    opacity:0;transition:opacity .4s,transform .4s;pointer-events:none;max-width:90vw;z-index:310}
   #reward.show{opacity:1;transform:translateX(-50%) translateY(0)}
-  #veil{position:fixed;inset:0;z-index:300;pointer-events:none;opacity:0}
-  #veil.go{animation:veilpass 1.7s ease-in-out forwards}
-  @keyframes veilpass{
-    0%{opacity:0}
-    34%{opacity:1;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.25),rgba(20,26,40,.2) 60%,transparent)}
-    50%{opacity:1;backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
-        background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.93),rgba(170,195,230,.55) 38%,rgba(8,10,18,.9) 78%)}
-    66%{opacity:1}
-    100%{opacity:0;backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0)}}
+  /* hide all chrome while the veil cinematic plays */
+  body.veil #hud,body.veil #galaxyTools,body.veil #advanceBtn,body.veil #back,
+  body.veil #controls,body.veil #menuToggle,body.veil #menuPanel,body.veil #slideshowUI{
+    opacity:0!important;pointer-events:none!important;transition:opacity .3s}
   @media(max-width:600px){#advanceBtn{bottom:62px;font-size:9px;padding:11px 18px}
     #reward{bottom:106px}}
 </style>
@@ -695,22 +689,75 @@ $throneNum.addEventListener('keydown',function(e){if(e.key==='Enter'){
   var v=parseInt($throneNum.value);
   if(!isNaN(v)&&v>=0&&v<=128)goSystem(v);}});
 
-// ── KINGDOM ADVANCE — pass through the veil to the next kingdom ──────────
+// ── KINGDOM ADVANCE — warp through the veil to the next kingdom ──────────
 var $advanceBtn=document.getElementById('advanceBtn');
-var $veil=document.getElementById('veil');
 var $reward=document.getElementById('reward');
-var veilBusy=false,rewardTO=0;
+var rewardTO=0;
 var REWARD={1:"TERRESTRIAL · ringed relic · warmer palette · richer worlds",
             0:"CELESTIAL · binary companion · comet swarm · gold palette"};
 function showReward(t){ if(!$reward)return; $reward.textContent=REWARD[t]||"";
   $reward.classList.add('show'); clearTimeout(rewardTO);
   rewardTO=setTimeout(function(){$reward.classList.remove('show');},3600); }
+
+// veil cinematic state
+var veilActive=false,veilT=0,veilNode=-1,veilDidAdvance=false,veilSpin=0,veilNz=0;
+var veilFrom=[110,215,255],veilTo=[255,110,210],veilPts=[],warpStars=[];
+var VEIL_DUR=IS_MOBILE?150:175;                 // frames (~2.6–2.9s)
+function buildVeil(){
+  var nP=IS_MOBILE?3000:7500,nW=IS_MOBILE?900:2400,r=mk((curNode*2654435761+777)>>>0),i;
+  veilPts=[];
+  for(i=0;i<nP;i++){var u=r()*TAU,ct=2*r()-1,st=Math.sqrt(1-ct*ct);
+    veilPts.push([st*Math.cos(u),ct,st*Math.sin(u)]);}        // [x, lat-y, z]
+  warpStars=[];
+  for(i=0;i<nW;i++) warpStars.push({x:(r()*2-1)*1.7,y:(r()*2-1)*1.7,z:0.12+r()*3.8,pz:0});
+}
+function veilCurve(t){                            // warp speed: ramp → hold → ease-out
+  if(t<0.14){var a=t/0.14;return a*a;}
+  if(t<0.5) return 1;
+  var k=(t-0.5)/0.5;return 1-(k*k*k*(k*(k*6-15)+10));
+}
+function bandCol(lat,sw){                         // gas-giant latitude bands (Jupiter-ish)
+  var b=Math.sin(lat*8.5+(sw-0.5)*2.0);          // bands, gently disturbed by the swirl
+  return b>0.45?[236,220,184]:b>0?[210,162,108]:b>-0.45?[150,102,64]:[228,210,176];
+}
+function renderVeil(){
+  ctx.globalCompositeOperation='source-over';
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  var t=veilT,cx=CX,cy=CY,vc=veilCurve(t);
+  // ── warp starfield ──
+  ctx.globalCompositeOperation='lighter';
+  var v=vc*0.27,fov=Math.min(W,H)*0.92,i;
+  for(i=0;i<warpStars.length;i++){var s=warpStars[i];
+    s.pz=s.z; s.z-=v*s.z;                         // accelerate as they near
+    if(s.z<0.09){s.z=3.8;s.pz=3.8;s.x=(Math.random()*2-1)*1.7;s.y=(Math.random()*2-1)*1.7;}
+    var x1=cx+s.x/s.z*fov,y1=cy+s.y/s.z*fov,x0=cx+s.x/s.pz*fov,y0=cy+s.y/s.pz*fov;
+    var b=Math.min(1,(1-s.z/3.8)*0.7+vc*0.7);
+    ctx.strokeStyle='rgba(255,255,255,'+b.toFixed(2)+')';
+    ctx.lineWidth=Math.max(1,(1-s.z/3.8)*2.2*dpr);
+    ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();}
+  ctx.globalCompositeOperation='source-over';
+  // ── rotating gas-giant; colour shifts, bands rearrange ──
+  veilSpin+=0.006; veilNz+=0.004+vc*0.03;
+  var R=Math.min(W,H)*0.185,cs=Math.cos(veilSpin),sn=Math.sin(veilSpin);
+  var shift=t*t*(3-2*t),tint=mix(veilFrom,veilTo,shift);
+  var DOTp=Math.max(2,Math.round(Math.min(W,H)/165));
+  for(i=0;i<veilPts.length;i++){var p=veilPts[i];
+    var x=p[0]*cs-p[2]*sn,z=p[0]*sn+p[2]*cs,y=p[1];
+    if(z<-0.04) continue;                         // front hemisphere
+    var sw=vnoise(x*2.0+veilNz,y*2.0,z*2.0);      // swirl that drifts → bands rearrange
+    var col=mix(bandCol(y,sw),tint,0.22);         // Jupiter bands, lightly kingdom-tinted
+    ctx.fillStyle=rs(sh(col,0.4+0.6*Math.max(0,z)));
+    ctx.fillRect((cx+x*R)|0,(cy-y*R)|0,DOTp,DOTp);}
+  // fade in / out at the ends
+  if(t<0.12||t>0.9){var fa=t<0.12?(0.12-t)/0.12:(t-0.9)/0.1;
+    ctx.fillStyle='rgba(0,0,0,'+Math.min(1,fa).toFixed(2)+')';ctx.fillRect(0,0,W,H);}
+}
 function doAdvance(){
-  if(veilBusy||mode!=="system"||coreView>=0) return;
+  if(veilActive||mode!=="system"||coreView>=0) return;
   var i=curNode; if(tierOf(i)<=0) return;
-  veilBusy=true; if($veil)$veil.classList.add('go');
-  setTimeout(function(){ var t=advanceTier(i); goSystem(i); showReward(t); },850);
-  setTimeout(function(){ if($veil)$veil.classList.remove('go'); veilBusy=false; },1700);
+  veilNode=i; veilFrom=TIER_COL[tierOf(i)]; veilTo=TIER_COL[tierOf(i)-1];
+  buildVeil(); veilActive=true; veilT=0; veilDidAdvance=false; veilSpin=0; veilNz=0;
+  document.body.classList.add('veil');
 }
 if($advanceBtn) $advanceBtn.addEventListener('click',function(e){e.stopPropagation();doAdvance();});
 
@@ -1269,6 +1316,14 @@ function goCore(ci){
 
 function loop(){
   if(!paused) clock+=speed;
+  // veil cinematic takes over the whole frame while it plays
+  if(veilActive){
+    veilT+=1/VEIL_DUR;
+    if(veilT>=0.5 && !veilDidAdvance){
+      var nt=advanceTier(veilNode); goSystem(veilNode); showReward(nt); veilDidAdvance=true; }
+    if(veilT>=1){ veilActive=false; document.body.classList.remove('veil'); }
+    else { renderVeil(); requestAnimationFrame(loop); return; }
+  }
   // zoom-out dim removed
   var now_=Date.now();
   // Text-hidden idle → auto-start slideshow after 10s
