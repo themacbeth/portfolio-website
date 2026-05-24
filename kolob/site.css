@@ -89,6 +89,26 @@ p{max-width:54ch;font-weight:300}
   radial-gradient(circle at 50% 50%,var(--c) 0,transparent 6%),
   repeating-radial-gradient(circle at 50% 50%,transparent 0 15px,rgba(255,255,255,.07) 16px 17px),#000}
 
+/* tier badges — visual only, NOT clickable */
+.kings{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:8px}
+.king{padding:30px 24px;border:1px solid var(--line);border-top:3px solid var(--kc);
+  background:linear-gradient(rgba(255,255,255,.025),transparent)}
+.king .kn{font-family:var(--font);font-weight:500;font-size:21px;letter-spacing:.06em;
+  color:var(--kc);margin:0 0 8px}
+.king p{margin:0;color:var(--dim);font-size:14px}
+@media(max-width:760px){.kings{grid-template-columns:1fr}}
+
+/* destination buttons — clearly clickable */
+.dests{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:8px}
+.dest{display:flex;justify-content:space-between;align-items:flex-end;min-height:158px;
+  padding:28px;border:1px solid var(--line-hi);background:rgba(255,255,255,.025);
+  transition:background .2s,border-color .2s,transform .2s}
+.dest:hover{background:rgba(255,255,255,.08);border-color:#fff;transform:translateY(-3px)}
+.dest .dt{font-family:var(--font);font-weight:500;font-size:27px;letter-spacing:.04em;color:#fff}
+.dest .dd{color:var(--dim);font-size:14px;margin-top:8px}
+.dest .arrow{font-size:22px;color:#fff;line-height:1}
+@media(max-width:760px){.dests{grid-template-columns:1fr}.dest{min-height:120px}}
+
 .chip{display:inline-block;font:10px/1 var(--mono);letter-spacing:.16em;
   padding:5px 9px;border:1px solid currentColor;text-transform:uppercase}
 .t-cel{color:var(--gold)} .t-ter{color:var(--mag)} .t-tel{color:var(--cyan)} .t-core{color:#fff}

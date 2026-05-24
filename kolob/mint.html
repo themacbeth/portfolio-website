@@ -7,18 +7,31 @@
 <link rel="stylesheet" href="site.css">
 <script defer src="site.js"></script>
 <style>
-  .mintbox{max-width:560px;margin:0 auto;text-align:center}
-  .supply{display:grid;grid-template-columns:1fr;gap:1px;background:var(--line);
-    border:1px solid var(--line);margin:40px 0}
-  .srow{display:flex;justify-content:space-between;align-items:center;background:#000;
-    padding:18px 22px;font:12px/1 var(--mono);letter-spacing:.08em}
-  .srow .lbl{display:flex;align-items:center;gap:12px;color:var(--ink)}
-  .srow .dot{width:8px;height:8px;border-radius:50%}
-  .srow .n{color:var(--dim)}
-  .mintbtn{display:inline-block;background:var(--white);color:#000;border:0;
-    padding:17px 44px;font:12px/1 var(--font);font-weight:500;letter-spacing:.28em;
-    text-transform:uppercase;cursor:not-allowed;opacity:.55}
-  .note{margin-top:18px;color:var(--dim);font:10px/1.7 var(--mono);letter-spacing:.1em}
+  .mintbox{max-width:600px;margin:0 auto}
+  .dry{display:inline-block;font:9px/1 var(--mono);letter-spacing:.28em;color:#000;
+    background:var(--gold,#e9c987);padding:5px 10px;border-radius:2px;text-transform:uppercase}
+  .wallet{display:flex;align-items:center;gap:12px;justify-content:center;margin:30px 0 8px;
+    font:11px/1 var(--mono);letter-spacing:.08em;color:var(--dim)}
+  .mintlist{border:1px solid var(--line);margin:14px 0 0}
+  .mrow{display:flex;align-items:center;gap:14px;padding:16px 18px;border-bottom:1px solid var(--line)}
+  .mrow:last-child{border-bottom:0}
+  .mrow .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .mrow .nm{flex:1;font:13px/1.3 var(--font);font-weight:400;color:var(--ink)}
+  .mrow .nm small{display:block;color:var(--dim);font-size:11px;margin-top:3px;letter-spacing:.04em}
+  .mrow .pr{font:12px/1 var(--mono);color:#fff;letter-spacing:.06em;white-space:nowrap}
+  .mbtn{background:#fff;color:#000;border:0;padding:10px 16px;font:10px/1 var(--font);
+    font-weight:500;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;white-space:nowrap;
+    -webkit-tap-highlight-color:transparent;transition:opacity .15s}
+  .mbtn:hover{opacity:.84}
+  .mbtn[disabled]{background:rgba(255,255,255,.14);color:var(--dim);cursor:not-allowed}
+  #log{margin-top:22px;font:11px/1.7 var(--mono);letter-spacing:.04em;color:var(--dim)}
+  #log a{color:var(--cyan,#7fc8ff)}
+  #log .ok{color:#fff}
+  .tools{display:flex;gap:14px;justify-content:center;margin-top:26px}
+  .tlink{font:10px/1 var(--mono);letter-spacing:.16em;color:var(--dim);cursor:pointer;
+    text-transform:uppercase;background:none;border:0}
+  .tlink:hover{color:#fff}
+  @media(max-width:600px){.mrow{flex-wrap:wrap}.mrow .pr{order:3}.mbtn{margin-left:auto}}
 </style>
 </head>
 <body>
@@ -32,21 +45,30 @@
   <a class="enter" href="kolob-pod-1d.html">ENTER ▸</a>
 </nav>
 
-<section class="wrap" style="padding-top:170px">
-  <div class="mintbox">
-    <p class="eyebrow">Mint</p>
+<section class="wrap" style="padding-top:150px">
+  <div class="mintbox" style="text-align:center">
+    <p class="eyebrow" style="margin-bottom:14px">Mint · <span class="dry">Dry Run</span></p>
     <h1 style="font-size:clamp(44px,8vw,92px)">144</h1>
-    <p class="lede" style="margin-top:24px">129 thrones, 15 sealed at the core.</p>
+    <p class="lede" style="margin-top:20px">129 thrones, 15 sealed at the core.</p>
 
-    <div class="supply">
-      <div class="srow"><span class="lbl"><span class="dot" style="background:var(--cyan)"></span>Telestial</span><span class="n">129 · base mint</span></div>
-      <div class="srow"><span class="lbl"><span class="dot" style="background:var(--mag)"></span>Terrestrial</span><span class="n">↑ advance</span></div>
-      <div class="srow"><span class="lbl"><span class="dot" style="background:var(--gold)"></span>Celestial</span><span class="n">↑ advance</span></div>
-      <div class="srow"><span class="lbl"><span class="dot" style="background:#fff"></span>Core 15</span><span class="n">15 · sealed</span></div>
+    <div class="wallet">
+      <button class="mbtn" id="connect">Connect Wallet</button>
+      <span id="addr"></span>
     </div>
 
-    <button class="mintbtn" disabled>Minting Soon</button>
-    <p class="note">On-chain · deterministic · drawn live from the token hash.</p>
+    <div style="text-align:left">
+      <h2 style="margin-top:46px;font-size:18px">Thrones <span class="dim" style="font-size:13px;font-family:var(--mono)" id="thLeft"></span></h2>
+      <p class="dim" style="font-size:13px;margin:2px 0 0">Mints Telestial; advance later through the veils — or mint already advanced.</p>
+      <div class="mintlist" id="thrones"></div>
+
+      <h2 style="margin-top:42px;font-size:18px">The Core 15 <span class="dim" style="font-size:13px;font-family:var(--mono)">sealed · celestial</span></h2>
+      <div class="mintlist" id="core"></div>
+    </div>
+
+    <div id="log"></div>
+    <div class="tools">
+      <button class="tlink" id="reset">↺ Reset dry run</button>
+    </div>
   </div>
 </section>
 
@@ -56,8 +78,111 @@
     <a href="core15.html">Core 15</a><a href="collection.html">Collection</a>
     <a href="explainer.html">Guide</a>
   </div>
-  KOLOB · pure code, no assets
+  KOLOB · dry-run mint — no transaction is sent
 </footer>
 
+<script>
+"use strict";
+var POD="kolob-pod-1d.html";
+// must match the explorer's canonical token hash so minted tiers show up there
+var HASH="0x4b4f4c42a17f0c3e9d5b8e2160f47a93c8d1e0b6452f9a3c7e1d80b54f2a69c3";
+var H8=HASH.slice(2,10);
+var TC={cel:[233,201,135],ter:[233,143,206],tel:[127,200,255],core:[255,255,255]};
+function rs(c){return"rgb("+c[0]+","+c[1]+","+c[2]+")";}
+function load(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function setTier(i,t){try{localStorage.setItem('kolob:'+H8+':'+i,t);}catch(e){}}
+
+var mintedTh=load('kolob:mint:thrones',[]);   // [{i,tier}]
+var mintedCore=load('kolob:mint:core',[]);    // [idx 0-14]
+var connected=false;
+
+function thronesLeft(){return 129-mintedTh.length;}
+function coreLeft(lo,hi){var n=0;for(var i=lo;i<=hi;i++) if(mintedCore.indexOf(i)<0)n++;return n;}
+function rndFree(taken,lo,hi){var pool=[];for(var i=lo;i<=hi;i++) if(taken.indexOf(i)<0)pool.push(i);
+  return pool.length?pool[(Math.random()*pool.length)|0]:-1;}
+
+var THRONE_TIERS=[ // tier value 2/1/0 (telestial/terrestrial/celestial)
+  {nm:"Telestial",  sub:"base mint",            price:"0.01", tier:2, c:TC.tel},
+  {nm:"Terrestrial",sub:"mint already advanced",price:"0.05", tier:1, c:TC.ter},
+  {nm:"Celestial",  sub:"mint already advanced",price:"0.10", tier:0, c:TC.cel}];
+
+function render(){
+  document.getElementById('thLeft').textContent=thronesLeft()+" / 129 left";
+  var th="";
+  THRONE_TIERS.forEach(function(o,k){
+    var out=thronesLeft()<=0;
+    th+='<div class="mrow"><span class="dot" style="background:'+rs(o.c)+'"></span>'+
+      '<span class="nm">'+o.nm+'<small>'+o.sub+'</small></span>'+
+      '<span class="pr">'+o.price+' ETH</span>'+
+      '<button class="mbtn" data-th="'+k+'"'+(out?' disabled':'')+'>'+(out?'Sold out':'Mint')+'</button></div>';
+  });
+  document.getElementById('thrones').innerHTML=th;
+  var sysLeft=coreLeft(3,14), starLeft=coreLeft(0,2);
+  document.getElementById('core').innerHTML=
+    '<div class="mrow"><span class="dot" style="background:'+rs(TC.core)+'"></span>'+
+      '<span class="nm">Governing Systems<small>'+sysLeft+' / 12 left</small></span>'+
+      '<span class="pr">0.20 ETH</span>'+
+      '<button class="mbtn" data-core="sys"'+(sysLeft<=0?' disabled':'')+'>'+(sysLeft<=0?'Sold out':'Mint')+'</button></div>'+
+    '<div class="mrow"><span class="dot" style="background:'+rs(TC.core)+'"></span>'+
+      '<span class="nm">Great Stars<small>'+starLeft+' / 3 left</small></span>'+
+      '<span class="pr">0.50 ETH</span>'+
+      '<button class="mbtn" data-core="star"'+(starLeft<=0?' disabled':'')+'>'+(starLeft<=0?'Sold out':'Mint')+'</button></div>';
+  wire();
+}
+function logLine(html){var l=document.getElementById('log');
+  l.innerHTML='<div class="ok">'+html+'</div>'+l.innerHTML;}
+
+function needWallet(){ if(!connected){ logLine('<span style="color:#e9c987">Connect a wallet first.</span>'); return true;} return false; }
+function simulate(label,done){
+  // dry-run "transaction"
+  logLine('<span class="dim">… minting '+label+' (dry run)</span>');
+  setTimeout(done,900);
+}
+function mintThrone(k){
+  if(needWallet())return; if(thronesLeft()<=0)return;
+  var o=THRONE_TIERS[k];
+  simulate(o.nm+' throne',function(){
+    var taken=mintedTh.map(function(m){return m.i;});
+    var i=rndFree(taken,0,128); if(i<0)return;
+    mintedTh.push({i:i,tier:o.tier}); save('kolob:mint:thrones',mintedTh);
+    setTier(i,o.tier);                       // so it renders at that kingdom in the explorer
+    logLine('Minted <b>Throne '+("00"+i).slice(-3)+'</b> · '+o.nm+' · '+o.price+
+      ' ETH — <a href="'+POD+'#throne='+i+'">VIEW ▸</a>');
+    render();
+  });
+}
+function mintCore(kind){
+  if(needWallet())return;
+  var lo=kind==='star'?0:3, hi=kind==='star'?2:14, price=kind==='star'?'0.50':'0.20';
+  if(coreLeft(lo,hi)<=0)return;
+  simulate(kind==='star'?'a great star':'a governing system',function(){
+    var idx=rndFree(mintedCore,lo,hi); if(idx<0)return;
+    mintedCore.push(idx); save('kolob:mint:core',mintedCore);
+    var link=kind==='star'?POD+'#sun='+idx:POD+'#core='+(idx-3);
+    var nm=kind==='star'?'Great Star '+(idx+1):'Core System '+(idx-2);
+    logLine('Minted <b>'+nm+'</b> · '+price+' ETH — <a href="'+link+'">VIEW ▸</a>');
+    render();
+  });
+}
+function wire(){
+  document.querySelectorAll('[data-th]').forEach(function(b){
+    b.onclick=function(){mintThrone(+b.dataset.th);};});
+  document.querySelectorAll('[data-core]').forEach(function(b){
+    b.onclick=function(){mintCore(b.dataset.core);};});
+}
+document.getElementById('connect').onclick=function(){
+  connected=!connected;
+  this.textContent=connected?'Disconnect':'Connect Wallet';
+  document.getElementById('addr').textContent=connected?'0xDRY…RUN':'';
+};
+document.getElementById('reset').onclick=function(){
+  mintedTh=[];mintedCore=[];save('kolob:mint:thrones',[]);save('kolob:mint:core',[]);
+  // clear minted-throne tiers too
+  for(var i=0;i<129;i++){try{localStorage.removeItem('kolob:'+H8+':'+i);}catch(e){}}
+  document.getElementById('log').innerHTML='';render();
+};
+render();
+</script>
 </body>
 </html>

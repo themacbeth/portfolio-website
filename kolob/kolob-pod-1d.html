@@ -17,7 +17,7 @@
   #hud .tier{font-size:14px;color:#888}
   #controls{position:fixed;left:14px;bottom:24px;z-index:100;display:flex;gap:6px;align-items:center}
   #controls label{color:#666;font:10px ui-monospace,monospace}
-  #throneNum{width:52px;background:rgba(20,20,35,0.9);border:1px solid rgba(255,255,255,0.12);
+  #throneNum{width:92px;background:rgba(20,20,35,0.9);border:1px solid rgba(255,255,255,0.12);
     color:#ddd;padding:6px 8px;border-radius:3px;font:12px ui-monospace,monospace;
     text-align:center;outline:none;-webkit-appearance:none}
   #throneNum:focus{border-color:rgba(255,255,255,0.3);background:rgba(30,30,50,0.95)}
@@ -58,7 +58,7 @@
   #ssFs.on{background:rgba(80,200,120,0.9);color:#fff;border-color:rgba(120,255,180,0.4)}
   @media(max-width:600px){#hud{font-size:9px;left:8px;top:8px}
   #hud .throne{font-size:18px}#controls{left:8px;bottom:16px}
-  #throneNum{width:44px;padding:5px 6px;font-size:11px}
+  #throneNum{width:80px;padding:5px 6px;font-size:11px}
   #back{left:8px;bottom:30px;padding:8px 10px;font-size:10px}
   #mintInfo{right:8px;top:8px;font-size:8px}
   #slideshowUI{right:8px;bottom:64px;max-width:calc(100vw - 16px)}}
@@ -91,8 +91,7 @@
   @media(max-width:600px){#menuToggle{right:8px;top:8px}#menuPanel{right:8px;top:36px}}
 </style>
 <div id="controls">
-  <label>THRONE</label>
-  <input id="throneNum" type="number" min="0" max="128" value="0" placeholder="000">
+  <input id="throneNum" type="number" min="0" max="128" placeholder="Throne #">
   <button id="throneGo">GO</button>
 </div>
 <div id="galaxyTools">
@@ -118,6 +117,11 @@
   @media(max-width:600px){#galaxyTools{right:8px;bottom:16px}}
   /* EXALT (2× particles) is desktop-only — phones can't push the count */
   @media(max-width:760px),(pointer:coarse){#gtGpu{display:none!important}}
+  #slideshowUI{display:none!important}   /* play is a single button now, no options */
+  /* hero embed (index background): galaxy loop only, zero chrome */
+  body.hero #hud,body.hero #mintInfo,body.hero #controls,body.hero #galaxyTools,
+  body.hero #menuToggle,body.hero #menuPanel,body.hero #back,body.hero #advanceBtn,
+  body.hero #reward,body.hero #slideshowUI{display:none!important}
 </style>
 <div id="back">← BACK</div>
 <button id="advanceBtn">ADVANCE ▸</button>
@@ -488,28 +492,12 @@ $ssBtnRand=document.getElementById('ssRand');
 $ssQueue=document.getElementById('slideshowQueue');
 if($ssBtnPlay) $ssBtnPlay.textContent='▶';
 
-function toggleCinematicUI(show){
-  cinematicUI=show;
-  var d=show?'':'none';
-  $controls.style.display=d;
-  $mintInfo.style.display=d;
-  $back.style.display=(mode==='system'&&show)?'block':'none';
-  // slideshow: show glyph controls always when cinematic/slideshow ready
-  if(show||cinematic||slideshowActive){ $ssUI.classList.add('visible'); }
-  else { $ssUI.classList.remove('visible'); }
-}
-function enterCinematic(){
-  cinematic=true;cinematicTime=0;hud=false;
-  csStartTime=Date.now(); tickStartTime=Date.now();
-  toggleCinematicUI(false);
-  $ssBtnPlay.textContent='▶';
-}
-function exitCinematic(){
-  cinematic=false;hud=true;
-  tickStartTime=Date.now();
-  toggleCinematicUI(true);
-  stopSlideshow();
-}
+function toggleCinematicUI(show){ cinematicUI=show; }
+// "PLAY" = a slow, mellow, within-scene camera drift (no scene changes)
+function enterCinematic(){ cinematic=true;cinematicTime=0;hud=false;
+  if($gtCinema)$gtCinema.classList.add('on'); }
+function exitCinematic(){ cinematic=false;hud=true;
+  if($gtCinema)$gtCinema.classList.remove('on'); }
 
 // SLIDESHOW FUNCTIONS
 function buildSlideshowQueue(){
@@ -609,14 +597,10 @@ function setGpu(on){
 }
 if($gtGpu) $gtGpu.addEventListener('click',function(e){e.stopPropagation();setGpu(!gpuMode);});
 if($gtBright) $gtBright.addEventListener('click',function(e){e.stopPropagation();brightBoost=!brightBoost;syncTools();});
-// CINEMA button → open / close all the slideshow options
+// PLAY button → toggle slow, mellow, within-scene camera drift (no scene changes)
 var $gtCinema=document.getElementById('gtCinema');
 if($gtCinema) $gtCinema.addEventListener('click',function(e){e.stopPropagation();
-  var open=$ssUI.classList.toggle('visible'); $gtCinema.classList.toggle('on',open);});
-document.addEventListener('click',function(e){
-  if($gtCinema && $ssUI.classList.contains('visible') && !$ssUI.contains(e.target)
-     && e.target!==$gtCinema && !$gtCinema.contains(e.target)){
-    $ssUI.classList.remove('visible'); $gtCinema.classList.remove('on');}});
+  if(cinematic) exitCinematic(); else enterCinematic();});
 syncTools();
 
 // ── IDLE AUTO-HIDE — fullscreen only: hide all chrome after inactivity ──
@@ -704,7 +688,7 @@ var veilActive=false,veilT=0,veilNode=-1,veilDidAdvance=false,veilSpin=0,veilNz=
 var veilFrom=[110,215,255],veilTo=[255,110,210],veilPts=[],warpStars=[];
 var VEIL_DUR=IS_MOBILE?150:175;                 // frames (~2.6–2.9s)
 function buildVeil(){
-  var nP=IS_MOBILE?3000:7500,nW=IS_MOBILE?900:2400,r=mk((curNode*2654435761+777)>>>0),i;
+  var nP=IS_MOBILE?5000:13000,nW=IS_MOBILE?900:2200,r=mk((curNode*2654435761+777)>>>0),i;
   veilPts=[];
   for(i=0;i<nP;i++){var u=r()*TAU,ct=2*r()-1,st=Math.sqrt(1-ct*ct);
     veilPts.push([st*Math.cos(u),ct,st*Math.sin(u)]);}        // [x, lat-y, z]
@@ -740,7 +724,7 @@ function renderVeil(){
   veilSpin+=0.006; veilNz+=0.004+vc*0.03;
   var R=Math.min(W,H)*0.185,cs=Math.cos(veilSpin),sn=Math.sin(veilSpin);
   var shift=t*t*(3-2*t),tint=mix(veilFrom,veilTo,shift);
-  var DOTp=Math.max(2,Math.round(Math.min(W,H)/165));
+  var DOTp=Math.max(1,Math.round(Math.min(W,H)/470));   // fine micro-particles, like the stars
   for(i=0;i<veilPts.length;i++){var p=veilPts[i];
     var x=p[0]*cs-p[2]*sn,z=p[0]*sn+p[2]*cs,y=p[1];
     if(z<-0.04) continue;                         // front hemisphere
@@ -1324,44 +1308,20 @@ function loop(){
     if(veilT>=1){ veilActive=false; document.body.classList.remove('veil'); }
     else { renderVeil(); requestAnimationFrame(loop); return; }
   }
-  // zoom-out dim removed
-  var now_=Date.now();
-  // Text-hidden idle → auto-start slideshow after 10s
-  if(cinematic && !slideshowActive && csStartTime>0){
-    if(now_-csStartTime > ssAutoStartT*1000) startSlideshow();
-  }
-  // ── Slideshow camera ──
-  if(slideshowActive){
-    slideshowPhaseT+=1;                       // real-frame timing
-    if(mode==="galaxy"){
-      ssTransT+=1;
-      var p=ssTransT/ssTransDur; if(p>1)p=1;
-      var e=p*p*p*(p*(p*6-15)+10);            // smootherstep — gentle ease-in-out
-      az  =ssFromAz  +(ssTargetAz  -ssFromAz)*e;
-      tilt=ssFromTilt+(ssTargetTilt-ssFromTilt)*e;
-      zoom=ssFromZoom+(ssTargetZoom-ssFromZoom)*e;
-      if(ssTargetNode>=0 && p>=0.94) goSystem(ssTargetNode);   // glide in, then enter
-    }
-    if(slideshowPhaseT >= slideshowInterval*60){
-      if(ssTargetNode>=0 && mode==="system") goGalaxy();       // leave the throne first
-      nextSlideshowTarget();
-    }
-  }
-  else if(cinematic && !slideshowActive){
-    // Organic cinematic drift (original)
-    cinematicTime+=speed;
-    az+=Math.sin(cinematicTime*0.0003)*0.00025+
-        Math.sin(cinematicTime*0.0007+1.3)*0.00015+
-        Math.sin(cinematicTime*0.00013+4.7)*0.0001;
-    tilt=0.5+0.35*Math.sin(cinematicTime*0.00004+0.8);
-    zoom=0.8+0.6*(0.5+0.5*Math.sin(cinematicTime*0.000015+2.1));
+  // ── PLAY — slow, mellow, easy-ease camera drift within the CURRENT scene ──
+  if(cinematic){
+    cinematicTime+=speed; var ct=cinematicTime;
+    az  += Math.sin(ct*0.00016)*0.00013 + Math.sin(ct*0.00037+1.3)*0.00006; // very slow pan
+    tilt = 0.46 + 0.16*Math.sin(ct*0.00006+0.8);                            // mellow tilt
+    zoom = 1   + 0.20*Math.sin(ct*0.000045+2.1);                            // slow push / pull
   }
   idleCheck();
-  if($galaxyTools) $galaxyTools.style.display=cinematic?'none':'flex';
-  // throne-jump only in the galaxy; ADVANCE only in an upgradeable throne
-  if($controls) $controls.style.display=(mode==='galaxy'&&!cinematic)?'flex':'none';
+  var heroM=document.body.classList.contains('hero');
+  if($galaxyTools) $galaxyTools.style.display=heroM?'none':'flex';   // keep ▶ usable to stop play
+  if($controls) $controls.style.display=(mode==='galaxy'&&!cinematic&&!heroM)?'flex':'none';
+  if($back) $back.style.display=(mode!=='galaxy'&&!cinematic&&!heroM)?'block':'none';
   if($advanceBtn){
-    var up=(mode==='system'&&coreView<0&&!cinematic&&tierOf(curNode)>0);
+    var up=(mode==='system'&&coreView<0&&!cinematic&&!heroM&&tierOf(curNode)>0);
     $advanceBtn.style.display=up?'block':'none';
     if(up) $advanceBtn.textContent="ADVANCE TO "+TIER_NAMES[tierOf(curNode)-1]+" ▸";
   }
@@ -1374,6 +1334,7 @@ function loop(){
 // ── deep-link router — lets the website link straight to a destination ───
 function applyHash(){
   var h=(location.hash||'').replace('#','');
+  if(h==='hero'){ document.body.classList.add('hero'); if(cinematic)exitCinematic(); goGalaxy(); return; }
   if(!h||h==='explore'){ if(cinematic)exitCinematic(); goGalaxy(); return; }
   if(h==='cinematic'){ goGalaxy(); if(!cinematic)enterCinematic(); return; }
   var m;
