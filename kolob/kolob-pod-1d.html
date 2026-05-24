@@ -1,0 +1,1286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>KOLOB</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  body{font:11px/1.55 ui-monospace,Menlo,Consolas,monospace;color:#8a8a9c}
+  #c{display:block;background:#000;cursor:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27 viewBox=%270 0 24 24%27%3E%3Cpolygon points=%2712,5 4,19 20,19%27 fill=%27white%27/%3E%3C/svg%3E") 12 12,grab;touch-action:none;image-rendering:pixelated}
+  #c:active{cursor:grabbing}
+  #hud{position:fixed;left:14px;top:12px;white-space:pre;
+       pointer-events:none;letter-spacing:.04em;text-shadow:0 0 4px #000;
+       max-width:calc(100vw - 28px);overflow:hidden;z-index:50}
+  #hud b{color:#f2f2f8}
+  #hud .throne{font-size:28px;line-height:1.2;color:#fff}
+  #hud .tier{font-size:14px;color:#888}
+  #controls{position:fixed;left:14px;bottom:24px;z-index:100;display:flex;gap:6px;align-items:center}
+  #controls label{color:#666;font:10px ui-monospace,monospace}
+  #throneNum{width:52px;background:rgba(20,20,35,0.9);border:1px solid rgba(255,255,255,0.12);
+    color:#ddd;padding:6px 8px;border-radius:3px;font:12px ui-monospace,monospace;
+    text-align:center;outline:none;-webkit-appearance:none}
+  #throneNum:focus{border-color:rgba(255,255,255,0.3);background:rgba(30,30,50,0.95)}
+  #throneGo{background:rgba(30,30,50,0.85);border:1px solid rgba(255,255,255,0.12);
+    color:#ccc;padding:6px 10px;border-radius:3px;font:11px ui-monospace,monospace;
+    cursor:pointer;-webkit-tap-highlight-color:transparent}
+  #throneGo:active{background:rgba(50,50,80,0.9)}
+  #back{position:fixed;left:14px;bottom:60px;z-index:100;
+    background:rgba(30,30,50,0.85);border:1px solid rgba(255,255,255,0.15);
+    color:#ddd;padding:8px 14px;border-radius:4px;
+    font:12px ui-monospace,monospace;cursor:pointer;display:none;
+    -webkit-tap-highlight-color:transparent;user-select:none}
+  #back:active{background:rgba(60,60,90,0.9)}
+  #mintInfo{position:fixed;right:14px;top:12px;z-index:100;text-align:right;
+    pointer-events:none;white-space:pre;font:10px ui-monospace,monospace;color:#555}
+  /* SLIDESHOW CONTROLS OVERLAY */
+  #slideshowUI{
+    position:fixed;right:14px;bottom:72px;z-index:205;
+    display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;max-width:252px;
+    background:rgba(8,8,14,0.82);border:1px solid rgba(255,255,255,0.1);
+    border-radius:9px;padding:8px;backdrop-filter:blur(3px);
+    opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s;pointer-events:none}
+  #slideshowUI.visible{opacity:1;transform:none;pointer-events:all}
+  .ssBtn{
+    min-width:36px;height:34px;background:rgba(24,24,40,0.92);
+    border:1px solid rgba(255,255,255,0.18);border-radius:5px;
+    color:#aab;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    font-size:13px;user-select:none;-webkit-tap-highlight-color:transparent;
+    transition:background 0.15s,color 0.15s}
+  .ssBtn:hover{background:rgba(50,50,100,0.95);color:#fff}
+  .ssBtn:active{background:rgba(70,70,130,0.95)}
+  #slideshowQueue{
+    font:10px ui-monospace,monospace;color:#667;background:rgba(10,10,20,0.85);
+    border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:4px 8px;
+    white-space:nowrap;overflow:hidden;max-width:160px;text-overflow:ellipsis}
+  #ssHold.on{background:rgba(80,200,120,0.9);color:#fff;border-color:rgba(120,255,180,0.4)}
+  .ssSpd.on{background:rgba(80,120,200,0.9);color:#fff;border-color:rgba(160,200,255,0.4)}
+  #ssGpu.on{background:rgba(150,120,255,0.9);color:#fff;border-color:rgba(180,160,255,0.5)}
+  #ssFs.on{background:rgba(80,200,120,0.9);color:#fff;border-color:rgba(120,255,180,0.4)}
+  @media(max-width:600px){#hud{font-size:9px;left:8px;top:8px}
+  #hud .throne{font-size:18px}#controls{left:8px;bottom:16px}
+  #throneNum{width:44px;padding:5px 6px;font-size:11px}
+  #back{left:8px;bottom:30px;padding:8px 10px;font-size:10px}
+  #mintInfo{right:8px;top:8px;font-size:8px}
+  #slideshowUI{right:8px;bottom:64px;max-width:calc(100vw - 16px)}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud"></div>
+<div id="mintInfo"></div>
+<!-- SLIDESHOW POPOVER (opened by the CINEMA button) -->
+<div id="slideshowUI">
+  <button class="ssBtn" id="ssPlay" title="Play / pause slideshow">▶</button>
+  <button class="ssBtn" id="ssRand" title="Shuffle the queue">⊕</button>
+  <button class="ssBtn ssSpd on" data-s="5">5s</button>
+  <button class="ssBtn ssSpd" data-s="10">10s</button>
+  <button class="ssBtn ssSpd" data-s="15">15s</button>
+  <button class="ssBtn" id="ssHold" title="Hold on each scene">⊙</button>
+  <button class="ssBtn" id="ssFs"   title="Fullscreen [f]">⛶</button>
+  <div id="slideshowQueue"></div>
+</div>
+<!-- EDITOR / MINT MENU -->
+<button id="menuToggle" style="position:fixed;right:14px;top:14px;z-index:210;width:28px;height:26px;background:rgba(20,20,35,0.92);border:1px solid rgba(255,255,255,0.15);border-radius:4px;color:#999;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;user-select:none" title="Editor / Mint">☰</button>
+<div id="menuPanel" style="position:fixed;right:14px;top:44px;z-index:210;background:rgba(12,12,22,0.95);border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:6px 0;min-width:140px;display:none;flex-direction:column;gap:1px">
+  <button class="menuItem" data-goto="editor" style="background:none;border:none;color:#ccf;padding:6px 14px;text-align:left;cursor:pointer;font:11px monospace;display:flex;align-items:center;gap:6px"><span style="opacity:.6">◈</span> EDITOR</button>
+  <button class="menuItem" data-goto="mint" style="background:none;border:none;color:#ccf;padding:6px 14px;text-align:left;cursor:pointer;font:11px monospace;display:flex;align-items:center;gap:6px"><span style="opacity:.6">◆</span> MINT</button>
+  <button id="menuDl" class="menuItem" style="background:none;border:none;color:#998;padding:6px 14px;text-align:left;cursor:pointer;font:11px monospace;display:flex;align-items:center;gap:6px"><span style="opacity:.5">↧</span> DOWNLOAD EDITOR</button>
+</div>
+<style>
+  .menuItem:hover{background:rgba(60,60,110,.7);color:#fff}
+  .menuItem:active{background:rgba(80,80,130,.8)}
+  @media(max-width:600px){#menuToggle{right:8px;top:8px}#menuPanel{right:8px;top:36px}}
+</style>
+<div id="controls">
+  <label>THRONE</label>
+  <input id="throneNum" type="number" min="0" max="143" value="0" placeholder="000">
+  <button id="throneGo">GO</button>
+</div>
+<div id="galaxyTools">
+  <button class="gtBtn" id="gtGpu" title="Enhance — 2× particle density">ENHANCE</button>
+  <button class="gtBtn" id="gtBright" title="Lumen — brightness boost [b]">LUMEN</button>
+  <button class="gtBtn" id="gtCinema" title="Cinema — slideshow options [c]">◐ CINEMA</button>
+</div>
+<style>
+  #galaxyTools{position:fixed;right:14px;bottom:22px;z-index:120;display:flex;
+    flex-wrap:wrap;justify-content:flex-end;gap:6px;max-width:calc(100vw - 28px);
+    transition:opacity .4s}
+  .gtBtn{background:rgba(20,20,35,0.9);border:1px solid rgba(255,255,255,0.15);
+    color:#9a9aae;padding:9px 14px;min-height:34px;border-radius:5px;
+    font:11px/1 ui-monospace,monospace;letter-spacing:.08em;
+    cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;
+    transition:background .15s,color .15s,border-color .15s}
+  .gtBtn:hover{background:rgba(50,50,90,0.95);color:#ddd}
+  .gtBtn.on{background:rgba(150,120,255,0.92);color:#fff;border-color:rgba(190,170,255,0.6)}
+  #gtBright.on{background:rgba(255,210,90,0.92);color:#1a1400;border-color:rgba(255,235,160,0.7)}
+  #gtCinema.on{background:rgba(110,180,255,0.92);color:#06121f;border-color:rgba(170,210,255,0.75)}
+  body.idle #hud,body.idle #controls,body.idle #mintInfo,body.idle #slideshowUI,
+  body.idle #menuToggle,body.idle #menuPanel,body.idle #galaxyTools,body.idle #back{
+    opacity:0 !important;pointer-events:none !important;transition:opacity .5s}
+  body.idle #c{cursor:none}
+  @media(max-width:600px){#galaxyTools{right:8px;bottom:16px}}
+</style>
+<div id="back">← BACK</div>
+<script>
+"use strict";
+// On ArtBlocks, tokenData is injected per token. Off-platform we default to a
+// fixed canonical hash so the galaxy is stable and matches the website index.
+var tokenData=(typeof tokenData!=="undefined")?tokenData:
+  {hash:"0x4b4f4c42a17f0c3e9d5b8e2160f47a93c8d1e0b6452f9a3c7e1d80b54f2a69c3"};
+function hashSeed(h){var s=0;
+  for(var i=2;i<h.length;i++) s=(Math.imul(s,16)+parseInt(h[i],16)+1)|0;
+  return s>>>0;}
+function PRNG(seed){
+  var a=seed^0x9e3779b9,b=seed^0x243f6a88,c=seed^0xb7e15162,d=1;
+  return function(){a|=0;b|=0;c|=0;d|=0;
+    var t=(a+b|0)+d|0;d=d+1|0;
+    a=b^b>>>9;b=c+(c<<3)|0;c=(c<<21|c>>>11);c=c+t|0;
+    return (t>>>0)/4294967296;};}
+var TAU=6.28318530718;
+function mk(seed){var r=PRNG(seed>>>0);
+  r.rng=function(a,b){return a+(b-a)*r();};
+  r.int=function(a,b){return a+((r()*(b-a+1))|0);};
+  r.pick=function(x){return x[(r()*x.length)|0];};
+  r.g=function(){var u=0,v=0;while(!u)u=r();while(!v)v=r();
+    return Math.sqrt(-2*Math.log(u))*Math.cos(TAU*v);};
+  return r;}
+var GRND=mk(hashSeed(tokenData.hash));
+
+// PALETTES
+var PALETTES=[
+ {name:"CMYK",c0:[0,176,240],c1:[236,0,140],c2:[255,222,0],c3:[255,255,255],
+  c4:[156,132,70],bg:[6,5,10],accent:[255,244,180],star_shift:0},
+ {name:"NEBULA",c0:[80,180,255],c1:[255,80,200],c2:[255,200,80],c3:[230,240,255],
+  c4:[200,160,100],bg:[8,6,20],accent:[255,220,200],star_shift:0.1},
+ {name:"BLOOD",c0:[180,0,30],c1:[255,0,60],c2:[255,100,0],c3:[255,200,180],
+  c4:[200,80,40],bg:[10,2,4],accent:[255,150,120],star_shift:0.3},
+ {name:"EMERALD",c0:[0,200,180],c1:[80,255,100],c2:[180,255,0],c3:[200,255,200],
+  c4:[160,200,60],bg:[2,10,6],accent:[180,255,180],star_shift:0.15},
+ {name:"VOID",c0:[100,80,200],c1:[180,60,200],c2:[200,180,100],c3:[220,210,255],
+  c4:[150,130,180],bg:[4,3,12],accent:[200,180,240],star_shift:0.2},
+ {name:"SUN",c0:[255,180,0],c1:[255,100,0],c2:[255,220,50],c3:[255,240,200],
+  c4:[255,200,50],bg:[8,4,0],accent:[255,230,180],star_shift:0.05},
+ {name:"ICE",c0:[150,220,255],c1:[200,180,255],c2:[220,240,255],c3:[240,245,255],
+  c4:[180,200,230],bg:[4,6,14],accent:[220,230,255],star_shift:-0.05},
+ {name:"FIRE",c0:[255,60,0],c1:[255,0,0],c2:[255,200,0],c3:[255,200,100],
+  c4:[255,150,0],bg:[10,2,0],accent:[255,180,80],star_shift:0.25},
+ {name:"ALIEN",c0:[0,255,100],c1:[255,0,200],c2:[200,255,0],c3:[180,255,180],
+  c4:[100,255,100],bg:[2,8,4],accent:[150,255,150],star_shift:0.35},
+ {name:"PURE_ICE",c0:[200,235,255],c1:[220,230,255],c2:[235,242,255],c3:[250,252,255],
+  c4:[200,215,240],bg:[5,7,14],accent:[255,255,255],star_shift:-0.3}
+];
+var palIdx=9; // PURE_ICE palette locked
+var P=PALETTES[palIdx];
+function sh(c,f){if(brightBoost) f=Math.min(1.5,f*2);
+  return[Math.min(255,c[0]*f),Math.min(255,c[1]*f),Math.min(255,c[2]*f)];}
+function lt(c,f){if(brightBoost) f=Math.min(1,f*2);
+  return[c[0]+(255-c[0])*f,c[1]+(255-c[1])*f,c[2]+(255-c[2])*f];}
+function mix(a,b,f){return[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f];}
+function sat(c,k){var m=(c[0]+c[1]+c[2])/3,cl=function(x){return x<0?0:x>255?255:x;};
+  return[cl(m+(c[0]-m)*k),cl(m+(c[1]-m)*k),cl(m+(c[2]-m)*k)];}
+function rs(c){return"rgb("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+")";}
+
+// Star names
+var JOSEPH_15=["Kolob","Oleblish","Enish-go-on-dosh","Kai-e-vanrash",
+ "Lindi","Zip","Vusel","Vauiste","Waine","Way-ho-ox-oan",
+ "Oansli","Kible","Shineflis","Flis","Os"];
+var SYL=["ko","lob","ol","ib","lish","en","ish","go","dosh","kae","van",
+ "rash","kli","flos","is","es","hah","beam","rauk","yang","shin","ehah",
+ "jah","oh","eh","gno","laum","kok","ob","ole","a","flo","eese","seth"];
+function aname(r){var n=r.int(2,3),s="";
+  for(var i=0;i<n;i++)s+=r.pick(SYL);
+  return s.charAt(0).toUpperCase()+s.slice(1);}
+
+// Stellar classification
+var S0=0.05*P.star_shift;
+var STAR=[
+ {c:"O",col:[120+S0*200,225,255],t:"blue",        w:0.003,rad:5.2},
+ {c:"B",col:[70+S0*200,205,255], t:"blue-white",  w:0.13, rad:3.1},
+ {c:"A",col:[235,245,255],t:"white",      w:0.61, rad:1.7},
+ {c:"F",col:[255,250,225],t:"yellow-white",w:3.0,  rad:1.3},
+ {c:"G",col:[255,221,55], t:"yellow",w:7.6,  rad:1.05},
+ {c:"K",col:[255,142+S0*100,40], t:"orange",    w:12,   rad:0.82},
+ {c:"M",col:[248,46+S0*200,118], t:"red", w:76,   rad:0.5}];
+var STARW=(function(){var s=0,a=[];for(var i=0;i<STAR.length;i++){s+=STAR[i].w;a.push(s);}return{a:a,t:s};})();
+function pickStar(r){var x=r()*STARW.t;
+  for(var i=0;i<STARW.a.length;i++) if(x<STARW.a[i]) return i;
+  return 6;}
+var CHAINS=[
+ [16,8,4,2,1],[18,12,8,6,4,3,2],[24,12,6,3,2,1],[12,8,6,4,3,2],
+ [24,16,12,9,6,4,3],[30,20,12,8,6,4,2],[16,12,8,6,4,3,2],[20,10,5,3,2,1],
+ [27,18,12,8,6,4],[32,16,8,6,4,3,2]];
+
+// Particle-cluster template
+var CTPL=(function(){var r=mk(20260516),a=[];
+  for(var i=0;i<220;i++){
+    var ang=r()*TAU,rad=Math.sqrt(r());
+    a.push([Math.cos(ang)*rad,Math.sin(ang)*rad,Math.sqrt(Math.max(0,1-rad*rad))]);
+  }
+  return a;})();
+function ccount(r,PX){var n=(r/PX)*(r/PX)*3.4|0;return n<10?10:n>220?220:n;}
+function cluster(sx,sy,r,base,count,rot,PX,plot){
+  var c=Math.cos(rot),s=Math.sin(rot);
+  for(var i=0;i<count;i++){var p=CTPL[i];
+    var dx=p[0]*c-p[1]*s,dy=p[0]*s+p[1]*c;
+    var b=dx*-0.45+dy*-0.5+p[2]*0.74;
+    var col= b>0.86?lt(base,0.42):b>0.64?lt(base,0.12):
+             b>0.42?sh(base,0.66):sh(base,0.4);
+    plot(sx+dx*r,sy+dy*r,rs(col));
+  }
+}
+
+// THE GALAXY
+var ARMS=GRND.pick([2,2,3,4]), WIND=GRND.rng(1.9,3.0), BARANG=GRND()*TAU;
+var N=48000, gpuN=24000, gN=gpuN; // default 24 K, GPU mode 48 K
+var gR=new Float32Array(N),gA=new Float32Array(N),gZ=new Float32Array(N),
+    gRev=new Int16Array(N),gK=new Uint8Array(N),gLv=new Uint8Array(N);
+for(var i=0;i<gpuN;i++){
+  var r,th;
+  if(i<2200){
+    r=Math.abs(GRND.g())*0.13; th=GRND()*TAU;
+    var bx=r*Math.cos(th)*1.8,by=r*Math.sin(th)*0.7,
+        ca=Math.cos(BARANG),sa=Math.sin(BARANG);
+    r=Math.hypot(bx*ca-by*sa,bx*sa+by*ca); th=Math.atan2(bx*sa+by*ca,bx*ca-by*sa);
+  }else if(i<N*0.90){
+    var arm=GRND.int(0,ARMS-1);
+    r=Math.pow(GRND(),0.70)*1.05;
+    th=arm*TAU/ARMS + WIND*TAU*r + GRND.g()*(0.035+0.035*r);
+  }else{ r=Math.pow(GRND(),0.4)*1.12; th=GRND()*TAU; }
+  if(r<0.004)r=0.004;
+  gR[i]=r; gA[i]=th; gZ[i]=GRND.g()*0.05*(0.4+r);
+  gRev[i]=Math.max(1,Math.min(14,Math.round(0.42*Math.pow(r,-1.5))));
+}
+
+// ── GPU RESEED — populate second half of particle arrays ──────────────────
+function gpuReseed(){
+  var orig_GRND=GRND; // keep existing state
+  GRND=mk(hashSeed(tokenData.hash)+0xDEAD);
+  for(var i=gpuN;i<N;i++){
+    // Second half: soft outer halo particles (not the tight spiral arms)
+    var r=Math.pow(GRND(),0.40)*1.10+0.08,th=GRND()*TAU;
+    gR[i]=r;gA[i]=th;
+    gZ[i]=GRND.g()*0.03*(0.4+r);
+    gRev[i]=Math.max(1,Math.min(14,Math.round(0.42*Math.pow(r,-1.5))));
+  }
+  GRND=orig_GRND;
+  gN=N;
+ }
+var GAL_COLS=[];var GAL_BASES=[P.accent,P.c3,P.c4,P.c1,P.c0,P.bg,P.c2].map(function(c){return sat(c,2.0);});
+for(var k=0;k<GAL_BASES.length;k++){var base=GAL_BASES[k],lvA=[];
+  for(var L=0;L<5;L++){var f=(L+1)/5,dA=[];
+    for(var D=0;D<4;D++) dA.push(rs(lt(sh(base,f),D*0.16)));
+    lvA.push(dA);}
+  GAL_COLS.push(lvA);}
+
+// 15 FIXED STARS — great 3 = equilateral triangle · core 12 = icosahedron
+var ICO12=(function(){var g=1.61803398875,
+  v=[[0,1,g],[0,1,-g],[0,-1,g],[0,-1,-g],
+     [1,g,0],[1,-g,0],[-1,g,0],[-1,-g,0],
+     [g,0,1],[g,0,-1],[-g,0,1],[-g,0,-1]],
+  L=Math.sqrt(1+g*g),o=[];
+  for(var k2=0;k2<12;k2++) o.push([v[k2][0]/L,v[k2][1]/L,v[k2][2]/L]);
+  return o;})();
+
+// ═══ CORE-15 — LOCKED, the most powerful & expensive pieces ═══════════════
+// Hand-picked constant seeds. These do NOT vary with the token hash: the 15
+// core pieces are curated and identical across the collection. Nothing a
+// throne can be upgraded to will ever match them.
+var CORE_SEEDS=[
+  0x4B4F4C00,0x4B414505,0x4B4C4909,            // great 3 — particle suns
+  0x0C0DE101,0x0C0DE202,0x0C0DE303,0x0C0DE404, // core 12 — extreme systems
+  0x0C0DE505,0x0C0DE606,0x0C0DE707,0x0C0DE808,
+  0x0C0DE909,0x0C0DEA0A,0x0C0DEB0B,0x0C0DEC0C];
+// Each great sun has a baked, visibly DIFFERENT identity.
+var SUN_PARAMS=[
+ {col:[255,234,168],size:1.30,density:0.92,noise:1.0,speed:0.65,length:1.30,
+  curl:2.2,rot:0.45,orbit:0.55,big:0.16},   // KOLOB — vast gold throne, long flares
+ {col:[150,212,255],size:0.95,density:0.74,noise:1.4,speed:1.70,length:0.65,
+  curl:4.6,rot:1.50,orbit:0.95,big:0.07},   // KAE-E-VANRASH — blue, restless, many orbiters
+ {col:[255,116,64], size:1.18,density:0.55,noise:1.1,speed:0.50,length:1.45,
+  curl:6.8,rot:0.30,orbit:0.22,big:0.22}];  // KLI-FLOS-IS-ES — red, lazy curling giant
+// Each core-12 system is a distinct, never-alike character.
+var CORE_PROFILES=["RINGED DYNASTY","MOON SWARM","ASTEROID EMPIRE",
+ "COMET STORM","EMBRYO NURSERY","ECCENTRIC CHAOS","BINARY HEART",
+ "RESONANCE CATHEDRAL","FROZEN KUIPER","HOT-JUPITER FORGE",
+ "MEGA-RING WORLD","TROJAN SWARMS"];
+
+var FIXED=[];
+for(i=0;i<15;i++){
+  var fr=mk(CORE_SEEDS[i]);             // LOCKED seed → fixed identity
+  var great=i<3;
+  FIXED.push({great:great,
+    r: great?0.22:0,                   // great 3: equal radius
+    a: great?i*TAU/3+0.4:0,            // great 3: 120° apart → equilateral
+    rev: great?0.00065:0,              // equal rev → triangle stays rigid
+    ico: great?null:ICO12[i-3],        // core 12: fixed icosahedron vertex
+    icoR: 0.32,
+    col: great?SUN_PARAMS[i].col:STAR[2+((fr()*5)|0)].col,  // suns show true colour
+    ph:fr()*TAU, sx:0, sy:0});
+}
+// OUTER DARKNESS
+var WORMS=[];
+for(i=0;i<260;i++){var wr=mk(8000+i*31);
+  WORMS.push({r:1.04+wr()*0.4,a:wr()*TAU,ph:wr()*TAU});}
+
+// 100 thrones with tier info
+var NODES=[];
+var TIER_NAMES=["CELESTIAL","TERRESTRIAL","TELESTIAL"];
+var TIER_COL=[[255,225,110],[255,110,210],[110,215,255]];
+for(i=0;i<144;i++){
+  var nr=mk(hashSeed(tokenData.hash)+(i+1)*8675309);
+  var arm=nr.int(0,ARMS-1),rad=0.15+Math.pow(nr(),0.7)*0.76;
+  // 144 thrones — 0-44 TELESTIAL · 45-100 TERRESTRIAL · 101-143 CELESTIAL
+  var tier=i<45?2:i<101?1:0;
+  NODES.push({r:rad,a:arm*TAU/ARMS+WIND*TAU*rad+nr.g()*0.06,
+    z:nr.g()*0.05,rev:Math.max(1,Math.min(14,Math.round(0.42*Math.pow(rad,-1.5)))),star:pickStar(nr),tier:tier,
+    seed:(hashSeed(tokenData.hash)^Math.imul(i+1,2654435761))>>>0,
+    spin:nr()*TAU,sx:0,sy:0});
+}
+
+// TIERED SYSTEM GENERATOR
+// wealth: 0=Kolob's Court (richest), 1=Celestial Ring, 2=Outer Verge (simplest)
+var ACC=[P.c0,P.c1,P.c2];
+function buildSystem(seed,wealth){
+  var R=mk(seed),sys={};
+  sys.deity=aname(R);
+  sys.scheme=[R.pick(ACC),R.pick(ACC)];
+  var s1=pickStar(R);
+  sys.stars=[{cls:s1}];
+  // Inner systems: more binary stars, hotter spectral types
+  sys.binary=wealth===0?R()<0.55:wealth===1?R()<0.36:R()<0.20;
+  if(sys.binary){
+    var s2=Math.min(6,s1+1+R.int(0,wealth===0?3:2));
+    sys.stars.push({cls:s2});
+    sys.sep=R.rng(0.07,0.13); sys.binRev=R.pick([6,8,10,wealth===0?12:10]);
+    var m1=STAR[s1].rad,m2=STAR[s2].rad,mt=m1+m2;
+    sys.stars[0].off=sys.sep*(m2/mt); sys.stars[1].off=-sys.sep*(m1/mt);
+  }
+  // Planet count scales with wealth (boosted)
+  var chain=R.pick(CHAINS);
+  var minP=wealth===0?4:wealth===1?3:2;
+  var maxP=wealth===0?8:wealth===1?6:4;
+  var nP=Math.min(chain.length,minP+R.int(0,maxP-minP));
+  var revs=chain.slice(0,nP);
+  var araw=revs.map(function(v){return Math.pow(v,-2/3);});
+  var aMax=araw[araw.length-1],hot=s1<=3;
+  sys.planets=[];
+  for(i=0;i<nP;i++){
+    var a=araw[i]/aMax;
+    var e=R()*R()*(wealth===0?0.2:0.16)+(R()<0.12?R()*0.3:0);
+    var type;
+    if(a<0.30) type=(hot&&a<0.20&&R()<0.6)?3:0;
+    else if(a<0.62) type=R()<0.55?1:0;
+    else type=R()<0.6?2:1;
+    // Richer systems: bigger planets, more rings
+    var szMul=wealth===0?1.3:wealth===1?1.0:0.7;
+    var pl={a:a,e:e,peri:R()*TAU,inc:R()*0.22,rev:revs[i],M0:R()*TAU,
+            type:type,spin:R()*TAU,ring:(type==1&&(wealth===0?R()<0.6:R()<0.4)),
+            szMul:szMul,moons:[]};
+    // Moons scale with wealth
+    var nm=type==1?(wealth===0?R.int(2,5):R.int(1,3)):type==2?R.int(0,wealth===0?2:1):R.int(0,1);
+    var mrevs=[12,6,3,2].slice(0,nm);
+    for(var mi=0;mi<nm;mi++)
+      pl.moons.push({a:0.045+mi*0.032+R()*0.012,rev:mrevs[mi],M0:R()*TAU,peri:R()*TAU});
+    sys.planets.push(pl);
+  }
+  // Embryos: all tiers boosted
+  sys.embryos=[];var ne=wealth===0?R.int(3,6):wealth===1?R.int(2,5):R.int(1,4);
+  for(i=0;i<ne;i++) sys.embryos.push({a:0.16+R()*0.4,rev:R.int(5,11),M0:R()*TAU,ph:R()*TAU});
+  // Asteroids: only in richer systems
+  var gi=0,gw=0;
+  for(i=0;i<nP-1;i++){var w=sys.planets[i+1].a/sys.planets[i].a;if(w>gw){gw=w;gi=i;}}
+  sys.asteroids=[];
+  if(nP>=2&&gw>1.45){
+    var aLo=sys.planets[gi].a*1.16,aHi=sys.planets[gi+1].a*0.85;
+    var gRevs=sys.planets[gi+1].rev;
+    var nAst=wealth===0?700:wealth===1?450:200;
+    for(i=0;i<nAst;i++){
+      var aa=R.rng(aLo,aHi);
+      var ar=Math.max(1,Math.round(gRevs*Math.pow(sys.planets[gi+1].a/aa,1.5)));
+      if(ar===2*gRevs||ar===3*gRevs) continue;
+      sys.asteroids.push({a:aa,e:R()*0.14,peri:R()*TAU,inc:R.g()*0.05,rev:ar,M0:R()*TAU});}
+  }
+  // Kuiper belt: all systems
+  sys.kuiper=[];
+  var nKui=wealth===0?400:wealth===1?250:120;
+  for(i=0;i<nKui;i++){var ka=R.rng(1.14,1.62);
+    sys.kuiper.push({a:ka,e:R()*0.2,peri:R()*TAU,inc:R.g()*0.12,rev:Math.max(1,Math.round(Math.pow(ka,-1.5))),M0:R()*TAU});}
+  // Comets: all systems
+  sys.comets=[];var nc=wealth===0?R.int(5,8):wealth===1?R.int(4,6):R.int(2,4);
+  for(i=0;i<nc;i++) sys.comets.push({a:R.rng(1.1,2.0),e:R.rng(0.55,0.9),peri:R()*TAU,inc:R.g()*0.4,rev:R.pick([3,4,5]),M0:R()*TAU});
+  sys.wealth=wealth;
+  return sys;
+}
+
+// Orbit
+function kepler(M,e){M=M%TAU;var E=M;
+  for(var i=0;i<5;i++) E=E-(E-e*Math.sin(E)-M)/(1-e*Math.cos(E));
+  return E;}
+function orbit(a,e,peri,inc,M){
+  var E=kepler(M,e);
+  var ox=a*(Math.cos(E)-e),oy=a*Math.sqrt(1-e*e)*Math.sin(E);
+  var px=ox*Math.cos(peri)-oy*Math.sin(peri);
+  var py=ox*Math.sin(peri)+oy*Math.cos(peri);
+  return [px,py*Math.cos(inc),py*Math.sin(inc)];}
+
+// Canvas / viewport
+var cv=document.getElementById('c'),ctx=cv.getContext('2d');
+var W,H,CX,CY,PX,GW,GH,scaleRef,dens,dpr;
+function resize(){
+  dpr=window.devicePixelRatio||1;
+  W=cv.width=innerWidth*dpr;H=cv.height=innerHeight*dpr;
+  cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';
+  CX=W/2;CY=H/2;
+  PX=Math.max(1,Math.round(Math.min(W,H)/720));
+  scaleRef=Math.min(W,H)*0.40;
+  GW=Math.ceil(W/PX)+1;GH=Math.ceil(H/PX)+1;
+  dens=new Int16Array(GW*GH);
+}
+addEventListener('resize',resize);resize();
+
+// View state
+var mode="galaxy",system=null,curNode=-1,hoverStar=-1;
+var zoom=1,az=0,tilt=0.52,clock=0,speed=0.3,paused=false,hud=true,hover=-1,keySel=-1,keyHeld=false;
+var cinematic=false,cinematicTime=0,cinematicUI=true;
+// SLIDESHOW
+var slideshowActive=false,slideshowPhase=0,slideshowPhaseT=0,slideshowInterval=10;
+var gpuMode=false,gpuN=24000; // GPU: 2× particles
+var ssTextHiddenT=0,ssAutoStartT=10; // seconds until auto-start
+var csStartTime=0,tickStartTime=Date.now(); // for idle text-hidden timer
+var slideshowQueue=[];
+var ssTargetAz=0,ssTargetTilt=0.52,ssTargetZoom=1;
+var ssFromAz=0,ssFromTilt=0.52,ssFromZoom=1,ssTransT=0,ssTransDur=170;
+var ssTargetNode=-1; // -1 = galaxy view, 0-99 = throne
+var $ssUI,$ssBtnPlay,$ssBtnRand,$ssQueue;
+var brightBoost=false; // B key: 2× brightness
+var $back=document.getElementById('back');
+var $throneNum=document.getElementById('throneNum');
+var $throneGo=document.getElementById('throneGo');
+var $mintInfo=document.getElementById('mintInfo');
+var $controls=document.getElementById('controls');
+$ssUI=document.getElementById('slideshowUI');
+$ssBtnPlay=document.getElementById('ssPlay');
+$ssBtnRand=document.getElementById('ssRand');
+$ssQueue=document.getElementById('slideshowQueue');
+if($ssBtnPlay) $ssBtnPlay.textContent='▶';
+
+function toggleCinematicUI(show){
+  cinematicUI=show;
+  var d=show?'':'none';
+  $controls.style.display=d;
+  $mintInfo.style.display=d;
+  $back.style.display=(mode==='system'&&show)?'block':'none';
+  // slideshow: show glyph controls always when cinematic/slideshow ready
+  if(show||cinematic||slideshowActive){ $ssUI.classList.add('visible'); }
+  else { $ssUI.classList.remove('visible'); }
+}
+function enterCinematic(){
+  cinematic=true;cinematicTime=0;hud=false;
+  csStartTime=Date.now(); tickStartTime=Date.now();
+  toggleCinematicUI(false);
+  $ssBtnPlay.textContent='▶';
+}
+function exitCinematic(){
+  cinematic=false;hud=true;
+  tickStartTime=Date.now();
+  toggleCinematicUI(true);
+  stopSlideshow();
+}
+
+// SLIDESHOW FUNCTIONS
+function buildSlideshowQueue(){
+  slideshowQueue=[];
+  var r2=mk(hashSeed(tokenData.hash)*7+131),visited={};
+  for(var si=0;si<12;si++){var ti;do{ti=r2.int(0,143);}while(visited[ti]);visited[ti]=true;
+    slideshowQueue.push({node:ti,type:'throne'});}
+  var widths=[0.4,0.65,0.85,1.1,0.55];
+  for(si=0;si<5;si++) slideshowQueue.push({node:-1,type:'galaxy',w:widths[si]});
+  if($ssQueue) $ssQueue.textContent=slideshowQueue.length+' targets loaded';
+}
+function nextSlideshowTarget(){
+  if(!slideshowQueue.length) buildSlideshowQueue();
+  var tgt=slideshowQueue[slideshowPhase%slideshowQueue.length];
+  slideshowPhase=(slideshowPhase+1)%slideshowQueue.length;
+  // set target camera
+  if(tgt.type==='galaxy'){
+    ssTargetNode=-1;
+    ssTargetZoom=tgt.w||1;
+    ssTargetAz=PRNG(hashSeed(tokenData.hash)+slideshowPhase*997)()*TAU;
+    ssTargetTilt=0.3+0.4*Math.random();
+  } else {
+    ssTargetNode=tgt.node;
+    ssTargetZoom=2.5+Math.random()*2.5;
+    ssTargetAz=tgt.a!==undefined?tgt.a:0;
+    ssTargetTilt=0.35+0.3*Math.random();
+  }
+  // capture the easing start pose + take the shortest rotation to the target
+  ssFromAz=az; ssFromTilt=tilt; ssFromZoom=zoom; ssTransT=0;
+  var daz=ssTargetAz-ssFromAz; ssTargetAz=ssFromAz+Math.atan2(Math.sin(daz),Math.cos(daz));
+  slideshowPhaseT=0;
+  if($ssQueue) $ssQueue.textContent=slideshowQueue.length>0
+    ? 'q: '+slideshowPhase+'/'+slideshowQueue.length
+    : 'queue empty';
+}
+
+function startSlideshow(){
+  slideshowActive=true;
+  buildSlideshowQueue();
+  slideshowPhase=0;slideshowPhaseT=0;
+  nextSlideshowTarget();
+  $ssBtnPlay.textContent='⏸';
+  $ssUI.classList.add('visible');
+  $ssQueue.textContent='q: 1/'+slideshowQueue.length;
+}
+function stopSlideshow(){
+  slideshowActive=false;
+  $ssBtnPlay.textContent='▶';
+}
+function toggleSlideshow(){
+  if(slideshowActive) stopSlideshow(); else startSlideshow();
+}
+
+if($ssBtnPlay) $ssBtnPlay.addEventListener('click',function(e){
+  e.stopPropagation();toggleSlideshow();
+});
+if($ssBtnRand) $ssBtnRand.addEventListener('click',function(e){
+  e.stopPropagation();buildSlideshowQueue();
+  $ssQueue.textContent='shuffled: '+slideshowQueue.length+' targets';
+  setTimeout(function(){ $ssQueue.textContent=''; },1800);
+});
+
+// ── SLIDESHOW DURATION + GPU MODE BUTTONS ──────────────────────────────
+document.querySelectorAll('.ssSpd').forEach(function(b){
+  b.addEventListener('click',function(){ slideshowInterval=parseInt(b.dataset.s);
+    document.querySelectorAll('.ssSpd').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); });});
+var gpuMode=false; // G key / button: 2× particles
+var $ssGpu=document.getElementById('ssGpu');
+if($ssGpu){ $ssGpu.addEventListener('click',function(){ setGpu(!gpuMode); });}
+
+// ── FULLSCREEN ──────────────────────────────────────────────────────────
+var $ssFs=document.getElementById('ssFs');
+function toggleFs(){
+  if(!document.fullscreenElement){ document.documentElement.requestFullscreen().catch(function(){}); }
+  else { document.exitFullscreen().catch(function(){}); }
+}
+if($ssFs){ $ssFs.addEventListener('click',function(e){ e.stopPropagation(); toggleFs(); }); }
+document.addEventListener('fullscreenchange',function(){$ssFs?$ssFs.classList.toggle('on',!!document.fullscreenElement):null;});
+
+// ── GALAXY TOOLBAR: GPU + BRIGHTNESS (always available at galaxy level) ──
+var $galaxyTools=document.getElementById('galaxyTools');
+var $gtGpu=document.getElementById('gtGpu');
+var $gtBright=document.getElementById('gtBright');
+function syncTools(){
+  if($gtGpu) $gtGpu.classList.toggle('on',gpuMode);
+  if($gtBright) $gtBright.classList.toggle('on',brightBoost);
+  if($ssGpu) $ssGpu.classList.toggle('on',gpuMode);
+}
+function setGpu(on){
+  gpuMode=on;
+  if(gpuMode){ gpuReseed(); gN=N; } else { gN=gpuN; }
+  if(mode==="galaxy") clock=0;
+  else if(mode==="star" && starIdx>=0) goStar(starIdx);      // rebuild sun denser
+  else if(mode==="system" && coreView>=0) goCore(coreView);  // rebuild core system
+  syncTools();
+}
+if($gtGpu) $gtGpu.addEventListener('click',function(e){e.stopPropagation();setGpu(!gpuMode);});
+if($gtBright) $gtBright.addEventListener('click',function(e){e.stopPropagation();brightBoost=!brightBoost;syncTools();});
+// CINEMA button → open / close all the slideshow options
+var $gtCinema=document.getElementById('gtCinema');
+if($gtCinema) $gtCinema.addEventListener('click',function(e){e.stopPropagation();
+  var open=$ssUI.classList.toggle('visible'); $gtCinema.classList.toggle('on',open);});
+document.addEventListener('click',function(e){
+  if($gtCinema && $ssUI.classList.contains('visible') && !$ssUI.contains(e.target)
+     && e.target!==$gtCinema && !$gtCinema.contains(e.target)){
+    $ssUI.classList.remove('visible'); $gtCinema.classList.remove('on');}});
+syncTools();
+
+// ── IDLE AUTO-HIDE — fullscreen only: hide all chrome after inactivity ──
+var lastActivity=Date.now();
+function poke(){ lastActivity=Date.now();
+  if(document.body.classList.contains('idle')) document.body.classList.remove('idle'); }
+['pointermove','pointerdown','wheel','keydown','touchstart'].forEach(function(ev){
+  addEventListener(ev,poke,{passive:true}); });
+document.addEventListener('fullscreenchange',poke);
+function idleCheck(){
+  if(document.fullscreenElement && Date.now()-lastActivity>2500)
+    document.body.classList.add('idle');
+}
+
+
+// ── EDITOR / MINT MENU ────────────────────────────────────────────────
+var $menuToggle=document.getElementById('menuToggle');
+var $menuPanel=document.getElementById('menuPanel');
+$menuToggle.addEventListener('click',function(e){
+  e.stopPropagation();
+  $menuPanel.style.display=$menuPanel.style.display==='none'?'flex':'none';
+});
+document.addEventListener('click',function(e){
+  if($menuPanel.style.display==='flex' && !$menuPanel.contains(e.target) && e.target!==$menuToggle)
+    $menuPanel.style.display='none';
+});
+document.querySelectorAll('.menuItem').forEach(function(item){
+  item.addEventListener('click',function(){
+    var goto=this.dataset.goto;
+    if(goto==='editor') window.open('kolob-editor.html','_blank');
+    if(goto==='mint')  window.open('kolob-editor.html#mint','_blank');
+    $menuPanel.style.display='none';
+  });
+});
+document.getElementById('menuDl').addEventListener('click',function(){
+  var a=document.createElement('a');a.href='kolob-editor.html';a.download='kolob-editor.html';a.click();
+  $menuPanel.style.display='none';
+});
+
+function goGalaxy(){mode="galaxy";zoom=1;az=0;tilt=0.52;
+  if(!cinematic){$back.style.display='none';
+    $throneNum.disabled=false;$throneGo.disabled=false;}
+  else {$back.style.display='none';}}
+function goSystem(idx){
+  if(idx<0||idx>143)return;
+  curNode=idx;coreView=-1;var nd=NODES[idx];
+  system=buildSystem(nd.seed,nd.tier);
+  mode="system";zoom=1;az=0;tilt=0.52;clock=0;
+  $back.style.display='block';
+  $throneNum.value=idx;$throneNum.disabled=false;$throneGo.disabled=false;}
+$back.addEventListener('click',goGalaxy);
+$back.addEventListener('touchend',function(e){e.preventDefault();goGalaxy();});
+$throneGo.addEventListener('click',function(){var v=parseInt($throneNum.value);
+  if(!isNaN(v)&&v>=0&&v<=143)goSystem(v);});
+$throneNum.addEventListener('keydown',function(e){if(e.key==='Enter'){
+  var v=parseInt($throneNum.value);
+  if(!isNaN(v)&&v>=0&&v<=143)goSystem(v);}});
+
+// Wheel
+cv.addEventListener('wheel',function(e){e.preventDefault();
+  zoom*=Math.exp(-e.deltaY*0.0012);zoom=Math.max(0.3,Math.min(9,zoom));
+},{passive:false});
+
+// Pointer / touch
+var drag=false,moved=0,lx=0,ly=0,touchDist=0,touchAng=0,touchCount=0;
+var lastTap=0,dblTapDelay=300;
+cv.addEventListener('pointerdown',function(e){
+  touchCount++;
+  if(touchCount===1){
+    drag=true;moved=0;lx=e.clientX;ly=e.clientY;
+    cv.setPointerCapture(e.pointerId);
+  }else if(touchCount===2){
+    var t0=e,t1=dragEv;
+    if(t1){var dx=t1.clientX-t0.clientX,dy=t1.clientY-t0.clientY;
+      touchDist=Math.hypot(dx,dy);touchAng=Math.atan2(dy,dx);}
+  }
+});
+  var dragEv=null;
+cv.addEventListener('pointermove',function(e){
+  dragEv=e;
+  if(touchCount>=2){
+    var t0=e,t1=dragEv;
+    if(t1&&touchCount>=2){
+      var dx=t1.clientX-t0.clientX,dy=t1.clientY-t0.clientY;
+      var nd=Math.hypot(dx,dy),na=Math.atan2(dy,dx);
+      if(nd>0&&touchDist>0){zoom*=touchDist/nd;zoom=Math.max(0.3,Math.min(9,zoom));}
+      if(touchAng!==null){var rot=(na-touchAng)*0.3;if(Math.abs(rot)>0.001)az+=rot;}
+      touchDist=nd;touchAng=na;}
+  }else if(drag){
+    var dx=e.clientX-lx,dy=e.clientY-ly;moved+=Math.abs(dx)+Math.abs(dy);
+    az+=dx*0.006;tilt=Math.max(0.12,Math.min(1,tilt+dy*0.004));
+    lx=e.clientX;ly=e.clientY;
+  }else if(mode==="galaxy"){hover=-1;
+    var mx=e.clientX*dpr,my=e.clientY*dpr,bd=PX*16;
+    for(var i=0;i<NODES.length;i++){
+      var d=Math.abs(NODES[i].sx-mx)+Math.abs(NODES[i].sy-my);
+      if(d<bd){bd=d;hover=i;}}
+    hoverStar=-1;var bs=PX*26;
+    for(var hs=0;hs<15;hs++){var hfx=FIXED[hs];
+      var hd=Math.abs(hfx.sx-mx)+Math.abs(hfx.sy-my);
+      if(hd<bs){bs=hd;hoverStar=hs;}}
+  }
+});
+cv.addEventListener('pointerup',function(e){
+  touchCount=Math.max(0,touchCount-1);
+  if(touchCount<=0){drag=false;touchDist=0;touchAng=null;
+    if(moved<12){
+      if(cinematic&&mode==="galaxy"){toggleCinematicUI(!cinematicUI);return;}
+      var now=Date.now();
+      if(now-lastTap<dblTapDelay){
+        if(cinematic){toggleCinematicUI(!cinematicUI);lastTap=0;return;}
+        goGalaxy();lastTap=0;return;}
+      lastTap=now;
+      if(mode==="galaxy"){
+        var mx=e.clientX*dpr,my=e.clientY*dpr;
+        // core 15 first — great 3 = particle sun · core 12 = extreme system
+        var bs=PX*30,fhit=-1;
+        for(var i2=0;i2<FIXED.length;i2++){
+          var fd=Math.abs(FIXED[i2].sx-mx)+Math.abs(FIXED[i2].sy-my);
+          if(fd<bs){bs=fd;fhit=i2;}}
+        if(fhit>=0){ if(FIXED[fhit].great) goStar(fhit); else goCore(fhit-3); return; }
+        var bd=PX*16,hit=-1;
+        for(var i=0;i<NODES.length;i++){
+          var d=Math.abs(NODES[i].sx-mx)+Math.abs(NODES[i].sy-my);
+          if(d<bd){bd=d;hit=i;}}
+        if(hit>=0){goSystem(hit);return;}
+        if(!cinematic&&Math.min(innerWidth,innerHeight)<600&&Math.random()<0.4){
+          zoom=0.8+Math.random()*1.5;}
+      }
+    }}
+});
+
+cv.addEventListener('pointercancel',function(){
+  touchCount=0;drag=false;touchDist=0;touchAng=null;
+});
+
+// Keyboard
+addEventListener('keydown',function(e){var k=e.key.toLowerCase();
+  if(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'))return;
+  if(k==="escape"||(k==="g"&&mode!=="galaxy")){if(cinematic)exitCinematic();goGalaxy();keySel=-1;}
+  else if(k===" "){e.preventDefault();paused=!paused;}
+  else if(k==="h"){hud=!hud;}
+  else if(k==="]"){speed=Math.min(4,speed*1.5);}
+  else if(k==="["){speed=Math.max(0.04,speed/1.5);}
+  // ←/→ step through thrones · ↑/↓ orbit around the galaxy
+  else if(k==="arrowleft"||k==="arrowright"){
+    var step=(k==="arrowright")?1:-1;
+    keySel=(keySel<0)?0:Math.max(0,Math.min(143,keySel+step));
+    hover=keySel;keyHeld=true;e.preventDefault();   // same state as mouse hover
+  }
+  else if(k==="arrowup"||k==="arrowdown"){
+    az+=(k==="arrowup")?-0.18:0.18;
+    e.preventDefault();
+  }
+  // 1-9 — camera presets (0 resets)
+  else if(k>="1"&&k<="9"){
+    var cam=parseInt(k)-1;
+    var prs=[
+      {z:0.95,a:0.00,t:0.62},{z:0.85,a:0.62,t:0.55},{z:1.05,a:1.22,t:0.60},
+      {z:0.75,a:1.85,t:0.50},{z:1.10,a:2.45,t:0.60},{z:0.80,a:3.10,t:0.52},
+      {z:1.00,a:3.75,t:0.58},{z:0.88,a:4.30,t:0.55},{z:0.92,a:5.00,t:0.60}];
+    zoom=prs[cam].z;az=prs[cam].a;tilt=prs[cam].t;
+    if(mode!=="galaxy")goGalaxy();keySel=-1;
+    e.preventDefault();
+  }
+  else if(k==="0"){zoom=1;az=0;tilt=0.52;keySel=-1;}
+  else if(k==="c"){if(cinematic){exitCinematic();stopSlideshow();keySel=-1;}
+    else{stopSlideshow();enterCinematic();}}
+  else if(k==="b"){brightBoost=!brightBoost;syncTools();}
+  else if(k==="s"){var a=document.createElement('a');
+    a.download="kolob_"+(mode==="system"?"throne"+curNode:"chart")+".png";
+    a.href=cv.toDataURL('image/png');a.click();}
+  else if(k==="enter"&&keySel>=0&&mode==="galaxy"){goSystem(keySel);}
+  else if(k==='f'){toggleFs();}
+  // palette lock — cool palette only
+});
+
+// Render primitives
+function project(x,y,z,cosP,sinP,scale){
+  var rx=x*cosP-y*sinP,ry=x*sinP+y*cosP;
+  return [CX+rx*scale,CY+ry*scale*tilt-z*scale*(1-tilt),ry];}
+function rot3(v,ay,ax){
+  var cy=Math.cos(ay),sy=Math.sin(ay),cx=Math.cos(ax),sx=Math.sin(ax);
+  var x=v[0]*cy+v[2]*sy,z=-v[0]*sy+v[2]*cy;
+  return [x,v[1]*cx-z*sx,v[1]*sx+z*cx];}
+function plot(sx,sy,col){
+  var gx=sx/PX|0,gy=sy/PX|0;
+  if(gx<0||gy<0||gx>=GW||gy>=GH) return;
+  ctx.fillStyle=col;ctx.fillRect(gx*PX,gy*PX,PX,PX);}
+function body(sx,sy,r,base,rot){cluster(sx,sy,r,base,ccount(r,PX),rot,PX,plot);}
+function starBody(sx,sy,r,base,rot){
+  for(var q=0;q<24;q++){var ag=q/24*TAU+rot*1.4,rr=r*(1.18+(q%3)*0.26);
+    plot(sx+Math.cos(ag)*rr,sy+Math.sin(ag)*rr,rs(sh(base,0.25)));}
+  cluster(sx,sy,r,lt(base,0.12),ccount(r,PX),rot,PX,plot);
+  cluster(sx,sy,r*0.38,lt(P.c3,0.3),ccount(r*0.38,PX),rot,PX,plot);}
+function streak(x0,y0,x1,y1,col){
+  var n=Math.max(2,(Math.abs(x1-x0)+Math.abs(y1-y0))/PX|0);
+  for(var i=0;i<=n;i++) plot(x0+(x1-x0)*i/n,y0+(y1-y0)*i/n,col);}
+
+// GALAXY VIEW
+var GALLOOP=24000;
+var sX=new Float32Array(N),sY=new Float32Array(N),vis=new Uint8Array(N);
+
+function renderGalaxy(){
+  ctx.fillStyle="#000";ctx.fillRect(0,0,W,H);
+  if(!window.sX||!window.sY||!window.vis||!window.GALLOOP){
+    if(!window.sX) window.sX=new Float32Array(N);
+    if(!window.sY) window.sY=new Float32Array(N);
+    if(!window.vis) window.vis=new Uint8Array(N);
+    if(!window.GALLOOP) window.GALLOOP=24000;
+  }
+  var t=(clock%GALLOOP)/GALLOOP;
+  var phi=t*TAU+az,cosP=Math.cos(phi),sinP=Math.sin(phi);
+  var scale=scaleRef*zoom;
+  dens.fill(0);
+  for(var i=0;i<gN;i++){
+    var ang=gA[i]+gRev[i]*TAU*t;   // counter-clockwise
+    var sp=project(gR[i]*Math.cos(ang),gR[i]*Math.sin(ang),gZ[i],cosP,sinP,scale);
+    window.sX[i]=sp[0];window.sY[i]=sp[1];
+    var gx=sp[0]/PX|0,gy=sp[1]/PX|0;
+    if(gx>=0&&gy>=0&&gx<GW&&gy<GH){dens[gy*GW+gx]++;window.vis[i]=1;}else window.vis[i]=0;
+  }
+  for(i=0;i<gN;i++){var kk=i%GAL_COLS.length,lv=0;
+    if(gR[i]<0.07)kk=0;else if(gR[i]<0.20)kk=1;else if(gR[i]<0.27)kk=2;else if(gR[i]<0.50)kk=3;else kk=4;
+    lv=kk<2?3:kk<4?2:1;
+    if(i%7===0)lv=Math.min(4,lv+1);
+    var rev=gRev[i];
+    for(var s=Math.min(3,rev+1);s>=1;s--){var L=lv-s;if(L<0)continue;
+      var a2=gA[i]+rev*TAU*(t-s*0.010);
+      var sp=project(gR[i]*Math.cos(a2),gR[i]*Math.sin(a2),gZ[i],cosP,sinP,scale);
+      plot(sp[0],sp[1],GAL_COLS[kk][L][0]);}
+  }
+  for(i=0;i<gN;i++){if(!window.vis[i])continue;
+    var c=dens[(sY[i]/PX|0)*GW+(sX[i]/PX|0)];
+    var D=c>=9?3:c>=5?2:c>=2?1:0;
+    var kk2=i%GAL_COLS.length;
+    if(gR[i]<0.07)kk2=0;else if(gR[i]<0.20)kk2=1;else if(gR[i]<0.27)kk2=2;else if(gR[i]<0.50)kk2=3;else kk2=4;
+    plot(window.sX[i],window.sY[i],GAL_COLS[kk2][kk2<2?3:kk2<4?2:1][D]);}
+
+  // Veils — two thin white particle barriers (denser + vertical spread)
+  var veilSeeds=[12345,67890];
+  for(var v=0;v<2;v++){var vr=v?0.235:0.50,vs=veilSeeds[v];
+    // Layer A: dense inner band
+    for(i=0;i<480;i++){var a=i/480*TAU+(v?clock*0.0005:-clock*0.0004);
+      var rr=vr+(Math.sin(a*13+vs)*0.003+Math.sin(a*23+vs+clock*0.002)*0.002);
+      // vertical spread: 3 z-planes per band for thicker veil
+      var zV=[0.010*1.5,-0.010*1.5,0.025999]; // ±0.015 mid + ±0.025 outer
+      var spA=project(rr*Math.cos(a),rr*Math.sin(a),zV[i%3],cosP,sinP,scale);
+      var shim=0.6+0.4*Math.sin(i*0.7+clock*0.015+vs);
+      var densV=0.55+0.45*Math.sin(a*4+vs);
+      if(densV<0.25)continue;
+      var alpha=(0.28+0.55*shim*densV*(0.7+0.3*Math.sin(a*8+clock*0.003+vs))).toFixed(2);
+      var distFactor=1-Math.abs(rr-vr)*60;
+      if(distFactor<0.1)continue;
+      plot(spA[0],spA[1],"rgba("+(200+55*shim|0)+","+(210+45*shim|0)+","+(230+25*shim|0)+","+alpha+")");}
+    // Layer B: outer shimmering halo
+    for(i=0;i<240;i++){var a=i/240*TAU-(v?clock*0.0003:clock*0.0002);
+      var rr=vr*0.98+Math.sin(a*17+vs*2)*0.002;
+      var zV2=(i%2===0)?0.020:-0.020;
+      var sp=project(rr*Math.cos(a),rr*Math.sin(a),zV2,cosP,sinP,scale);
+      var shim=0.5+0.5*Math.sin(i*1.1+clock*0.02+vs+7);
+      plot(sp[0],sp[1],"rgba(230,235,245,"+(0.15+0.2*shim).toFixed(2)+")");}
+  }
+
+  // TELESTIAL — extra drifting detail in the galaxy's outer ring
+  for(i=0;i<800;i++){
+    var tr=0.74+0.34*((i*0.61803399)%1);
+    var ta=i*2.39996 + t*TAU*(0.45+tr*0.5) + 0.3*Math.sin(clock*0.01+i);
+    var tz=0.05*Math.sin(i*1.7+clock*0.008);
+    var tsp=project(tr*Math.cos(ta),tr*Math.sin(ta),tz,cosP,sinP,scale);
+    var tw=0.4+0.6*Math.sin(i*0.9+clock*0.02);
+    plot(tsp[0],tsp[1],rs(sh(mix(P.c0,TIER_COL[2],0.55),0.28+0.42*tw)));
+  }
+  // OUTER DARKNESS — churning dark matter banished beyond the galaxy
+  for(i=0;i<WORMS.length;i++){var w=WORMS[i];
+    var wr=w.r+0.06*Math.sin(clock*0.02+w.ph);
+    var wa=w.a+0.05*Math.sin(clock*0.013+w.ph)+t*TAU*0.30;
+    for(var ws=0;ws<5;ws++){
+      var wsp=project((wr+ws*0.020)*Math.cos(wa-ws*0.05),
+                      (wr+ws*0.020)*Math.sin(wa-ws*0.05),0,cosP,sinP,scale);
+      var fk=Math.sin(w.ph*7+clock*0.03+ws);
+      var dk=fk>0.93?44:fk<-0.97?16:6;
+      plot(wsp[0],wsp[1],"rgb("+dk+","+dk+","+(dk+5)+")");
+    }
+  }
+
+  // KOLOB — central black hole + accretion disc
+  var bh=Math.max(PX*8,scale*0.075);
+  for(i=0;i<140;i++){var p=CTPL[i];          // dark sphere
+    plot(CX+p[0]*bh,CY+p[1]*bh,"rgb(2,2,5)");}
+  for(i=0;i<170;i++){var aa=i/170*TAU+clock*0.06;  // accretion disc glow
+    var rr2=bh*(1.18+(i%5)*0.07);
+    plot(CX+Math.cos(aa)*rr2,CY+Math.sin(aa)*rr2*tilt,rs(mix(P.c2,P.c3,(i%5)/5)));}
+
+  // 15 fixed stars — great 3 = equilateral triangle · core 12 = icosahedron
+  var fp=[];
+  var icoAy=clock*0.0009, icoAx=clock*0.0006;
+  for(i=0;i<15;i++){var fx=FIXED[i];
+    var sp;
+    if(fx.great){
+      var fa=fx.a+fx.rev*t*TAU;          // rigid rotation → stays equilateral
+      sp=project(fx.r*Math.cos(fa),fx.r*Math.sin(fa),0,cosP,sinP,scale);
+      fp.push(sp);
+    }else{
+      var rv=rot3(fx.ico,icoAy,icoAx);   // core 12 spin as one 3D solid
+      sp=project(rv[0]*fx.icoR,rv[1]*fx.icoR,rv[2]*fx.icoR,cosP,sinP,scale);
+    }
+    fx.sx=sp[0]; fx.sy=sp[1];
+    var pul=0.85+0.15*Math.sin(clock*0.03+fx.ph);
+    var fsz=(fx.great?PX*5.0:PX*3.6)*pul;
+    for(var gq=0;gq<16;gq++){            // always-on glow halo → prominent landmark
+      var ga=clock*0.025+gq/16*TAU;
+      plot(sp[0]+Math.cos(ga)*fsz*1.7,sp[1]+Math.sin(ga)*fsz*1.7,rs(sh(fx.col,0.42)));}
+    if(i===hoverStar){                   // hover cue
+      for(var hq=0;hq<22;hq++){var ha=clock*0.05+hq/22*TAU;
+        plot(sp[0]+Math.cos(ha)*fsz*2.5,sp[1]+Math.sin(ha)*fsz*2.5,"rgba(255,255,255,0.75)");}}
+    starBody(sp[0],sp[1],fsz,fx.col,clock*0.02);}
+  for(i=0;i<3;i++){var j=(i+1)%3;
+    streak(fp[i][0],fp[i][1],fp[j][0],fp[j][1],
+      rs(sh(P.accent,0.4+0.3*Math.sin(clock*0.05+i))));}
+
+  // 100 thrones with tier-colored halos
+  for(i=0;i<NODES.length;i++){var nd=NODES[i];
+    var ang=nd.a+nd.rev*TAU*t;     // thrones orbit counter-clockwise
+    var sp=project(nd.r*Math.cos(ang),nd.r*Math.sin(ang),nd.z,cosP,sinP,scale);
+    nd.sx=sp[0];nd.sy=sp[1];
+    var col=STAR[nd.star].col,gr=PX*(i===hover?3.4:i===keySel?2.8:2.4);
+    var tc=TIER_COL[nd.tier];
+    var bcol=mix(col,tc,0.6);            // tier-tinted body — cores still read white
+    if(i===hover || i===keySel){
+      var glowR=gr*(i===keySel?2.0:2.2);
+      for(var q=0;q<12;q++){var a4=clock*0.02+q/12*TAU;
+        plot(sp[0]+Math.cos(a4)*glowR,sp[1]+Math.sin(a4)*glowR,
+          "rgba("+tc[0]+","+tc[1]+","+tc[2]+",0.42)");}}
+    body(sp[0],sp[1],gr,brightBoost?sh(bcol,1.4):bcol,nd.spin+clock*0.013);
+  }
+
+  if(hud){
+    var palName=PALETTES[palIdx].name;
+    var hudTxt="<b>KOLOB</b>\ntoken "+tokenData.hash.slice(0,10)+
+     "\npalette <b>"+palName+"</b> [LOCKED]\n\n"+
+     "144 thrones · ←/→ select · ↑/↓ orbit\n"+
+     (keySel>=0?"▸ throne "+keySel+" — enter to visit\n":"")+
+     (hover>=0?"\n<b>THRONE "+hover+"</b>\n<span class=\"tier\">"+TIER_NAMES[NODES[hover].tier]+"</span>":
+      "hover a throne")+
+     "\n\ndrag · pinch · [ ] x"+speed.toFixed(2)+
+     (paused?" [PAUSED]":"")+" · h · s";
+    if(hover>=0) hudTxt+="\n\n<span class=\"throne\">THRONE "+hover+"</span>";
+    document.getElementById('hud').innerHTML=hudTxt;
+  }
+  // Mint info overlay
+  $mintInfo.innerHTML="THRONE 000-143\ninner ── CELESTIAL\nmid ──── TERRESTRIAL\nouter ── TELESTIAL";
+}
+
+// SYSTEM VIEW
+var SYSLOOP=6600;
+var PTYPE=[
+ {base:[150,140,170],sz:2.0,nm:"rocky"},{base:P.c2,sz:4.5,nm:"gas giant"},
+ {base:P.c0,sz:3.5,nm:"ice giant"},{base:P.c1,sz:2.5,nm:"hot world"}];
+function ellipse(a,e,peri,inc,cosP,sinP,scale,col){
+  for(var u=0;u<TAU;u+=0.05){
+    var ox=a*(Math.cos(u)-e),oy=a*Math.sqrt(1-e*e)*Math.sin(u);
+    var px=ox*Math.cos(peri)-oy*Math.sin(peri);
+    var py=ox*Math.sin(peri)+oy*Math.cos(peri);
+    var sp=project(px,py*Math.cos(inc),py*Math.sin(inc),cosP,sinP,scale);
+    plot(sp[0],sp[1],col);}
+}
+function renderSystem(){
+  ctx.fillStyle="#000";ctx.fillRect(0,0,W,H);
+  var t=(clock%SYSLOOP)/SYSLOOP;
+  var phi=t*TAU+az,cosP=Math.cos(phi),sinP=Math.sin(phi);
+  var sy=system,amax=0.1;
+  for(var i=0;i<sy.planets.length;i++)
+    amax=Math.max(amax,sy.planets[i].a*(1+sy.planets[i].e));
+  var scale=scaleRef*zoom/amax;
+
+  for(i=0;i<sy.planets.length;i++){var pl=sy.planets[i];
+    ellipse(pl.a,pl.e,pl.peri,pl.inc,cosP,sinP,scale,"rgb(40,40,56)");}
+  for(i=0;i<sy.comets.length;i++){var cm=sy.comets[i];
+    ellipse(cm.a,cm.e,cm.peri,cm.inc,cosP,sinP,scale,"rgb(36,40,56)");}
+  for(i=0;i<sy.kuiper.length;i++){var ku=sy.kuiper[i];
+    var o=orbit(ku.a,ku.e,ku.peri,ku.inc,ku.M0+ku.rev*TAU*t);
+    var sp=project(o[0],o[1],o[2],cosP,sinP,scale);
+    plot(sp[0],sp[1],"rgb(80,140,170)");}
+  for(i=0;i<sy.asteroids.length;i++){var as=sy.asteroids[i];
+    var o=orbit(as.a,as.e,as.peri,as.inc,as.M0+as.rev*TAU*t);
+    var sp=project(o[0],o[1],o[2],cosP,sinP,scale);
+    plot(sp[0],sp[1],"rgb(160,145,105)");}
+  for(i=0;i<sy.embryos.length;i++){var em=sy.embryos[i];
+    var o=orbit(em.a,0.05,em.ph,0,em.M0+em.rev*TAU*t);
+    var sp=project(o[0],o[1],o[2],cosP,sinP,scale);
+    var fl=0.3+0.7*Math.abs(Math.sin(clock*0.05+em.ph));
+    body(sp[0],sp[1],PX*1.5,sh([150,160,210],fl),clock*0.03);}
+
+  for(i=0;i<sy.stars.length;i++){var st=sy.stars[i];
+    var sxx=0,syy=0;
+    if(sy.binary){var off=st.off;
+      sxx=off*Math.cos(sy.binRev*TAU*t);syy=off*Math.sin(sy.binRev*TAU*t);}
+    var sp=project(sxx,syy,0,cosP,sinP,scale);
+    var sr=Math.min(PX*10,PX*(4+STAR[st.cls].rad*1.8));
+    starBody(sp[0],sp[1],sr,STAR[st.cls].col,clock*0.007);}
+
+  for(i=0;i<sy.planets.length;i++){var pl=sy.planets[i];
+    var o=orbit(pl.a,pl.e,pl.peri,pl.inc,pl.M0+pl.rev*TAU*t);
+    var sp=project(o[0],o[1],o[2],cosP,sinP,scale);
+    var pt=PTYPE[pl.type];
+    var base=mix(pt.base,sy.scheme[i%2],0.22),pr=PX*pt.sz*pl.szMul;
+    if(pl.ring)
+      for(var q=0;q<72;q++){var ra=q/72*TAU+pl.spin+clock*0.01,
+        rr=pr*(1.5+0.55*(q%3)/2);
+        plot(sp[0]+Math.cos(ra)*rr,sp[1]+Math.sin(ra)*rr*tilt,rs(sh(base,0.6)));}
+    body(sp[0],sp[1],pr,base,pl.spin+clock*0.022);
+    for(var m=0;m<pl.moons.length;m++){var mo=pl.moons[m];
+      var mp=orbit(mo.a,0.02,mo.peri,0,mo.M0+mo.rev*TAU*t);
+      var sp2=project(o[0]+mp[0],o[1]+mp[1],o[2]+mp[2],cosP,sinP,scale);
+      body(sp2[0],sp2[1],PX*1.3,[180,180,200],mo.M0+clock*0.05);}
+  }
+  for(i=0;i<sy.comets.length;i++){var cm=sy.comets[i];
+    /* Coiled gas tail — 36 steps, slow rotation, amber-to-cyan fade */
+    var tailLen=36;
+    for(var s=tailLen;s>=1;s--){var t0=t-s*(0.007+cm.e*0.003),tt=cm.M0+cm.rev*TAU*t0;
+      var o2=orbit(cm.a,cm.e,cm.peri,cm.inc,tt);
+      var tp=project(o2[0],o2[1],o2[2],cosP,sinP,scale);
+      var f=s/tailLen;
+      /* color: amber→white→cyan as tail fades */
+      var col=s<8?lt([210,220,255],(8-s)/8*0.7):
+             s<20?rs([190,230,255]):mix([255,210,130],[130,220,255],(s-20)/(tailLen-20));
+      plot(tp[0],tp[1],col);
+    }
+    var oh=orbit(cm.a,cm.e,cm.peri,cm.inc,cm.M0+cm.rev*TAU*t);
+    var sp=project(oh[0],oh[1],oh[2],cosP,sinP,scale);
+    body(sp[0],sp[1],PX*1.5,[205,238,255],clock*0.06);}
+
+  if(hud){
+    var res="";
+    for(i=0;i<sy.planets.length-1;i++) res+=sy.planets[i].rev+":"+sy.planets[i+1].rev+" ";
+    var sHead=coreView>=0
+     ? "<b>"+sy.coreName+"</b>\n<span class=\"tier\">CORE "+(coreView+1)+"/12 · "+sy.coreProfile+" · LOCKED</span>"
+     : "<b>THRONE "+curNode+"</b>\nseed "+("00000000"+NODES[curNode].seed.toString(16)).slice(-8)+
+       "\n<span class=\"tier\">"+TIER_NAMES[system.wealth]+"</span>";
+    document.getElementById('hud').innerHTML=
+     sHead+
+     "\n"+(sy.binary?"binary":"single")+" "+
+     sy.stars.map(function(x){return STAR[x.cls].c;}).join("+")+
+     " · "+sy.stars.map(function(x){return STAR[x.cls].t;}).join("+")+
+     "\n"+sy.planets.length+" planets · "+sy.embryos.length+" embryo"+
+     (sy.embryos.length!==1?"s":"")+" · "+sy.comets.length+" comets"+
+     (sy.asteroids.length?" · "+sy.asteroids.length+" asteroids":"")+
+     "\nresonance "+res+
+     "\n\nWorlds:\n"+sy.planets.map(function(p,i){return (i+1)+"."+["rocky","gas","ice","hot"][p.type];}).join(" · ")+
+     "\n\ndrag · pinch · [ ] x"+speed.toFixed(2)+
+     "\n<b>← BACK</b> · h · s";
+  }
+}
+
+// ═══ CORE-15 DESTINATIONS ═══════════════════════════════════════════════
+// Great 3 → kolob-sun1b surface-emission engine, three LOCKED identities.
+// Core 12 → twelve LOCKED, never-alike extreme throne systems.
+var starIdx=-1,starIntroT=0,coreView=-1,sunSpin=0,SUN=SUN_PARAMS[0];
+var sunStrands=[],sunOrbits=[];
+
+// noise field (after kolob-sun1b)
+function hash3(x,y,z){var n=(Math.imul(x,374761393)+Math.imul(y,668265263)+Math.imul(z,1274126177))|0;
+  n=(n^(n>>>13))|0;n=Math.imul(n,1274126177)|0;return((n^(n>>>16))>>>0)/4294967296;}
+function vnoise(x,y,z){var xi=Math.floor(x),yi=Math.floor(y),zi=Math.floor(z),
+  xf=x-xi,yf=y-yi,zf=z-zi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf),w=zf*zf*(3-2*zf);
+  function L(a,b,k){return a+(b-a)*k;}
+  return L(L(L(hash3(xi,yi,zi),hash3(xi+1,yi,zi),u),L(hash3(xi,yi+1,zi),hash3(xi+1,yi+1,zi),u),v),
+           L(L(hash3(xi,yi,zi+1),hash3(xi+1,yi,zi+1),u),L(hash3(xi,yi+1,zi+1),hash3(xi+1,yi+1,zi+1),u),v),w);}
+function fbm(x,y,z){var s=0,a=0.5,f=1;for(var o=0;o<3;o++){s+=a*vnoise(x*f,y*f,z*f);f*=2.03;a*=0.5;}return s;}
+function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+function norm(v){var l=Math.hypot(v[0],v[1],v[2])||1;return [v[0]/l,v[1]/l,v[2]/l];}
+
+function buildStar(seed){
+  var r=mk(seed>>>0),i;sunStrands=[];sunOrbits=[];
+  var nS=gpuMode?6000:3600, nO=gpuMode?760:400;
+  for(i=0;i<nS;i++){                                  // strands rooted on the surface
+    var u=r()*TAU,ct=2*r()-1,st=Math.sqrt(1-ct*ct);
+    var d=[st*Math.cos(u),st*Math.sin(u),ct];
+    var up=Math.abs(d[1])<0.92?[0,1,0]:[1,0,0];
+    var t1=norm(cross(d,up)),t2=cross(d,t1);
+    var erupt=r()<(0.14+SUN.big);                     // some erupt as long flares
+    sunStrands.push({d:d,t1:t1,t2:t2,ph:r()*40,
+      tipExt:erupt?(1.0+r()*1.2):(0.25+r()*0.4),
+      amp:0.7+r()*1.1,coil:2.0+r()*3.0,flow:0.18+r()*0.5,bri:0.65+r()*0.6});
+  }
+  for(i=0;i<nO;i++){                                  // orbiting elements on tilted rings
+    var nu=r()*TAU,nc=2*r()-1,nsr=Math.sqrt(1-nc*nc);
+    var n=[nsr*Math.cos(nu),nsr*Math.sin(nu),nc];
+    var nup=Math.abs(n[1])<0.92?[0,1,0]:[1,0,0];
+    var ou=norm(cross(n,nup)),ov=cross(n,ou);
+    sunOrbits.push({u:ou,v:ov,rad:1.12+r()*1.05,ph:r()*TAU,
+      sp:(r()<0.5?-1:1)*(0.35+r()*1.0),bri:0.55+r()*0.6});
+  }
+}
+function sunProject(x,y,z,s){
+  var ca=Math.cos(az),sa=Math.sin(az),x1=x*ca-z*sa,z1=x*sa+z*ca;
+  var ct=Math.cos(tilt),st=Math.sin(tilt);
+  return [CX+x1*s, CY+(y*ct-z1*st)*s];
+}
+function goStar(idx){
+  stopSlideshow();
+  starIdx=idx;starIntroT=0;coreView=-1;sunSpin=0;
+  SUN=SUN_PARAMS[idx];
+  buildStar(CORE_SEEDS[idx]);              // LOCKED seed
+  mode="star";zoom=1;az=0;tilt=0.30;clock=0;
+  $back.style.display='block';
+  $throneNum.disabled=true;$throneGo.disabled=true;
+}
+function renderStar(){
+  ctx.globalCompositeOperation='source-over';
+  ctx.fillStyle="#000";ctx.fillRect(0,0,W,H);
+  ctx.globalCompositeOperation='lighter';        // additive glow for the throne sun
+  if(starIntroT<1) starIntroT=Math.min(1,starIntroT+0.02);
+  var intro=starIntroT*starIntroT*(3-2*starIntroT);
+  var col=SUN.col, cr=0.45+0.55*col[0]/255, cg=0.45+0.55*col[1]/255, cb=0.45+0.55*col[2]/255;
+  var DOT=Math.max(1,Math.round(Math.min(W,H)/820));
+  var REF=Math.min(W,H)*0.30;
+  sunSpin+=0.004*SUN.rot;
+  var cosS=Math.cos(sunSpin),sinS=Math.sin(sunSpin);
+  var t=clock*0.013*SUN.speed, s=REF*zoom*SUN.size;
+  var i,k,u,f,amp,na,nb,px,py,pz,pl,rr,sp,a,rx,rz;
+  var NK=gpuMode?60:40, INV=1/(NK-1);
+  var aS=Math.round(sunStrands.length*SUN.density);
+  var aO=Math.round(sunOrbits.length*SUN.orbit);
+  for(i=0;i<aS;i++){var sd=sunStrands[i];                 // surface shell + flares
+    var sx=sd.d[0]*1.6,sy=sd.d[1]*1.6,sz=sd.d[2]*1.6, tw=t*sd.flow+sd.ph;
+    for(k=0;k<NK;k++){
+      u=k*INV; f=u*u;
+      amp=(0.10+f*0.85)*sd.amp*SUN.noise;
+      na=fbm(sx+f*sd.coil*SUN.curl+tw,sy,sz)-0.44;
+      nb=fbm(sy,sz+f*sd.coil*SUN.curl+tw,sx)-0.44;
+      rr=1.0+sd.tipExt*f*SUN.length+na*0.10;
+      px=sd.d[0]+sd.t1[0]*na*amp+sd.t2[0]*nb*amp;
+      py=sd.d[1]+sd.t1[1]*na*amp+sd.t2[1]*nb*amp;
+      pz=sd.d[2]+sd.t1[2]*na*amp+sd.t2[2]*nb*amp;
+      pl=Math.sqrt(px*px+py*py+pz*pz)||1; pl=rr/pl; px*=pl;py*=pl;pz*=pl;
+      rx=px*cosS-pz*sinS; rz=px*sinS+pz*cosS;
+      sp=sunProject(rx,py,rz,s);
+      a=sd.bri*(0.34-f*0.20)*intro; if(a<0.03)a=0.03; if(a>1)a=1;
+      ctx.fillStyle='rgba('+(255*cr|0)+','+(255*cg|0)+','+(255*cb|0)+','+a.toFixed(3)+')';
+      ctx.fillRect(sp[0],sp[1],DOT,DOT);
+    }
+  }
+  for(i=0;i<aO;i++){var o=sunOrbits[i];                   // orbiting elements w/ trails
+    for(k=0;k<3;k++){var th=o.ph+(t-k*0.045)*o.sp,cth=Math.cos(th),sth=Math.sin(th);
+      px=(o.u[0]*cth+o.v[0]*sth)*o.rad;py=(o.u[1]*cth+o.v[1]*sth)*o.rad;pz=(o.u[2]*cth+o.v[2]*sth)*o.rad;
+      sp=sunProject(px,py,pz,s);
+      a=(k===0?0.62:k===1?0.30:0.15)*o.bri*intro; if(a>1)a=1;
+      ctx.fillStyle='rgba('+(200+55*cr|0)+','+(200+55*cg|0)+','+(220+35*cb|0)+','+a.toFixed(3)+')';
+      ctx.fillRect(sp[0],sp[1],k===0?DOT*1.6:DOT,k===0?DOT*1.6:DOT);
+    }}
+  ctx.globalCompositeOperation='source-over';
+  $mintInfo.innerHTML="";
+  if(hud){
+    document.getElementById('hud').innerHTML=
+     "<b>"+JOSEPH_15[starIdx]+"</b>\n<span class=\"tier\">GREAT STAR "+(starIdx+1)+"/3 · LOCKED</span>\n\n"+
+     aS+" strands · "+aO+" orbiters\n\ndrag · pinch · scroll\n<b>← BACK</b> · h · g";
+  }
+}
+
+// ── CORE-12: twelve LOCKED, never-alike extreme throne systems ───────────
+function extremize(sys,r,ci){
+  var i,m,gm=gpuMode?2:1;
+  for(i=0;i<sys.planets.length;i++){var pl=sys.planets[i];
+    pl.szMul*=1.3+r()*0.7;pl.e=Math.min(0.5,pl.e+r()*0.18);}
+  switch(ci){
+   case 0:  // RINGED DYNASTY — every world ringed
+     for(i=0;i<sys.planets.length;i++){sys.planets[i].ring=true;sys.planets[i].szMul*=1.35;} break;
+   case 1:  // MOON SWARM
+     for(i=0;i<sys.planets.length;i++){var p1=sys.planets[i],mr=[12,9,7,5,4,3,2],ad=r.int(4,9)*gm;
+       for(m=0;m<ad;m++) p1.moons.push({a:0.05+p1.moons.length*0.026+r()*0.012,
+         rev:mr[m%mr.length],M0:r()*TAU,peri:r()*TAU});} break;
+   case 2:  // ASTEROID EMPIRE
+     sys.asteroids=[];for(i=0;i<2800*gm;i++){var aa=r.rng(0.3,1.5);
+       sys.asteroids.push({a:aa,e:r()*0.25,peri:r()*TAU,inc:r.g()*0.15,
+         rev:Math.max(1,Math.round(Math.pow(aa,-1.5))),M0:r()*TAU});} break;
+   case 3:  // COMET STORM
+     sys.comets=[];for(i=0;i<30*gm;i++) sys.comets.push({a:r.rng(1.0,2.4),e:r.rng(0.6,0.95),
+       peri:r()*TAU,inc:r.g()*0.6,rev:r.pick([3,4,5]),M0:r()*TAU}); break;
+   case 4:  // EMBRYO NURSERY
+     sys.embryos=[];for(i=0;i<48*gm;i++) sys.embryos.push({a:0.12+r()*0.9,rev:r.int(4,12),M0:r()*TAU,ph:r()*TAU}); break;
+   case 5:  // ECCENTRIC CHAOS
+     for(i=0;i<sys.planets.length;i++){var p2=sys.planets[i];p2.e=0.4+r()*0.34;p2.inc=r()*0.7;}
+     sys.kuiper=[];for(i=0;i<700*gm;i++){var ka=r.rng(1.1,1.9);
+       sys.kuiper.push({a:ka,e:r()*0.4,peri:r()*TAU,inc:r.g()*0.3,
+         rev:Math.max(1,Math.round(Math.pow(ka,-1.5))),M0:r()*TAU});} break;
+   case 6:  // BINARY HEART — twin stars, near-circular circumbinary worlds
+     if(sys.stars.length<2){sys.stars.push({cls:Math.min(6,sys.stars[0].cls+1)});}
+     sys.binary=true;sys.sep=0.13;sys.binRev=12;
+     var mm=STAR[sys.stars[0].cls].rad+STAR[sys.stars[1].cls].rad;
+     sys.stars[0].off=sys.sep*STAR[sys.stars[1].cls].rad/mm;
+     sys.stars[1].off=-sys.sep*STAR[sys.stars[0].cls].rad/mm;
+     for(i=0;i<sys.planets.length;i++)sys.planets[i].e=Math.min(0.25,sys.planets[i].e); break;
+   case 7:  // RESONANCE CATHEDRAL — many planets, tight low-e chain
+     for(i=0;i<sys.planets.length;i++){sys.planets[i].e*=0.3;sys.planets[i].inc*=0.4;}
+     if(sys.planets[0]){var b7=sys.planets[0].a,r7=sys.planets[0].rev;
+       for(i=0;i<3;i++)sys.planets.push({a:b7*Math.pow(0.55,i+1),e:0.02,peri:r()*TAU,inc:0.02,
+         rev:r7*(i+2),M0:r()*TAU,type:0,spin:r()*TAU,ring:false,szMul:0.8,moons:[]});} break;
+   case 8:  // FROZEN KUIPER — vast icy outer realm
+     sys.kuiper=[];for(i=0;i<1500*gm;i++){var ka2=r.rng(1.05,1.78);
+       sys.kuiper.push({a:ka2,e:r()*0.3,peri:r()*TAU,inc:r.g()*0.2,
+         rev:Math.max(1,Math.round(Math.pow(ka2,-1.5))),M0:r()*TAU});} break;
+   case 9:  // HOT-JUPITER FORGE — close-in giants, scorched worlds
+     for(i=0;i<sys.planets.length;i++){var p3=sys.planets[i];
+       if(p3.a<0.5){p3.type=1;p3.szMul*=1.6;p3.ring=r()<0.5;}else p3.type=3;} break;
+   case 10: // MEGA-RING WORLD — one colossal ringed giant, sparse else
+     sys.planets=sys.planets.slice(0,Math.min(3,sys.planets.length));
+     if(sys.planets[0]){sys.planets[0].type=1;sys.planets[0].ring=true;sys.planets[0].szMul*=2.4;} break;
+   case 11: // TROJAN SWARMS — co-orbital clouds at a host's L4/L5
+     sys.asteroids=[];var host=sys.planets[Math.min(1,sys.planets.length-1)];
+     if(host)for(i=0;i<1400*gm;i++){var lead=r()<0.5;
+       sys.asteroids.push({a:host.a*(1+r.g()*0.04),e:host.e+r()*0.03,peri:host.peri,inc:r.g()*0.05,
+         rev:host.rev,M0:host.M0+(lead?1.047:-1.047)+r.g()*0.20});} break;
+  }
+  return sys;
+}
+function goCore(ci){
+  stopSlideshow();
+  var seed=CORE_SEEDS[3+ci];               // LOCKED seed
+  system=buildSystem(seed,0);
+  extremize(system,mk((seed^0xABCDEF)>>>0),ci);
+  system.coreName=JOSEPH_15[3+ci];
+  system.coreProfile=CORE_PROFILES[ci];
+  curNode=-1;coreView=ci;
+  mode="system";zoom=1;az=0;tilt=0.52;clock=0;
+  $back.style.display='block';
+  $throneNum.disabled=true;$throneGo.disabled=true;
+}
+
+function loop(){
+  if(!paused) clock+=speed;
+  // zoom-out dim removed
+  var now_=Date.now();
+  // Text-hidden idle → auto-start slideshow after 10s
+  if(cinematic && !slideshowActive && csStartTime>0){
+    if(now_-csStartTime > ssAutoStartT*1000) startSlideshow();
+  }
+  // ── Slideshow camera ──
+  if(slideshowActive){
+    slideshowPhaseT+=1;                       // real-frame timing
+    if(mode==="galaxy"){
+      ssTransT+=1;
+      var p=ssTransT/ssTransDur; if(p>1)p=1;
+      var e=p*p*p*(p*(p*6-15)+10);            // smootherstep — gentle ease-in-out
+      az  =ssFromAz  +(ssTargetAz  -ssFromAz)*e;
+      tilt=ssFromTilt+(ssTargetTilt-ssFromTilt)*e;
+      zoom=ssFromZoom+(ssTargetZoom-ssFromZoom)*e;
+      if(ssTargetNode>=0 && p>=0.94) goSystem(ssTargetNode);   // glide in, then enter
+    }
+    if(slideshowPhaseT >= slideshowInterval*60){
+      if(ssTargetNode>=0 && mode==="system") goGalaxy();       // leave the throne first
+      nextSlideshowTarget();
+    }
+  }
+  else if(cinematic && !slideshowActive){
+    // Organic cinematic drift (original)
+    cinematicTime+=speed;
+    az+=Math.sin(cinematicTime*0.0003)*0.00025+
+        Math.sin(cinematicTime*0.0007+1.3)*0.00015+
+        Math.sin(cinematicTime*0.00013+4.7)*0.0001;
+    tilt=0.5+0.35*Math.sin(cinematicTime*0.00004+0.8);
+    zoom=0.8+0.6*(0.5+0.5*Math.sin(cinematicTime*0.000015+2.1));
+  }
+  idleCheck();
+  if($galaxyTools) $galaxyTools.style.display=
+    (mode==='galaxy'||mode==='star'||(mode==='system'&&coreView>=0))?'flex':'none';
+  if(mode=='galaxy') renderGalaxy();
+  else if(mode=='star') renderStar();
+  else renderSystem();
+  requestAnimationFrame(loop);
+}
+
+// ── deep-link router — lets the website link straight to a destination ───
+function applyHash(){
+  var h=(location.hash||'').replace('#','');
+  if(!h||h==='explore'){ if(cinematic)exitCinematic(); goGalaxy(); return; }
+  if(h==='cinematic'){ goGalaxy(); if(!cinematic)enterCinematic(); return; }
+  var m;
+  if((m=h.match(/^sun=(\d+)/))){ var s=+m[1]; if(s>=0&&s<3)goStar(s); return; }
+  if((m=h.match(/^core=(\d+)/))){ var c=+m[1]; if(c>=0&&c<12)goCore(c); return; }
+  if((m=h.match(/^throne=(\d+)/))){ var n=+m[1]; if(n>=0&&n<=143)goSystem(n); return; }
+}
+addEventListener('hashchange',applyHash);
+applyHash();
+
+loop();
+</script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Collection — KOLOB</title>
+<link rel="stylesheet" href="site.css">
+<script defer src="site.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="brand" href="index.html">KOLOB</a>
+  <a href="theorem.html">THE THEOREM</a>
+  <a href="core15.html">CORE 15</a>
+  <a href="collection.html" class="active">COLLECTION</a>
+  <a href="explainer.html">GUIDE</a>
+  <a class="enter" href="kolob-pod-1d.html">ENTER ▸</a>
+</nav>
+
+<section class="wrap" style="padding-top:130px;padding-bottom:20px">
+  <p class="eyebrow">The Collection</p>
+  <h1 style="font-size:clamp(34px,6vw,60px)">144 Thrones</h1>
+  <p class="lede" style="margin-top:20px;max-width:62ch">Each throne is a unique planetary
+  system — generated from its own seed. Filter by ring, then step into any one of them in the live
+  explorer.</p>
+  <p style="margin-top:16px"><a class="btn ghost" href="core15.html">★ THE LOCKED CORE 15 ▸</a></p>
+</section>
+
+<section class="wrap" style="padding-top:8px">
+  <div class="filters" id="filters">
+    <button data-t="all" class="on">ALL · 144</button>
+    <button data-t="2">TELESTIAL</button>
+    <button data-t="1">TERRESTRIAL</button>
+    <button data-t="0">CELESTIAL</button>
+  </div>
+  <div class="tgrid" id="grid"></div>
+</section>
+
+<footer class="foot">
+  <div class="links">
+    <a href="index.html">Home</a><a href="theorem.html">The Theorem</a>
+    <a href="core15.html">Core 15</a><a href="kolob-pod-1d.html">Explorer</a>
+  </div>
+  144 thrones · click any cell to enter it live
+</footer>
+
+<script>
+"use strict";
+var POD="kolob-pod-1d.html";
+// canonical hash — matches the explorer's default so the grid is consistent
+var HASH="0x4b4f4c42a17f0c3e9d5b8e2160f47a93c8d1e0b6452f9a3c7e1d80b54f2a69c3";
+function hashSeed(h){var s=0;for(var i=2;i<h.length;i++) s=(Math.imul(s,16)+parseInt(h[i],16)+1)|0;return s>>>0;}
+function PRNG(seed){var a=seed^0x9e3779b9,b=seed^0x243f6a88,c=seed^0xb7e15162,d=1;
+  return function(){a|=0;b|=0;c|=0;d|=0;var t=(a+b|0)+d|0;d=d+1|0;
+    a=b^b>>>9;b=c+(c<<3)|0;c=(c<<21|c>>>11);c=c+t|0;return (t>>>0)/4294967296;};}
+var TAU=6.28318530718;
+function mk(seed){var r=PRNG(seed>>>0);
+  r.int=function(a,b){return a+((r()*(b-a+1))|0);};
+  r.g=function(){var u=0,v=0;while(!u)u=r();while(!v)v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(TAU*v);};
+  return r;}
+// stellar colours (PURE_ICE palette, matches the pod)
+var STAR=[ {col:[117,225,255],w:0.003},{col:[67,205,255],w:0.13},{col:[235,245,255],w:0.61},
+ {col:[255,250,225],w:3.0},{col:[255,221,55],w:7.6},{col:[255,140,40],w:12},{col:[248,43,118],w:76}];
+var STARW=(function(){var s=0,a=[];for(var i=0;i<STAR.length;i++){s+=STAR[i].w;a.push(s);}return{a:a,t:s};})();
+function pickStar(r){var x=r()*STARW.t;for(var i=0;i<STARW.a.length;i++) if(x<STARW.a[i]) return i;return 6;}
+var TIER_NAMES=["CELESTIAL","TERRESTRIAL","TELESTIAL"];
+var TIER_COL=[[255,225,110],[255,110,210],[110,215,255]];
+
+var H0=hashSeed(HASH),NODES=[];
+for(var i=0;i<144;i++){
+  var nr=mk((H0+(i+1)*8675309)>>>0);
+  nr.int(0,3);          // arm  (consume, value unused)
+  nr();                 // radius
+  nr.g(); nr.g();       // a, z
+  var star=pickStar(nr);
+  var tier=i<45?2:i<101?1:0;     // matches the pod
+  NODES.push({i:i,star:star,tier:tier});
+}
+function rs(c){return"rgb("+c[0]+","+c[1]+","+c[2]+")";}
+function build(filter){
+  var g=document.getElementById('grid'),html="";
+  NODES.forEach(function(n){
+    if(filter!=='all' && n.tier!=+filter) return;
+    var sc=rs(STAR[n.star].col), tc=rs(TIER_COL[n.tier]);
+    html+='<a class="tcell" href="'+POD+'#throne='+n.i+'" title="Throne '+n.i+' · '+TIER_NAMES[n.tier]+'">'+
+      '<span class="ring"></span>'+
+      '<span class="dot" style="color:'+sc+';background:'+sc+'"></span>'+
+      '<span class="tg" style="background:'+tc+'"></span>'+
+      '<span class="id">'+("00"+n.i).slice(-3)+'</span></a>';
+  });
+  g.innerHTML=html;
+}
+build('all');
+document.querySelectorAll('#filters button').forEach(function(b){
+  b.addEventListener('click',function(){
+    document.querySelectorAll('#filters button').forEach(function(x){x.classList.remove('on');});
+    b.classList.add('on'); build(b.dataset.t);
+  });
+});
+</script>
+</body>
+</html>
