@@ -96,7 +96,6 @@
 </div>
 <div id="galaxyTools">
   <button class="gtBtn" id="gtGpu" title="Exalt — 2× particle density (desktop only)">EXALT</button>
-  <button class="gtBtn" id="gtBright" title="Enlighten — brightness boost [b]">ENLIGHTEN</button>
   <button class="gtBtn" id="gtCinema" title="Slideshow [c]">▶</button>
 </div>
 <style>
@@ -194,9 +193,9 @@ var PALETTES=[
 ];
 var palIdx=9; // PURE_ICE palette locked
 var P=PALETTES[palIdx];
-function sh(c,f){if(brightBoost) f=Math.min(1.5,f*2);
+function sh(c,f){f=Math.min(1.5,f*1.3);   // everything a touch brighter, always
   return[Math.min(255,c[0]*f),Math.min(255,c[1]*f),Math.min(255,c[2]*f)];}
-function lt(c,f){if(brightBoost) f=Math.min(1,f*2);
+function lt(c,f){f=Math.min(1,f*1.3);
   return[c[0]+(255-c[0])*f,c[1]+(255-c[1])*f,c[2]+(255-c[2])*f];}
 function mix(a,b,f){return[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f];}
 function sat(c,k){var m=(c[0]+c[1]+c[2])/3,cl=function(x){return x<0?0:x>255?255:x;};
@@ -480,7 +479,6 @@ var ssTargetAz=0,ssTargetTilt=0.52,ssTargetZoom=1;
 var ssFromAz=0,ssFromTilt=0.52,ssFromZoom=1,ssTransT=0,ssTransDur=170;
 var ssTargetNode=-1; // -1 = galaxy view, 0-99 = throne
 var $ssUI,$ssBtnPlay,$ssBtnRand,$ssQueue;
-var brightBoost=false; // B key: 2× brightness
 var $back=document.getElementById('back');
 var $throneNum=document.getElementById('throneNum');
 var $throneGo=document.getElementById('throneGo');
@@ -581,10 +579,8 @@ document.addEventListener('fullscreenchange',function(){$ssFs?$ssFs.classList.to
 // ── GALAXY TOOLBAR: GPU + BRIGHTNESS (always available at galaxy level) ──
 var $galaxyTools=document.getElementById('galaxyTools');
 var $gtGpu=document.getElementById('gtGpu');
-var $gtBright=document.getElementById('gtBright');
 function syncTools(){
   if($gtGpu) $gtGpu.classList.toggle('on',gpuMode);
-  if($gtBright) $gtBright.classList.toggle('on',brightBoost);
   if($ssGpu) $ssGpu.classList.toggle('on',gpuMode);
 }
 function setGpu(on){
@@ -596,7 +592,6 @@ function setGpu(on){
   syncTools();
 }
 if($gtGpu) $gtGpu.addEventListener('click',function(e){e.stopPropagation();setGpu(!gpuMode);});
-if($gtBright) $gtBright.addEventListener('click',function(e){e.stopPropagation();brightBoost=!brightBoost;syncTools();});
 // PLAY button → toggle slow, mellow, within-scene camera drift (no scene changes)
 var $gtCinema=document.getElementById('gtCinema');
 if($gtCinema) $gtCinema.addEventListener('click',function(e){e.stopPropagation();
@@ -657,11 +652,12 @@ function goGalaxy(){mode="galaxy";zoom=1;az=0;tilt=0.52;
   if(!cinematic){$back.style.display='none';
     $throneNum.disabled=false;$throneGo.disabled=false;}
   else {$back.style.display='none';}}
-function goSystem(idx){
+function goSystem(idx,ft){
   if(idx<0||idx>128)return;
   curNode=idx;coreView=-1;var nd=NODES[idx];
-  system=buildSystem(nd.seed,tierOf(idx));
-  applyRelics(system,tierOf(idx),mk((nd.seed^0x9E5C17)>>>0));
+  var tr=(ft==null?tierOf(idx):ft);          // ft forces a tier (for before/after embeds)
+  system=buildSystem(nd.seed,tr);
+  applyRelics(system,tr,mk((nd.seed^0x9E5C17)>>>0));
   mode="system";zoom=1;az=0;tilt=0.52;clock=0;
   $back.style.display='block';
   $throneNum.value=idx;$throneNum.disabled=false;$throneGo.disabled=false;}
@@ -855,7 +851,6 @@ addEventListener('keydown',function(e){var k=e.key.toLowerCase();
   else if(k==="0"){zoom=1;az=0;tilt=0.52;keySel=-1;}
   else if(k==="c"){if(cinematic){exitCinematic();stopSlideshow();keySel=-1;}
     else{stopSlideshow();enterCinematic();}}
-  else if(k==="b"){brightBoost=!brightBoost;syncTools();}
   else if(k==="s"){var a=document.createElement('a');
     a.download="kolob_"+(mode==="system"?"throne"+curNode:"chart")+".png";
     a.href=cv.toDataURL('image/png');a.click();}
@@ -1021,7 +1016,7 @@ function renderGalaxy(){
       for(var q=0;q<12;q++){var a4=clock*0.02+q/12*TAU;
         plot(sp[0]+Math.cos(a4)*glowR,sp[1]+Math.sin(a4)*glowR,
           "rgba("+tc[0]+","+tc[1]+","+tc[2]+",0.42)");}}
-    body(sp[0],sp[1],gr,brightBoost?sh(bcol,1.4):bcol,nd.spin+clock*0.013);
+    body(sp[0],sp[1],gr,bcol,nd.spin+clock*0.013);
   }
 
   // top-left appears only while hovering a throne or a core star
@@ -1338,6 +1333,15 @@ function applyHash(){
   if(!h||h==='explore'){ if(cinematic)exitCinematic(); goGalaxy(); return; }
   if(h==='cinematic'){ goGalaxy(); if(!cinematic)enterCinematic(); return; }
   var m;
+  // chrome-free live embeds for the website (Core 15 cards, before/after)
+  if((m=h.match(/^embed=(sun|core|throne):(\d+)(?::(\d+))?/))){
+    document.body.classList.add('hero');
+    var ety=m[1],eid=+m[2],ett=(m[3]!=null?+m[3]:null);
+    if(ety==='sun'&&eid<3) goStar(eid);
+    else if(ety==='core'&&eid<12) goCore(eid);
+    else if(ety==='throne'&&eid<=128) goSystem(eid,ett);
+    return;
+  }
   if((m=h.match(/^sun=(\d+)/))){ var s=+m[1]; if(s>=0&&s<3)goStar(s); return; }
   if((m=h.match(/^core=(\d+)/))){ var c=+m[1]; if(c>=0&&c<12)goCore(c); return; }
   if((m=h.match(/^throne=(\d+)/))){ var n=+m[1]; if(n>=0&&n<=128)goSystem(n); return; }

@@ -25,7 +25,24 @@
   <p style="margin-top:18px"><a class="btn ghost" href="core15.html">THE CORE 15 ▸</a></p>
 </section>
 
-<section class="wrap" style="padding-top:8px">
+<!-- ── before / after: the same throne, Telestial vs Celestial ──────────── -->
+<section class="wrap" style="padding-top:8px;padding-bottom:8px">
+  <p class="eyebrow">See the upgrade · same throne, two kingdoms</p>
+  <div class="cmpbar">
+    <span>THRONE</span>
+    <input id="cmpNum" type="number" min="0" max="128" value="7">
+    <button id="cmpGo">COMPARE</button>
+    <span class="dim">advancing is paid — this is what you unlock</span>
+  </div>
+  <div class="compare">
+    <div class="pane"><span class="lab t-tel">Telestial · before</span>
+      <iframe id="cmpA" title="before"></iframe></div>
+    <div class="pane"><span class="lab t-cel">Celestial · after</span>
+      <iframe id="cmpB" title="after"></iframe></div>
+  </div>
+</section>
+
+<section class="wrap" style="padding-top:34px">
   <div class="filters" id="filters">
     <button data-t="all" class="on">ALL · 129</button>
     <button data-t="2">TELESTIAL</button>
@@ -98,6 +115,17 @@ document.querySelectorAll('#filters button').forEach(function(b){
     b.classList.add('on'); build(b.dataset.t);
   });
 });
+
+// before / after comparison — same throne at Telestial (2) vs Celestial (0)
+function compare(){
+  var n=parseInt(document.getElementById('cmpNum').value);
+  if(isNaN(n)||n<0||n>128) n=7;
+  document.getElementById('cmpA').src=POD+'#embed=throne:'+n+':2';
+  document.getElementById('cmpB').src=POD+'#embed=throne:'+n+':0';
+}
+document.getElementById('cmpGo').addEventListener('click',compare);
+document.getElementById('cmpNum').addEventListener('keydown',function(e){if(e.key==='Enter')compare();});
+compare();
 </script>
 </body>
 </html>

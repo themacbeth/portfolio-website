@@ -19,3 +19,26 @@
   nav.insertBefore(tog, enter);
   box.addEventListener('click',function(e){ if(e.target.tagName==='A') box.classList.remove('open'); });
 })();
+
+/* live tier scoreboard — base momentum + dry-run mints (FOMO) */
+(function(){
+  var BASE={cel:1,ter:3,tel:9};
+  function counts(){
+    var th=[],co=[];
+    try{th=JSON.parse(localStorage.getItem('kolob:mint:thrones')||'[]');}catch(e){}
+    try{co=JSON.parse(localStorage.getItem('kolob:mint:core')||'[]');}catch(e){}
+    var c={cel:BASE.cel,ter:BASE.ter,tel:BASE.tel};
+    th.forEach(function(m){ if(m.tier===0)c.cel++; else if(m.tier===1)c.ter++; else c.tel++; });
+    c.cel+=co.length;            // the core 15 are celestial
+    return c;
+  }
+  function pad(n){return ("00"+n).slice(-3);}
+  var el=document.createElement('div'); el.id='score'; document.body.appendChild(el);
+  function render(){var c=counts();
+    el.innerHTML=
+      '<div class="sl"><b>'+pad(c.cel)+'</b> Celestial <span class="sd" style="background:#e9c987"></span></div>'+
+      '<div class="sl"><b>'+pad(c.ter)+'</b> Terrestrial <span class="sd" style="background:#e98fce"></span></div>'+
+      '<div class="sl"><b>'+pad(c.tel)+'</b> Telestial <span class="sd" style="background:#7fc8ff"></span></div>';
+  }
+  render(); addEventListener('storage',render); setInterval(render,4000);
+})();
