@@ -162,7 +162,7 @@ function mintThrone(k){
     mintedTh.push({i:i,tier:o.tier}); save('kolob:mint:thrones',mintedTh);
     setTier(i,o.tier);                       // so it renders at that kingdom in the explorer
     logLine('Minted <b>Throne '+("00"+i).slice(-3)+'</b> · '+o.nm+' · '+o.price+
-      ' ETH — <a href="'+POD+'#throne='+i+'">VIEW ▸</a>');
+      ' ETH — <a href="'+POD+'#throne='+i+'&own">VIEW ▸</a>');
     render();
   });
 }

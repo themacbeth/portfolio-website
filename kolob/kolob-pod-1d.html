@@ -82,12 +82,23 @@
 <!-- EDITOR / MINT MENU -->
 <button id="menuToggle" style="position:fixed;right:14px;top:14px;z-index:210;width:28px;height:26px;background:rgba(20,20,35,0.92);border:1px solid rgba(255,255,255,0.15);border-radius:4px;color:#999;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;user-select:none" title="Editor / Mint">☰</button>
 <div id="menuPanel" style="position:fixed;right:14px;top:44px;z-index:210;background:rgba(12,12,22,0.95);border:1px solid rgba(255,255,255,0.12);border-radius:5px;padding:6px 0;min-width:140px;display:none;flex-direction:column;gap:1px">
-  <button class="menuItem" data-goto="home" style="background:none;border:none;color:#ccf;padding:8px 16px;text-align:left;cursor:pointer;font:11px monospace;letter-spacing:.12em;display:flex;align-items:center;gap:8px"><span style="opacity:.6">⌂</span> INDEX</button>
-  <button class="menuItem" data-goto="mint" style="background:none;border:none;color:#ccf;padding:8px 16px;text-align:left;cursor:pointer;font:11px monospace;letter-spacing:.12em;display:flex;align-items:center;gap:8px"><span style="opacity:.6">◆</span> MINT</button>
+  <button class="menuItem" data-goto="home"><span style="opacity:.6">⌂</span> INDEX</button>
+  <button class="menuItem" data-goto="mint"><span style="opacity:.6">◆</span> MINT</button>
+  <button class="menuItem" data-goto="cinema"><span style="opacity:.6">▶</span> CINEMATIC</button>
+  <div class="menuHead">Camera change</div>
+  <button class="menuItem cfreq" data-f="5">Every 5s</button>
+  <button class="menuItem cfreq on" data-f="10">Every 10s</button>
+  <button class="menuItem cfreq" data-f="20">Every 20s</button>
 </div>
 <style>
+  .menuItem{background:none;border:none;color:#ccf;padding:8px 16px;text-align:left;cursor:pointer;
+    font:11px monospace;letter-spacing:.12em;display:flex;align-items:center;gap:8px}
   .menuItem:hover{background:rgba(60,60,110,.7);color:#fff}
   .menuItem:active{background:rgba(80,80,130,.8)}
+  .menuItem.cfreq{padding-left:30px;color:#99a}
+  .menuItem.cfreq.on{color:#fff}
+  .menuItem.cfreq.on::before{content:"·";margin-right:4px;color:#9ab}
+  .menuHead{padding:8px 16px 3px;color:#667;font:9px monospace;letter-spacing:.2em;text-transform:uppercase}
   @media(max-width:600px){#menuToggle{right:8px;top:8px}#menuPanel{right:8px;top:36px}}
 </style>
 <div id="controls">
@@ -469,7 +480,10 @@ addEventListener('resize',resize);resize();
 // View state
 var mode="galaxy",system=null,curNode=-1,hoverStar=-1;
 var zoom=1,az=0,tilt=0.52,clock=0,speed=0.3,paused=false,hud=true,hover=-1,keySel=-1,keyHeld=false;
-var cinematic=false,cinematicTime=0,cinematicUI=true;
+var cinematic=false,cinematicTime=0,cinematicUI=true,ownMode=false;
+// cinematic camera: glides to a new composition every camFreq seconds
+var camFreq=10,camT=0,camDur=480,camFromAz=0,camFromTilt=0.5,camFromZoom=1,
+    camToAz=0,camToTilt=0.5,camToZoom=1;
 // SLIDESHOW
 var slideshowActive=false,slideshowPhase=0,slideshowPhaseT=0,slideshowInterval=10;
 var gpuMode=false,gpuN=24000; // GPU: 2× particles
@@ -492,10 +506,19 @@ $ssQueue=document.getElementById('slideshowQueue');
 if($ssBtnPlay) $ssBtnPlay.textContent='▶';
 
 function toggleCinematicUI(show){ cinematicUI=show; }
-// "PLAY" = a slow, mellow, within-scene camera drift (no scene changes)
-function enterCinematic(){ cinematic=true;cinematicTime=0;hud=false;
+function newCamTarget(){                       // a fresh, gentle composition of the SAME scene
+  camFromAz=az;camFromTilt=tilt;camFromZoom=zoom; camT=0;
+  camDur=Math.max(120,camFreq*60*0.82);
+  camToAz=az+(Math.random()*2-1)*1.3;
+  camToTilt=0.28+Math.random()*0.5;
+  camToZoom=0.8+Math.random()*0.8;
+}
+function reqFS(){try{if(!document.fullscreenElement)document.documentElement.requestFullscreen().catch(function(){});}catch(e){}}
+function exitFS(){try{if(document.fullscreenElement)document.exitFullscreen().catch(function(){});}catch(e){}}
+// PLAY = fullscreen, slow easy-ease cinematic of the current scene; exit on click/key
+function enterCinematic(){ cinematic=true;hud=false; newCamTarget(); reqFS();
   if($gtCinema)$gtCinema.classList.add('on'); }
-function exitCinematic(){ cinematic=false;hud=true;
+function exitCinematic(){ cinematic=false;hud=true; exitFS();
   if($gtCinema)$gtCinema.classList.remove('on'); }
 
 // SLIDESHOW FUNCTIONS
@@ -624,10 +647,16 @@ document.addEventListener('click',function(e){
     $menuPanel.style.display='none';
 });
 document.querySelectorAll('.menuItem').forEach(function(item){
-  item.addEventListener('click',function(){
+  item.addEventListener('click',function(e){
+    e.stopPropagation();
+    var f=this.dataset.f;
+    if(f){ camFreq=+f;                       // camera-change frequency (keeps menu open)
+      document.querySelectorAll('.cfreq').forEach(function(x){x.classList.remove('on');});
+      this.classList.add('on'); return; }
     var goto=this.dataset.goto;
     if(goto==='home') location.href='index.html';
-    if(goto==='mint') location.href='mint.html';
+    else if(goto==='mint') location.href='mint.html';
+    else if(goto==='cinema'){ if(!cinematic) enterCinematic(); }
     $menuPanel.style.display='none';
   });
 });
@@ -751,6 +780,7 @@ cv.addEventListener('wheel',function(e){e.preventDefault();
 var drag=false,moved=0,lx=0,ly=0,touchDist=0,touchAng=0,touchCount=0;
 var lastTap=0,dblTapDelay=300;
 cv.addEventListener('pointerdown',function(e){
+  if(cinematic){ exitCinematic(); return; }   // a click ends the cinematic (cursor move does not)
   touchCount++;
   if(touchCount===1){
     drag=true;moved=0;lx=e.clientX;ly=e.clientY;
@@ -823,6 +853,7 @@ cv.addEventListener('pointercancel',function(){
 // Keyboard
 addEventListener('keydown',function(e){var k=e.key.toLowerCase();
   if(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'))return;
+  if(cinematic){ exitCinematic(); return; }   // any key ends the cinematic
   if(k==="escape"||(k==="g"&&mode!=="galaxy")){if(cinematic)exitCinematic();goGalaxy();keySel=-1;}
   else if(k===" "){e.preventDefault();paused=!paused;}
   else if(k==="h"){hud=!hud;}
@@ -1308,20 +1339,26 @@ function loop(){
     if(veilT>=1){ veilActive=false; document.body.classList.remove('veil'); }
     else { renderVeil(); requestAnimationFrame(loop); return; }
   }
-  // ── PLAY — slow, mellow, easy-ease camera drift within the CURRENT scene ──
+  // ── CINEMATIC — easy-ease glides to a fresh composition every camFreq sec ──
   if(cinematic){
-    cinematicTime+=speed; var ct=cinematicTime;
-    az  += Math.sin(ct*0.00016)*0.00013 + Math.sin(ct*0.00037+1.3)*0.00006; // very slow pan
-    tilt = 0.46 + 0.16*Math.sin(ct*0.00006+0.8);                            // mellow tilt
-    zoom = 1   + 0.20*Math.sin(ct*0.000045+2.1);                            // slow push / pull
+    camT++;
+    var p=Math.min(1,camT/camDur), e=p*p*p*(p*(p*6-15)+10);   // smootherstep
+    az  =camFromAz  +(camToAz  -camFromAz)*e;
+    tilt=camFromTilt+(camToTilt-camFromTilt)*e;
+    zoom=camFromZoom+(camToZoom-camFromZoom)*e;
+    if(camT>=camFreq*60) newCamTarget();
   }
   idleCheck();
   var heroM=document.body.classList.contains('hero');
-  if($galaxyTools) $galaxyTools.style.display=heroM?'none':'flex';   // keep ▶ usable to stop play
-  if($controls) $controls.style.display=(mode==='galaxy'&&!cinematic&&!heroM)?'flex':'none';
-  if($back) $back.style.display=(mode!=='galaxy'&&!cinematic&&!heroM)?'block':'none';
+  var chrome=!cinematic&&!heroM;
+  if($galaxyTools) $galaxyTools.style.display=chrome?'flex':'none';
+  // EXALT only in galaxy / great-star / core-system views — never on a throne
+  if($gtGpu) $gtGpu.style.display=(mode==='galaxy'||mode==='star'||(mode==='system'&&coreView>=0))?'':'none';
+  if($controls) $controls.style.display=(mode==='galaxy'&&chrome)?'flex':'none';
+  if($back) $back.style.display=(mode!=='galaxy'&&chrome)?'block':'none';
   if($advanceBtn){
-    var up=(mode==='system'&&coreView<0&&!cinematic&&!heroM&&tierOf(curNode)>0);
+    // advance is a paid action — only shown when managing an owned throne (#…&own)
+    var up=(ownMode&&mode==='system'&&coreView<0&&chrome&&tierOf(curNode)>0);
     $advanceBtn.style.display=up?'block':'none';
     if(up) $advanceBtn.textContent="ADVANCE TO "+TIER_NAMES[tierOf(curNode)-1]+" ▸";
   }
@@ -1334,6 +1371,7 @@ function loop(){
 // ── deep-link router — lets the website link straight to a destination ───
 function applyHash(){
   var h=(location.hash||'').replace('#','');
+  ownMode=/(?:^|[&:])own\b/.test(h);   // #throne=N&own → manage mode (advance enabled)
   if(h==='hero'){ document.body.classList.add('hero'); if(cinematic)exitCinematic(); goGalaxy(); return; }
   if(!h||h==='explore'){ if(cinematic)exitCinematic(); goGalaxy(); return; }
   if(h==='cinematic'){ goGalaxy(); if(!cinematic)enterCinematic(); return; }

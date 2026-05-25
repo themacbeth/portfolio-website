@@ -34,11 +34,10 @@
     <button id="cmpGo">COMPARE</button>
     <span class="dim">advancing is paid — this is what you unlock</span>
   </div>
-  <div class="compare">
-    <div class="pane"><span class="lab t-tel">Telestial · before</span>
-      <iframe id="cmpA" title="before"></iframe></div>
-    <div class="pane"><span class="lab t-cel">Celestial · after</span>
-      <iframe id="cmpB" title="after"></iframe></div>
+  <div class="compare three">
+    <div class="pane"><span class="lab t-tel">Telestial</span><iframe id="cmpA" title="telestial"></iframe></div>
+    <div class="pane"><span class="lab t-ter">Terrestrial</span><iframe id="cmpB" title="terrestrial"></iframe></div>
+    <div class="pane"><span class="lab t-cel">Celestial</span><iframe id="cmpC" title="celestial"></iframe></div>
   </div>
 </section>
 
@@ -121,7 +120,8 @@ function compare(){
   var n=parseInt(document.getElementById('cmpNum').value);
   if(isNaN(n)||n<0||n>128) n=7;
   document.getElementById('cmpA').src=POD+'#embed=throne:'+n+':2';
-  document.getElementById('cmpB').src=POD+'#embed=throne:'+n+':0';
+  document.getElementById('cmpB').src=POD+'#embed=throne:'+n+':1';
+  document.getElementById('cmpC').src=POD+'#embed=throne:'+n+':0';
 }
 document.getElementById('cmpGo').addEventListener('click',compare);
 document.getElementById('cmpNum').addEventListener('keydown',function(e){if(e.key==='Enter')compare();});
@@ -130,7 +130,7 @@ compare();
 var cio=new IntersectionObserver(function(es){es.forEach(function(e){
   try{e.target.contentWindow.postMessage(e.isIntersecting?'kolob:play':'kolob:pause','*');}catch(_){}
 });},{threshold:0.01});
-cio.observe(document.getElementById('cmpA')); cio.observe(document.getElementById('cmpB'));
+['cmpA','cmpB','cmpC'].forEach(function(id){cio.observe(document.getElementById(id));});
 </script>
 </body>
 </html>
