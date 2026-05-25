@@ -209,6 +209,25 @@ function sh(c,f){f=Math.min(1.5,f*1.3);   // everything a touch brighter, always
 function lt(c,f){f=Math.min(1,f*1.3);
   return[c[0]+(255-c[0])*f,c[1]+(255-c[1])*f,c[2]+(255-c[2])*f];}
 function mix(a,b,f){return[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f];}
+// HSL→RGB — the engine for per-system vivid, individual-yet-family palettes
+function hsl(h,s,l){h=((h%360)+360)%360/360;
+  function f(n){var k=(n+h*12)%12;return 255*(l-s*Math.min(l,1-l)*Math.max(-1,Math.min(k-3,9-k,1)));}
+  return [f(0),f(8),f(4)];}
+// each system gets a seeded hue; planets/belts/star/comets sample a coherent scheme
+function makePalette(R){
+  var h0=R()*360, sc=R.int(0,2);            // 0 analogous · 1 triad · 2 split-complement
+  var spread=sc===0?28:sc===1?120:150;
+  function H(d,s,l){return hsl(h0+d,s,l);}
+  return {hue:h0,scheme:sc,
+    rocky:H(R.rng(-18,18),0.34,0.56),
+    gas:  H(0,0.82,0.62),
+    ice:  H(spread,0.74,0.64),
+    hot:  H(-spread,0.86,0.58),
+    star: H(R.rng(-14,14),0.58,0.74),
+    belt: H(R.rng(8,32),0.52,0.60),
+    comet:H(spread*0.7+150,0.72,0.74)};
+}
+function palType(p,t){return t===0?p.rocky:t===1?p.gas:t===2?p.ice:p.hot;}
 function sat(c,k){var m=(c[0]+c[1]+c[2])/3,cl=function(x){return x<0?0:x>255?255:x;};
   return[cl(m+(c[0]-m)*k),cl(m+(c[1]-m)*k),cl(m+(c[2]-m)*k)];}
 function rs(c){return"rgb("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+")";}
@@ -381,8 +400,10 @@ for(i=0;i<129;i++){
 var ACC=[P.c0,P.c1,P.c2];
 function buildSystem(seed,wealth){
   var R=mk(seed),sys={};
+  sys.seed=seed>>>0;
   sys.deity=aname(R);
-  sys.scheme=[R.pick(ACC),R.pick(ACC)];
+  sys.pal=makePalette(R);                              // unique seeded palette
+  sys.scheme=[sys.pal.gas,sys.pal.ice];
   var s1=pickStar(R);
   sys.stars=[{cls:s1}];
   // Inner systems: more binary stars, hotter spectral types
@@ -506,12 +527,12 @@ $ssQueue=document.getElementById('slideshowQueue');
 if($ssBtnPlay) $ssBtnPlay.textContent='▶';
 
 function toggleCinematicUI(show){ cinematicUI=show; }
-function newCamTarget(){                       // a fresh, gentle composition of the SAME scene
+function newCamTarget(){                       // gentle re-framing of the SAME scene
   camFromAz=az;camFromTilt=tilt;camFromZoom=zoom; camT=0;
   camDur=Math.max(120,camFreq*60*0.82);
-  camToAz=az+(Math.random()*2-1)*1.3;
-  camToTilt=0.28+Math.random()*0.5;
-  camToZoom=0.8+Math.random()*0.8;
+  camToAz=az+(Math.random()*2-1)*1.3;          // slow pan / orbit
+  camToTilt=0.40+(Math.random()*2-1)*0.18;     // gentle tilt
+  camToZoom=zoom;                              // keep zoom fixed — the pixel grid stays crisp
 }
 function reqFS(){try{if(!document.fullscreenElement)document.documentElement.requestFullscreen().catch(function(){});}catch(e){}}
 function exitFS(){try{if(document.fullscreenElement)document.exitFullscreen().catch(function(){});}catch(e){}}
@@ -776,32 +797,33 @@ cv.addEventListener('wheel',function(e){e.preventDefault();
   zoom*=Math.exp(-e.deltaY*0.0012);zoom=Math.max(0.3,Math.min(9,zoom));
 },{passive:false});
 
-// Pointer / touch
-var drag=false,moved=0,lx=0,ly=0,touchDist=0,touchAng=0,touchCount=0;
+// Pointer / touch — pinch zoom uses a live map of active pointers
+var drag=false,moved=0,lx=0,ly=0;
+var ptrs=new Map(),pinchDist=0,pinchAng=0,pinching=false;
 var lastTap=0,dblTapDelay=300;
+function ptrArr(){return [].slice.call(ptrs.values());}
 cv.addEventListener('pointerdown',function(e){
   if(cinematic){ exitCinematic(); return; }   // a click ends the cinematic (cursor move does not)
-  touchCount++;
-  if(touchCount===1){
-    drag=true;moved=0;lx=e.clientX;ly=e.clientY;
-    cv.setPointerCapture(e.pointerId);
-  }else if(touchCount===2){
-    var t0=e,t1=dragEv;
-    if(t1){var dx=t1.clientX-t0.clientX,dy=t1.clientY-t0.clientY;
-      touchDist=Math.hypot(dx,dy);touchAng=Math.atan2(dy,dx);}
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  try{cv.setPointerCapture(e.pointerId);}catch(_){}
+  if(ptrs.size===1){
+    drag=true;moved=0;lx=e.clientX;ly=e.clientY;pinching=false;
+  }else if(ptrs.size===2){
+    drag=false;pinching=true;
+    var a=ptrArr(),dx=a[1].x-a[0].x,dy=a[1].y-a[0].y;
+    pinchDist=Math.hypot(dx,dy);pinchAng=Math.atan2(dy,dx);
   }
 });
-  var dragEv=null;
 cv.addEventListener('pointermove',function(e){
-  dragEv=e;
-  if(touchCount>=2){
-    var t0=e,t1=dragEv;
-    if(t1&&touchCount>=2){
-      var dx=t1.clientX-t0.clientX,dy=t1.clientY-t0.clientY;
-      var nd=Math.hypot(dx,dy),na=Math.atan2(dy,dx);
-      if(nd>0&&touchDist>0){zoom*=touchDist/nd;zoom=Math.max(0.3,Math.min(9,zoom));}
-      if(touchAng!==null){var rot=(na-touchAng)*0.3;if(Math.abs(rot)>0.001)az+=rot;}
-      touchDist=nd;touchAng=na;}
+  if(ptrs.has(e.pointerId)) ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinching&&ptrs.size>=2){
+    var a=ptrArr(),dx=a[1].x-a[0].x,dy=a[1].y-a[0].y;
+    var nd=Math.hypot(dx,dy),na=Math.atan2(dy,dx);
+    if(nd>0&&pinchDist>0){zoom*=nd/pinchDist;zoom=Math.max(0.3,Math.min(9,zoom));}
+    var rot=(na-pinchAng);
+    if(rot>Math.PI)rot-=2*Math.PI; if(rot<-Math.PI)rot+=2*Math.PI;
+    if(Math.abs(rot)>0.001)az+=rot*0.5;
+    pinchDist=nd;pinchAng=na;moved+=20;
   }else if(drag){
     var dx=e.clientX-lx,dy=e.clientY-ly;moved+=Math.abs(dx)+Math.abs(dy);
     az+=dx*0.006;tilt=Math.max(0.12,Math.min(1,tilt+dy*0.004));
@@ -818,8 +840,12 @@ cv.addEventListener('pointermove',function(e){
   }
 });
 cv.addEventListener('pointerup',function(e){
-  touchCount=Math.max(0,touchCount-1);
-  if(touchCount<=0){drag=false;touchDist=0;touchAng=null;
+  ptrs.delete(e.pointerId);
+  try{cv.releasePointerCapture(e.pointerId);}catch(_){}
+  if(ptrs.size===1){ // one finger lifted from a pinch — resume single-finger drag
+    var a=ptrArr()[0]; drag=true;pinching=false;lx=a.x;ly=a.y;return;
+  }
+  if(ptrs.size===0){drag=false;pinching=false;
     if(moved<12){
       if(cinematic&&mode==="galaxy"){toggleCinematicUI(!cinematicUI);return;}
       var now=Date.now();
@@ -846,8 +872,10 @@ cv.addEventListener('pointerup',function(e){
     }}
 });
 
-cv.addEventListener('pointercancel',function(){
-  touchCount=0;drag=false;touchDist=0;touchAng=null;
+cv.addEventListener('pointercancel',function(e){
+  if(e&&ptrs.has(e.pointerId))ptrs.delete(e.pointerId); else ptrs.clear();
+  if(ptrs.size<2)pinching=false;
+  if(ptrs.size===0)drag=false;
 });
 
 // Keyboard
@@ -1079,44 +1107,53 @@ function ellipse(a,e,peri,inc,cosP,sinP,scale,col){
 }
 function renderSystem(){
   ctx.fillStyle="#000";ctx.fillRect(0,0,W,H);
+  var sy=system,PAL=sy.pal||makePalette(mk(1));
   var t=(clock%SYSLOOP)/SYSLOOP;
   var phi=t*TAU+az,cosP=Math.cos(phi),sinP=Math.sin(phi);
-  var sy=system,amax=0.1;
+  var amax=0.1;
   for(var i=0;i<sy.planets.length;i++)
     amax=Math.max(amax,sy.planets[i].a*(1+sy.planets[i].e));
   var scale=scaleRef*zoom/amax;
+  var orbCol=rs(sh(PAL.gas,0.16)), comOrb=rs(sh(PAL.comet,0.16));
+  var kuiCol=rs(sh(PAL.ice,0.55)), belCol=rs(sh(PAL.belt,0.8));
 
   for(i=0;i<sy.planets.length;i++){var pl=sy.planets[i];
-    ellipse(pl.a,pl.e,pl.peri,pl.inc,cosP,sinP,scale,"rgb(40,40,56)");}
+    ellipse(pl.a,pl.e,pl.peri,pl.inc,cosP,sinP,scale,orbCol);}
   for(i=0;i<sy.comets.length;i++){var cm=sy.comets[i];
-    ellipse(cm.a,cm.e,cm.peri,cm.inc,cosP,sinP,scale,"rgb(36,40,56)");}
+    ellipse(cm.a,cm.e,cm.peri,cm.inc,cosP,sinP,scale,comOrb);}
   for(i=0;i<sy.kuiper.length;i++){var ku=sy.kuiper[i];
     var o=orbit(ku.a,ku.e,ku.peri,ku.inc,ku.M0+ku.rev*TAU*t);
     var sp=project(o[0],o[1],o[2],cosP,sinP,scale);
-    plot(sp[0],sp[1],"rgb(80,140,170)");}
+    plot(sp[0],sp[1],kuiCol);}
   for(i=0;i<sy.asteroids.length;i++){var as=sy.asteroids[i];
     var o=orbit(as.a,as.e,as.peri,as.inc,as.M0+as.rev*TAU*t);
     var sp=project(o[0],o[1],o[2],cosP,sinP,scale);
-    plot(sp[0],sp[1],"rgb(160,145,105)");}
+    plot(sp[0],sp[1],belCol);}
   for(i=0;i<sy.embryos.length;i++){var em=sy.embryos[i];
     var o=orbit(em.a,0.05,em.ph,0,em.M0+em.rev*TAU*t);
     var sp=project(o[0],o[1],o[2],cosP,sinP,scale);
     var fl=0.3+0.7*Math.abs(Math.sin(clock*0.05+em.ph));
-    body(sp[0],sp[1],PX*1.5,sh([150,160,210],fl),clock*0.03);}
+    body(sp[0],sp[1],PX*1.5,sh(PAL.star,fl*0.9),clock*0.03);}
 
   for(i=0;i<sy.stars.length;i++){var st=sy.stars[i];
     var sxx=0,syy=0;
     if(sy.binary){var off=st.off;
       sxx=off*Math.cos(sy.binRev*TAU*t);syy=off*Math.sin(sy.binRev*TAU*t);}
     var sp=project(sxx,syy,0,cosP,sinP,scale);
-    var sr=Math.min(PX*10,PX*(4+STAR[st.cls].rad*1.8));
-    starBody(sp[0],sp[1],sr,STAR[st.cls].col,clock*0.007);}
+    if(sy.isCore){   // Core 12 — a mini, surface-emission particle sun at heart
+      var ccol=mix(STAR[st.cls].col,PAL.star,0.65);   // stays saturated, no white blow-out
+      renderCoreStar(sp[0],sp[1],Math.min(PX*9,PX*(5+STAR[st.cls].rad*2)),
+        (sy.seed^(0x51F0+i*97))>>>0,ccol);
+    }else{
+      var sr=Math.min(PX*10,PX*(4+STAR[st.cls].rad*1.8));
+      starBody(sp[0],sp[1],sr,mix(STAR[st.cls].col,PAL.star,0.5),clock*0.007);
+    }}
 
   for(i=0;i<sy.planets.length;i++){var pl=sy.planets[i];
     var o=orbit(pl.a,pl.e,pl.peri,pl.inc,pl.M0+pl.rev*TAU*t);
     var sp=project(o[0],o[1],o[2],cosP,sinP,scale);
     var pt=PTYPE[pl.type];
-    var base=mix(pt.base,sy.scheme[i%2],0.22),pr=PX*pt.sz*pl.szMul;
+    var base=mix(palType(PAL,pl.type),sy.scheme[i%2],0.28),pr=PX*pt.sz*pl.szMul;
     if(pl.ring)
       for(var q=0;q<72;q++){var ra=q/72*TAU+pl.spin+clock*0.01,
         rr=pr*(1.5+0.55*(q%3)/2);
@@ -1136,12 +1173,12 @@ function renderSystem(){
       var f=s/tailLen;
       /* color: amber→white→cyan as tail fades */
       var col=s<8?lt([210,220,255],(8-s)/8*0.7):
-             s<20?rs([190,230,255]):mix([255,210,130],[130,220,255],(s-20)/(tailLen-20));
+             s<20?rs(lt(PAL.comet,0.45)):mix(lt(PAL.star,0.4),PAL.comet,(s-20)/(tailLen-20));
       plot(tp[0],tp[1],col);
     }
     var oh=orbit(cm.a,cm.e,cm.peri,cm.inc,cm.M0+cm.rev*TAU*t);
     var sp=project(oh[0],oh[1],oh[2],cosP,sinP,scale);
-    body(sp[0],sp[1],PX*1.5,[205,238,255],clock*0.06);}
+    body(sp[0],sp[1],PX*1.5,lt(PAL.comet,0.55),clock*0.06);}
 
   if(hud){
     document.getElementById('hud').innerHTML= coreView>=0
@@ -1168,6 +1205,49 @@ function vnoise(x,y,z){var xi=Math.floor(x),yi=Math.floor(y),zi=Math.floor(z),
 function fbm(x,y,z){var s=0,a=0.5,f=1;for(var o=0;o<3;o++){s+=a*vnoise(x*f,y*f,z*f);f*=2.03;a*=0.5;}return s;}
 function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
 function norm(v){var l=Math.hypot(v[0],v[1],v[2])||1;return [v[0]/l,v[1]/l,v[2]/l];}
+
+// ── Core-12 mini particle sun — the great-star engine, scaled & simplified ──
+var _csData=null,_csSeed=null;
+function buildCoreStar(seed){
+  var r=mk(seed>>>0),arr=[],i,nS=IS_MOBILE?170:(gpuMode?520:340);
+  for(i=0;i<nS;i++){
+    var u=r()*TAU,ct=2*r()-1,st=Math.sqrt(1-ct*ct);
+    var d=[st*Math.cos(u),st*Math.sin(u),ct];
+    var up=Math.abs(d[1])<0.92?[0,1,0]:[1,0,0];
+    var t1=norm(cross(d,up)),t2=cross(d,t1);
+    var erupt=r()<0.17;
+    arr.push({d:d,t1:t1,t2:t2,ph:r()*40,tipExt:erupt?(0.8+r()*1.0):(0.2+r()*0.35),
+      amp:0.6+r()*0.9,coil:2.0+r()*3.0,flow:0.2+r()*0.5,bri:0.6+r()*0.6});
+  }
+  return arr;
+}
+function renderCoreStar(cx,cy,rad,seed,col){
+  if(_csSeed!==seed){_csData=buildCoreStar(seed);_csSeed=seed;}
+  var arr=_csData,t=clock*0.013;
+  var spin=az+clock*0.011,cosS=Math.cos(spin),sinS=Math.sin(spin);
+  var cosT=Math.cos(tilt),sinT=Math.sin(tilt);
+  var cr=col[0]|0,cg=col[1]|0,cb=col[2]|0;
+  var NK=IS_MOBILE?14:(gpuMode?30:22),INV=1/(NK-1),i,k;
+  ctx.globalCompositeOperation='lighter';
+  for(i=0;i<arr.length;i++){var sd=arr[i],tw=t*sd.flow+sd.ph;
+    var bx=sd.d[0]*1.6,by=sd.d[1]*1.6,bz=sd.d[2]*1.6;
+    for(k=0;k<NK;k++){
+      var u=k*INV,f=u*u,amp=(0.10+f*0.7)*sd.amp;
+      var na=fbm(bx+f*sd.coil+tw,by,bz)-0.44,nb=fbm(by,bz+f*sd.coil+tw,bx)-0.44;
+      var rr=1.0+sd.tipExt*f+na*0.1;
+      var px=sd.d[0]+sd.t1[0]*na*amp+sd.t2[0]*nb*amp;
+      var py=sd.d[1]+sd.t1[1]*na*amp+sd.t2[1]*nb*amp;
+      var pz=sd.d[2]+sd.t1[2]*na*amp+sd.t2[2]*nb*amp;
+      var pl=Math.sqrt(px*px+py*py+pz*pz)||1;pl=rr/pl;px*=pl;py*=pl;pz*=pl;
+      var rx=px*cosS-pz*sinS,rz=px*sinS+pz*cosS;
+      var sx=cx+rx*rad,sy=cy+(py*cosT-rz*sinT)*rad;
+      var a=sd.bri*(0.22-f*0.15);if(a<0.03)a=0.03;if(a>1)a=1;
+      ctx.fillStyle='rgba('+cr+','+cg+','+cb+','+a.toFixed(3)+')';
+      ctx.fillRect(sx,sy,PX,PX);
+    }
+  }
+  ctx.globalCompositeOperation='source-over';
+}
 
 function buildStar(seed){
   var r=mk(seed>>>0),i;sunStrands=[];sunOrbits=[];
@@ -1312,11 +1392,42 @@ function extremize(sys,r,ci){
   }
   return sys;
 }
+// Core-12 grandeur pass — more planets (well-spaced), 2× belts, prominent comets
+function coreBoost(sys,r){
+  var orig=sys.planets,oc=orig.length,i;
+  // target ~3× planets, but capped so every orbit keeps breathing room
+  var N=Math.min(oc*3,IS_MOBILE?8:11);
+  var aIn=0.14,aOut=1.0,ratio=N>1?Math.pow(aOut/aIn,1/(N-1)):1.3;
+  while(ratio<1.20&&N>2){N--;ratio=Math.pow(aOut/aIn,1/(N-1));}  // min 1.20 gap = no orbit crossing
+  var out=[],a=aIn,pl;
+  for(i=0;i<N;i++){
+    if(i<oc){pl=orig[i];}                                   // keep the original world (type/ring/moons)
+    else{var src=orig[i%oc];pl={type:src.type,spin:r()*TAU,ring:(r()<0.35),
+      szMul:src.szMul*(0.8+r()*0.5),moons:[]};}
+    pl.a=a;
+    pl.e=Math.min(pl.e||0,0.05);                            // low-e so apoapsis stays inside next periapsis
+    pl.peri=r()*TAU;pl.inc=r()*0.20;
+    if(pl.M0==null)pl.M0=r()*TAU;
+    pl.rev=Math.max(1,Math.round(Math.pow(a,-1.5)*4));
+    out.push(pl);a*=ratio;
+  }
+  sys.planets=out;
+  if(!IS_MOBILE){                                           // 2× belts (desktop only, perf)
+    var dup=function(arr,j){var n=arr.length,k;for(k=0;k<n;k++){var o=arr[k];
+      arr.push({a:o.a*(1+(r()-0.5)*j),e:o.e,peri:o.peri+(r()-0.5)*0.2,inc:o.inc,rev:o.rev,M0:r()*TAU});}};
+    dup(sys.asteroids,0.04);dup(sys.kuiper,0.04);}
+  var nc=(IS_MOBILE?8:16)+r.int(0,8);                       // prominent eccentric comets, out beyond the planets
+  for(i=0;i<nc;i++) sys.comets.push({a:r.rng(1.3,2.7),e:r.rng(0.7,0.95),
+    peri:r()*TAU,inc:r.g()*0.5,rev:r.pick([2,3,4,5]),M0:r()*TAU});
+  return sys;
+}
 function goCore(ci){
   stopSlideshow();
   var seed=CORE_SEEDS[3+ci];               // LOCKED seed
   system=buildSystem(seed,0);
   extremize(system,mk((seed^0xABCDEF)>>>0),ci);
+  coreBoost(system,mk((seed^0x5A17C0)>>>0));
+  system.isCore=true;
   system.coreName=JOSEPH_15[3+ci];
   system.coreProfile=CORE_PROFILES[ci];
   curNode=-1;coreView=ci;

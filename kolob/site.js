@@ -20,6 +20,18 @@
   box.addEventListener('click',function(e){ if(e.target.tagName==='A') box.classList.remove('open'); });
 })();
 
+/* standardized footer links — single source of truth */
+(function(){
+  var links=document.querySelector('.foot .links'); if(!links) return;
+  links.innerHTML=
+    '<a href="index.html">Home</a>'+
+    '<a href="core15.html">Core 15</a>'+
+    '<a href="collection.html">Collection</a>'+
+    '<a href="pitch.html">How It Works</a>'+
+    '<a href="mint.html">Mint</a>'+
+    '<a href="../kolob-pod-1d.html">Explore</a>';
+})();
+
 /* live tier scoreboard — base momentum + dry-run mints (FOMO) */
 (function(){
   var BASE={cel:1,ter:3,tel:9};
