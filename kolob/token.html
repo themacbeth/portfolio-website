@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KOLOB — token</title>
+<!-- ════════════════════════════════════════════════════════════════════
+     ON-CHAIN TOKEN RENDERER (Art Blocks Engine Flex, scriptType: js)
+     Renders ONE piece, deterministically, from tokenData:
+       invocation 0-2   → the 3 great suns        (locked seeds)
+       invocation 3-14  → the 12 core systems     (locked seeds)
+       invocation 15+   → a throne                (seeded by tokenData.hash)
+     Tier (telestial/terrestrial/celestial) + Creator-mode overrides come
+     from PostParams (externalAssetDependencies[0].data).
+     Everything below the ARTIST SCRIPT marker is what goes on-chain.
+     The head block (tokenData + canvas + style) is injected by Art Blocks;
+     here it's a local mock. Test other pieces with ?inv=N  (e.g. ?inv=5).
+     ════════════════════════════════════════════════════════════════════ -->
+<script>
+/* ── MOCK tokenData (Art Blocks injects the real one) ───────────────── */
+var tokenData = (typeof tokenData!=="undefined") ? tokenData : {
+  hash: "0x4b4f4c42a17f0c3e9d5b8e2160f47a93c8d1e0b6452f9a3c7e1d80b54f2a69c3",
+  tokenId: "144000020",                 // projectId 144 · invocation 20 (a throne)
+  externalAssetDependencies: [          // PostParams (PMP) mock
+    { dependency_type:"ONCHAIN", data:{ tier:"2" /* 2 telestial · 1 terrestrial · 0 celestial */ } }
+  ]
+};
+</script>
+<style>
+  html{height:100%}
+  body{min-height:100%;margin:0;padding:0;background:#000}
+  canvas{padding:0;margin:auto;display:block;position:absolute;top:0;bottom:0;left:0;right:0}
+</style>
+</head>
+<body>
+<canvas></canvas>
+
+<!-- ══════════════════════ ARTIST SCRIPT (on-chain) ══════════════════════ -->
+<script>
+"use strict";
+var TAU=6.28318530718;
+
+/* ── deterministic PRNG (hash-seeded) ── */
+function hashSeed(h){var s=0;for(var i=2;i<h.length;i++) s=(Math.imul(s,16)+parseInt(h[i],16)+1)|0;return s>>>0;}
+function PRNG(seed){var a=seed^0x9e3779b9,b=seed^0x243f6a88,c=seed^0xb7e15162,d=1;
+  return function(){a|=0;b|=0;c|=0;d|=0;var t=(a+b|0)+d|0;d=d+1|0;
+    a=b^b>>>9;b=c+(c<<3)|0;c=(c<<21|c>>>11);c=c+t|0;return (t>>>0)/4294967296;};}
+function mk(seed){var r=PRNG(seed>>>0);
+  r.rng=function(a,b){return a+(b-a)*r();};
+  r.int=function(a,b){return a+((r()*(b-a+1))|0);};
+  r.pick=function(x){return x[(r()*x.length)|0];};
+  r.g=function(){var u=0,v=0;while(!u)u=r();while(!v)v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(TAU*v);};
+  return r;}
+
+/* ── PostParams (tier + Creator-mode overrides) ── */
+function pmp(){try{return tokenData.externalAssetDependencies[0].data||{};}catch(e){return {};}}
+var PP=pmp();
+function ppInt(k,d){var n=parseInt(PP[k]);return isNaN(n)?d:n;}
+
+/* ── which piece is this token? ── */
+var INV=(function(){var u=new URLSearchParams(location.search),q=u.get('inv');
+  if(q!=null)return +q;
+  var tid=parseInt(String(tokenData.tokenId).split('-').pop())||0;return tid%1000000;})();
+
+/* ── palette + colour helpers (locked: PURE_ICE) ── */
+var P={c0:[200,235,255],c1:[220,230,255],c2:[235,242,255],c3:[250,252,255],
+       c4:[200,215,240],bg:[5,7,14],accent:[255,255,255],star_shift:-0.3};
+function sh(c,f){f=Math.min(1.5,f*1.3);return[Math.min(255,c[0]*f),Math.min(255,c[1]*f),Math.min(255,c[2]*f)];}
+function lt(c,f){f=Math.min(1,f*1.3);return[c[0]+(255-c[0])*f,c[1]+(255-c[1])*f,c[2]+(255-c[2])*f];}
+function mix(a,b,f){return[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f];}
+function rs(c){return"rgb("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+")";}
+
+/* ── names ── */
+var JOSEPH_15=["Kolob","Oleblish","Enish-go-on-dosh","Kai-e-vanrash","Lindi","Zip","Vusel",
+ "Vauiste","Waine","Way-ho-ox-oan","Oansli","Kible","Shineflis","Flis","Os"];
+var SYL=["ko","lob","ol","ib","lish","en","ish","go","dosh","kae","van","rash","kli","flos",
+ "is","es","hah","beam","rauk","yang","shin","ehah","jah","oh","eh","gno","laum","kok","ob","ole","a","flo","eese","seth"];
+function aname(r){var n=r.int(2,3),s="";for(var i=0;i<n;i++)s+=r.pick(SYL);return s.charAt(0).toUpperCase()+s.slice(1);}
+
+/* ── stellar classification ── */
+var S0=0.05*P.star_shift;
+var STAR=[
+ {c:"O",col:[120+S0*200,225,255],t:"blue",w:0.003,rad:5.2},
+ {c:"B",col:[70+S0*200,205,255],t:"blue-white",w:0.13,rad:3.1},
+ {c:"A",col:[235,245,255],t:"white",w:0.61,rad:1.7},
+ {c:"F",col:[255,250,225],t:"yellow-white",w:3.0,rad:1.3},
+ {c:"G",col:[255,221,55],t:"yellow",w:7.6,rad:1.05},
+ {c:"K",col:[255,142+S0*100,40],t:"orange",w:12,rad:0.82},
+ {c:"M",col:[248,46+S0*200,118],t:"red",w:76,rad:0.5}];
+var STARW=(function(){var s=0,a=[];for(var i=0;i<STAR.length;i++){s+=STAR[i].w;a.push(s);}return{a:a,t:s};})();
+function pickStar(r){var x=r()*STARW.t;for(var i=0;i<STARW.a.length;i++) if(x<STARW.a[i]) return i;return 6;}
+var CHAINS=[[16,8,4,2,1],[18,12,8,6,4,3,2],[24,12,6,3,2,1],[12,8,6,4,3,2],
+ [24,16,12,9,6,4,3],[30,20,12,8,6,4,2],[16,12,8,6,4,3,2],[20,10,5,3,2,1],
+ [27,18,12,8,6,4],[32,16,8,6,4,3,2]];
+
+/* ── locked core identities ── */
+var CORE_SEEDS=[0x4B4F4C00,0x4B414505,0x4B4C4909,
+  0x0C0DE101,0x0C0DE202,0x0C0DE303,0x0C0DE404,0x0C0DE505,0x0C0DE606,
+  0x0C0DE707,0x0C0DE808,0x0C0DE909,0x0C0DEA0A,0x0C0DEB0B,0x0C0DEC0C];
+var SUN_PARAMS=[
+ {col:[255,234,168],size:1.30,density:0.92,noise:1.0,speed:0.65,length:1.30,curl:2.2,rot:0.45,orbit:0.55,big:0.16},
+ {col:[150,212,255],size:0.95,density:0.74,noise:1.4,speed:1.70,length:0.65,curl:4.6,rot:1.50,orbit:0.95,big:0.07},
+ {col:[255,116,64], size:1.18,density:0.55,noise:1.1,speed:0.50,length:1.45,curl:6.8,rot:0.30,orbit:0.22,big:0.22}];
+var CORE_PROFILES=["RINGED DYNASTY","MOON SWARM","ASTEROID EMPIRE","COMET STORM","EMBRYO NURSERY",
+ "ECCENTRIC CHAOS","BINARY HEART","RESONANCE CATHEDRAL","FROZEN KUIPER","HOT-JUPITER FORGE","MEGA-RING WORLD","TROJAN SWARMS"];
+var TIER_NAMES=["CELESTIAL","TERRESTRIAL","TELESTIAL"];
+
+/* ── particle-cluster template ── */
+var CTPL=(function(){var r=mk(20260516),a=[];for(var i=0;i<220;i++){var ang=r()*TAU,rad=Math.sqrt(r());
+  a.push([Math.cos(ang)*rad,Math.sin(ang)*rad,Math.sqrt(Math.max(0,1-rad*rad))]);}return a;})();
+function ccount(r,PX){var n=(r/PX)*(r/PX)*3.4|0;return n<10?10:n>220?220:n;}
+function cluster(sx,sy,r,base,count,rot,PX,plot){var c=Math.cos(rot),s=Math.sin(rot);
+  for(var i=0;i<count;i++){var p=CTPL[i];var dx=p[0]*c-p[1]*s,dy=p[0]*s+p[1]*c;
+    var b=dx*-0.45+dy*-0.5+p[2]*0.74;
+    var col=b>0.86?lt(base,0.42):b>0.64?lt(base,0.12):b>0.42?sh(base,0.66):sh(base,0.4);
+    plot(sx+dx*r,sy+dy*r,rs(col));}}
+
+/* ── noise (for the great suns) ── */
+function hash3(x,y,z){var n=(Math.imul(x,374761393)+Math.imul(y,668265263)+Math.imul(z,1274126177))|0;
+  n=(n^(n>>>13))|0;n=Math.imul(n,1274126177)|0;return((n^(n>>>16))>>>0)/4294967296;}
+function vnoise(x,y,z){var xi=Math.floor(x),yi=Math.floor(y),zi=Math.floor(z),xf=x-xi,yf=y-yi,zf=z-zi,
+  u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf),w=zf*zf*(3-2*zf);function L(a,b,k){return a+(b-a)*k;}
+  return L(L(L(hash3(xi,yi,zi),hash3(xi+1,yi,zi),u),L(hash3(xi,yi+1,zi),hash3(xi+1,yi+1,zi),u),v),
+           L(L(hash3(xi,yi,zi+1),hash3(xi+1,yi,zi+1),u),L(hash3(xi,yi+1,zi+1),hash3(xi+1,yi+1,zi+1),u),v),w);}
+function fbm(x,y,z){var s=0,a=0.5,f=1;for(var o=0;o<3;o++){s+=a*vnoise(x*f,y*f,z*f);f*=2.03;a*=0.5;}return s;}
+function cross(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+function norm(v){var l=Math.hypot(v[0],v[1],v[2])||1;return[v[0]/l,v[1]/l,v[2]/l];}
+
+/* ── orbit modeling ── */
+function kepler(M,e){M=M%TAU;var E=M;for(var i=0;i<5;i++) E=E-(E-e*Math.sin(E)-M)/(1-e*Math.cos(E));return E;}
+function orbit(a,e,peri,inc,M){var E=kepler(M,e);var ox=a*(Math.cos(E)-e),oy=a*Math.sqrt(1-e*e)*Math.sin(E);
+  var px=ox*Math.cos(peri)-oy*Math.sin(peri),py=ox*Math.sin(peri)+oy*Math.cos(peri);
+  return [px,py*Math.cos(inc),py*Math.sin(inc)];}
+
+/* ── canvas ── */
+var cv=document.querySelector('canvas'),ctx=cv.getContext('2d');
+var W,H,CX,CY,PX,scaleRef,dpr;
+var IS_MOBILE=(typeof matchMedia!=="undefined"&&matchMedia('(max-width:760px),(pointer:coarse)').matches)||false;
+function resize(){
+  dpr=Math.min(window.devicePixelRatio||1, IS_MOBILE?1.5:2);
+  W=cv.width=Math.floor(innerWidth*dpr);H=cv.height=Math.floor(innerHeight*dpr);
+  cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';
+  CX=W/2;CY=H/2;PX=Math.max(1,Math.round(Math.min(W,H)/720));scaleRef=Math.min(W,H)*0.40;}
+addEventListener('resize',resize);resize();
+
+/* ── view (light interactivity for the live view) ── */
+var az=0,tilt=0.52,zoom=1,clock=0;
+var drag=false,lx=0,ly=0;
+cv.addEventListener('pointerdown',function(e){drag=true;lx=e.clientX;ly=e.clientY;cv.setPointerCapture(e.pointerId);});
+cv.addEventListener('pointermove',function(e){if(!drag)return;az+=(e.clientX-lx)*0.006;tilt=Math.max(0.12,Math.min(1,tilt+(e.clientY-ly)*0.004));lx=e.clientX;ly=e.clientY;});
+cv.addEventListener('pointerup',function(){drag=false;});
+cv.addEventListener('wheel',function(e){e.preventDefault();zoom*=Math.exp(-e.deltaY*0.0012);zoom=Math.max(0.3,Math.min(9,zoom));},{passive:false});
+
+/* ── render primitives ── */
+function project(x,y,z,cosP,sinP,scale){var rx=x*cosP-y*sinP,ry=x*sinP+y*cosP;
+  return [CX+rx*scale,CY+ry*scale*tilt-z*scale*(1-tilt),ry];}
+function plot(sx,sy,col){var gx=sx/PX|0,gy=sy/PX|0;ctx.fillStyle=col;ctx.fillRect(gx*PX,gy*PX,PX,PX);}
+function body(sx,sy,r,base,rot){cluster(sx,sy,r,base,ccount(r,PX),rot,PX,plot);}
+function starBody(sx,sy,r,base,rot){
+  for(var q=0;q<24;q++){var ag=q/24*TAU+rot*1.4,rr=r*(1.18+(q%3)*0.26);plot(sx+Math.cos(ag)*rr,sy+Math.sin(ag)*rr,rs(sh(base,0.25)));}
+  cluster(sx,sy,r,lt(base,0.12),ccount(r,PX),rot,PX,plot);
+  cluster(sx,sy,r*0.38,lt(P.c3,0.3),ccount(r*0.38,PX),rot,PX,plot);}
+
+/* ── system generator ── */
+var ACC=[P.c0,P.c1,P.c2];
+function buildSystem(seed,wealth){
+  var R=mk(seed),sys={},i;sys.deity=aname(R);sys.scheme=[R.pick(ACC),R.pick(ACC)];
+  var s1=pickStar(R);sys.stars=[{cls:s1}];
+  sys.binary=wealth===0?R()<0.55:wealth===1?R()<0.36:R()<0.20;
+  if(sys.binary){var s2=Math.min(6,s1+1+R.int(0,wealth===0?3:2));sys.stars.push({cls:s2});
+    sys.sep=R.rng(0.07,0.13);sys.binRev=R.pick([6,8,10,wealth===0?12:10]);
+    var m1=STAR[s1].rad,m2=STAR[s2].rad,mt=m1+m2;sys.stars[0].off=sys.sep*(m2/mt);sys.stars[1].off=-sys.sep*(m1/mt);}
+  var chain=R.pick(CHAINS),minP=wealth===0?4:wealth===1?3:2,maxP=wealth===0?8:wealth===1?6:4;
+  var nP=Math.min(chain.length,minP+R.int(0,maxP-minP)),revs=chain.slice(0,nP);
+  var araw=revs.map(function(v){return Math.pow(v,-2/3);}),aMax=araw[araw.length-1],hot=s1<=3;
+  sys.planets=[];
+  for(i=0;i<nP;i++){var a=araw[i]/aMax,e=R()*R()*(wealth===0?0.2:0.16)+(R()<0.12?R()*0.3:0),type;
+    if(a<0.30) type=(hot&&a<0.20&&R()<0.6)?3:0; else if(a<0.62) type=R()<0.55?1:0; else type=R()<0.6?2:1;
+    var szMul=wealth===0?1.3:wealth===1?1.0:0.7;
+    var pl={a:a,e:e,peri:R()*TAU,inc:R()*0.22,rev:revs[i],M0:R()*TAU,type:type,spin:R()*TAU,
+      ring:(type==1&&(wealth===0?R()<0.6:R()<0.4)),szMul:szMul,moons:[]};
+    var nm=type==1?(wealth===0?R.int(2,5):R.int(1,3)):type==2?R.int(0,wealth===0?2:1):R.int(0,1),mrevs=[12,6,3,2].slice(0,nm);
+    for(var mi=0;mi<nm;mi++) pl.moons.push({a:0.045+mi*0.032+R()*0.012,rev:mrevs[mi],M0:R()*TAU,peri:R()*TAU});
+    sys.planets.push(pl);}
+  sys.embryos=[];var ne=wealth===0?R.int(3,6):wealth===1?R.int(2,5):R.int(1,4);
+  for(i=0;i<ne;i++) sys.embryos.push({a:0.16+R()*0.4,rev:R.int(5,11),M0:R()*TAU,ph:R()*TAU});
+  var gi=0,gw=0;for(i=0;i<nP-1;i++){var w=sys.planets[i+1].a/sys.planets[i].a;if(w>gw){gw=w;gi=i;}}
+  sys.asteroids=[];
+  if(nP>=2&&gw>1.45){var aLo=sys.planets[gi].a*1.16,aHi=sys.planets[gi+1].a*0.85,gRevs=sys.planets[gi+1].rev,
+    nAst=wealth===0?700:wealth===1?450:200;
+    for(i=0;i<nAst;i++){var aa=R.rng(aLo,aHi),ar=Math.max(1,Math.round(gRevs*Math.pow(sys.planets[gi+1].a/aa,1.5)));
+      if(ar===2*gRevs||ar===3*gRevs) continue;
+      sys.asteroids.push({a:aa,e:R()*0.14,peri:R()*TAU,inc:R.g()*0.05,rev:ar,M0:R()*TAU});}}
+  sys.kuiper=[];var nKui=wealth===0?400:wealth===1?250:120;
+  for(i=0;i<nKui;i++){var ka=R.rng(1.14,1.62);sys.kuiper.push({a:ka,e:R()*0.2,peri:R()*TAU,inc:R.g()*0.12,rev:Math.max(1,Math.round(Math.pow(ka,-1.5))),M0:R()*TAU});}
+  sys.comets=[];var nc=wealth===0?R.int(5,8):wealth===1?R.int(4,6):R.int(2,4);
+  for(i=0;i<nc;i++) sys.comets.push({a:R.rng(1.1,2.0),e:R.rng(0.55,0.9),peri:R()*TAU,inc:R.g()*0.4,rev:R.pick([3,4,5]),M0:R()*TAU});
+  sys.wealth=wealth;return sys;}
+
+function applyRelics(sys,tier,r){
+  if(tier===0) sys.scheme=[[255,206,120],[255,168,86]];
+  else if(tier===1) sys.scheme=[[255,128,150],[255,96,120]];
+  if(tier<=1 && sys.planets.length){var g=sys.planets[Math.min(1,sys.planets.length-1)];g.type=1;g.ring=true;g.szMul*=1.5;}
+  if(tier===0){if(sys.stars.length<2){var s2=Math.min(6,sys.stars[0].cls+1);sys.stars.push({cls:s2});
+      sys.binary=true;sys.sep=0.12;sys.binRev=10;var mm=STAR[sys.stars[0].cls].rad+STAR[s2].rad;
+      sys.stars[0].off=sys.sep*STAR[s2].rad/mm;sys.stars[1].off=-sys.sep*STAR[sys.stars[0].cls].rad/mm;}
+    for(var i=0;i<10;i++) sys.comets.push({a:r.rng(1.1,2.1),e:r.rng(0.6,0.92),peri:r()*TAU,inc:r.g()*0.5,rev:r.pick([3,4,5]),M0:r()*TAU});}}
+
+function extremize(sys,r,ci){var i,m,gm=1;
+  for(i=0;i<sys.planets.length;i++){var pl=sys.planets[i];pl.szMul*=1.3+r()*0.7;pl.e=Math.min(0.5,pl.e+r()*0.18);}
+  switch(ci){
+   case 0: for(i=0;i<sys.planets.length;i++){sys.planets[i].ring=true;sys.planets[i].szMul*=1.35;} break;
+   case 1: for(i=0;i<sys.planets.length;i++){var p1=sys.planets[i],mr=[12,9,7,5,4,3,2],ad=r.int(4,9)*gm;
+       for(m=0;m<ad;m++) p1.moons.push({a:0.05+p1.moons.length*0.026+r()*0.012,rev:mr[m%mr.length],M0:r()*TAU,peri:r()*TAU});} break;
+   case 2: sys.asteroids=[];for(i=0;i<2800*gm;i++){var aa=r.rng(0.3,1.5);
+       sys.asteroids.push({a:aa,e:r()*0.25,peri:r()*TAU,inc:r.g()*0.15,rev:Math.max(1,Math.round(Math.pow(aa,-1.5))),M0:r()*TAU});} break;
+   case 3: sys.comets=[];for(i=0;i<30*gm;i++) sys.comets.push({a:r.rng(1.0,2.4),e:r.rng(0.6,0.95),peri:r()*TAU,inc:r.g()*0.6,rev:r.pick([3,4,5]),M0:r()*TAU}); break;
+   case 4: sys.embryos=[];for(i=0;i<48*gm;i++) sys.embryos.push({a:0.12+r()*0.9,rev:r.int(4,12),M0:r()*TAU,ph:r()*TAU}); break;
+   case 5: for(i=0;i<sys.planets.length;i++){var p2=sys.planets[i];p2.e=0.4+r()*0.34;p2.inc=r()*0.7;}
+     sys.kuiper=[];for(i=0;i<700*gm;i++){var ka=r.rng(1.1,1.9);sys.kuiper.push({a:ka,e:r()*0.4,peri:r()*TAU,inc:r.g()*0.3,rev:Math.max(1,Math.round(Math.pow(ka,-1.5))),M0:r()*TAU});} break;
+   case 6: if(sys.stars.length<2){sys.stars.push({cls:Math.min(6,sys.stars[0].cls+1)});}
+     sys.binary=true;sys.sep=0.13;sys.binRev=12;var mm=STAR[sys.stars[0].cls].rad+STAR[sys.stars[1].cls].rad;
+     sys.stars[0].off=sys.sep*STAR[sys.stars[1].cls].rad/mm;sys.stars[1].off=-sys.sep*STAR[sys.stars[0].cls].rad/mm;
+     for(i=0;i<sys.planets.length;i++)sys.planets[i].e=Math.min(0.25,sys.planets[i].e); break;
+   case 7: for(i=0;i<sys.planets.length;i++){sys.planets[i].e*=0.3;sys.planets[i].inc*=0.4;}
+     if(sys.planets[0]){var b7=sys.planets[0].a,r7=sys.planets[0].rev;
+       for(i=0;i<3;i++)sys.planets.push({a:b7*Math.pow(0.55,i+1),e:0.02,peri:r()*TAU,inc:0.02,rev:r7*(i+2),M0:r()*TAU,type:0,spin:r()*TAU,ring:false,szMul:0.8,moons:[]});} break;
+   case 8: sys.kuiper=[];for(i=0;i<1500*gm;i++){var ka2=r.rng(1.05,1.78);sys.kuiper.push({a:ka2,e:r()*0.3,peri:r()*TAU,inc:r.g()*0.2,rev:Math.max(1,Math.round(Math.pow(ka2,-1.5))),M0:r()*TAU});} break;
+   case 9: for(i=0;i<sys.planets.length;i++){var p3=sys.planets[i];if(p3.a<0.5){p3.type=1;p3.szMul*=1.6;p3.ring=r()<0.5;}else p3.type=3;} break;
+   case 10: sys.planets=sys.planets.slice(0,Math.min(3,sys.planets.length));
+     if(sys.planets[0]){sys.planets[0].type=1;sys.planets[0].ring=true;sys.planets[0].szMul*=2.4;} break;
+   case 11: sys.asteroids=[];var host=sys.planets[Math.min(1,sys.planets.length-1)];
+     if(host)for(i=0;i<1400*gm;i++){var lead=r()<0.5;sys.asteroids.push({a:host.a*(1+r.g()*0.04),e:host.e+r()*0.03,peri:host.peri,inc:r.g()*0.05,rev:host.rev,M0:host.M0+(lead?1.047:-1.047)+r.g()*0.20});} break;
+  } return sys;}
+
+/* ── the great-sun engine ── */
+var SUN,sunStrands=[],sunOrbits=[],sunSpin=0,starIntroT=0;
+function buildStar(seed){var r=mk(seed>>>0),i;sunStrands=[];sunOrbits=[];
+  var nS=IS_MOBILE?1600:3600,nO=IS_MOBILE?240:400;
+  for(i=0;i<nS;i++){var u=r()*TAU,ct=2*r()-1,st=Math.sqrt(1-ct*ct);var d=[st*Math.cos(u),st*Math.sin(u),ct];
+    var up=Math.abs(d[1])<0.92?[0,1,0]:[1,0,0];var t1=norm(cross(d,up)),t2=cross(d,t1);var erupt=r()<(0.14+SUN.big);
+    sunStrands.push({d:d,t1:t1,t2:t2,ph:r()*40,tipExt:erupt?(1.0+r()*1.2):(0.25+r()*0.4),amp:0.7+r()*1.1,coil:2.0+r()*3.0,flow:0.18+r()*0.5,bri:0.65+r()*0.6});}
+  for(i=0;i<nO;i++){var nu=r()*TAU,nc=2*r()-1,nsr=Math.sqrt(1-nc*nc);var n=[nsr*Math.cos(nu),nsr*Math.sin(nu),nc];
+    var nup=Math.abs(n[1])<0.92?[0,1,0]:[1,0,0];var ou=norm(cross(n,nup)),ov=cross(n,ou);
+    sunOrbits.push({u:ou,v:ov,rad:1.12+r()*1.05,ph:r()*TAU,sp:(r()<0.5?-1:1)*(0.35+r()*1.0),bri:0.55+r()*0.6});}}
+function sunProject(x,y,z,s){var ca=Math.cos(az),sa=Math.sin(az),x1=x*ca-z*sa,z1=x*sa+z*ca;var ct=Math.cos(tilt),st=Math.sin(tilt);
+  return [CX+x1*s,CY+(y*ct-z1*st)*s];}
+function renderStar(){
+  ctx.globalCompositeOperation='source-over';ctx.fillStyle="#000";ctx.fillRect(0,0,W,H);
+  ctx.globalCompositeOperation='lighter';
+  if(starIntroT<1) starIntroT=Math.min(1,starIntroT+0.02);var intro=starIntroT*starIntroT*(3-2*starIntroT);
+  var col=SUN.col,cr=0.45+0.55*col[0]/255,cg=0.45+0.55*col[1]/255,cb=0.45+0.55*col[2]/255;
+  var DOT=Math.max(1,Math.round(Math.min(W,H)/1000)),REF=Math.min(W,H)*0.30;
+  sunSpin+=0.004*SUN.rot;var cosS=Math.cos(sunSpin),sinS=Math.sin(sunSpin);
+  var t=clock*0.013*SUN.speed,s=REF*zoom*SUN.size,i,k,u,f,amp,na,nb,px,py,pz,pl,rr,sp,a,rx,rz;
+  var NK=IS_MOBILE?26:40,INVK=1/(NK-1),aS=Math.round(sunStrands.length*SUN.density),aO=Math.round(sunOrbits.length*SUN.orbit);
+  for(i=0;i<aS;i++){var sd=sunStrands[i];var sx=sd.d[0]*1.6,sy=sd.d[1]*1.6,sz=sd.d[2]*1.6,tw=t*sd.flow+sd.ph;
+    for(k=0;k<NK;k++){u=k*INVK;f=u*u;amp=(0.10+f*0.85)*sd.amp*SUN.noise;
+      na=fbm(sx+f*sd.coil*SUN.curl+tw,sy,sz)-0.44;nb=fbm(sy,sz+f*sd.coil*SUN.curl+tw,sx)-0.44;
+      rr=1.0+sd.tipExt*f*SUN.length+na*0.10;
+      px=sd.d[0]+sd.t1[0]*na*amp+sd.t2[0]*nb*amp;py=sd.d[1]+sd.t1[1]*na*amp+sd.t2[1]*nb*amp;pz=sd.d[2]+sd.t1[2]*na*amp+sd.t2[2]*nb*amp;
+      pl=Math.sqrt(px*px+py*py+pz*pz)||1;pl=rr/pl;px*=pl;py*=pl;pz*=pl;
+      rx=px*cosS-pz*sinS;rz=px*sinS+pz*cosS;sp=sunProject(rx,py,rz,s);
+      a=sd.bri*(0.20-f*0.13)*intro;if(a<0.02)a=0.02;if(a>1)a=1;
+      ctx.fillStyle='rgba('+(255*cr|0)+','+(255*cg|0)+','+(255*cb|0)+','+a.toFixed(3)+')';ctx.fillRect(sp[0],sp[1],DOT,DOT);}}
+  for(i=0;i<aO;i++){var o=sunOrbits[i];for(k=0;k<3;k++){var th=o.ph+(t-k*0.045)*o.sp,cth=Math.cos(th),sth=Math.sin(th);
+      px=(o.u[0]*cth+o.v[0]*sth)*o.rad;py=(o.u[1]*cth+o.v[1]*sth)*o.rad;pz=(o.u[2]*cth+o.v[2]*sth)*o.rad;sp=sunProject(px,py,pz,s);
+      a=(k===0?0.62:k===1?0.30:0.15)*o.bri*intro;if(a>1)a=1;
+      ctx.fillStyle='rgba('+(200+55*cr|0)+','+(200+55*cg|0)+','+(220+35*cb|0)+','+a.toFixed(3)+')';
+      ctx.fillRect(sp[0],sp[1],k===0?DOT*1.6:DOT,k===0?DOT*1.6:DOT);}}
+  ctx.globalCompositeOperation='source-over';}
+
+/* ── the system renderer (thrones + core systems) ── */
+var system,SYSLOOP=6600;
+var PTYPE=[{base:[150,140,170],sz:2.0},{base:P.c2,sz:4.5},{base:P.c0,sz:3.5},{base:P.c1,sz:2.5}];
+function ellipse(a,e,peri,inc,cosP,sinP,scale,col){for(var u=0;u<TAU;u+=0.05){
+  var ox=a*(Math.cos(u)-e),oy=a*Math.sqrt(1-e*e)*Math.sin(u);
+  var px=ox*Math.cos(peri)-oy*Math.sin(peri),py=ox*Math.sin(peri)+oy*Math.cos(peri);
+  var sp=project(px,py*Math.cos(inc),py*Math.sin(inc),cosP,sinP,scale);plot(sp[0],sp[1],col);}}
+function renderSystem(){
+  ctx.fillStyle="#000";ctx.fillRect(0,0,W,H);
+  var t=(clock%SYSLOOP)/SYSLOOP,phi=t*TAU+az,cosP=Math.cos(phi),sinP=Math.sin(phi),sy=system,amax=0.1,i;
+  for(i=0;i<sy.planets.length;i++) amax=Math.max(amax,sy.planets[i].a*(1+sy.planets[i].e));
+  var scale=scaleRef*zoom/amax;
+  for(i=0;i<sy.planets.length;i++){var pl=sy.planets[i];ellipse(pl.a,pl.e,pl.peri,pl.inc,cosP,sinP,scale,"rgb(40,40,56)");}
+  for(i=0;i<sy.comets.length;i++){var cm=sy.comets[i];ellipse(cm.a,cm.e,cm.peri,cm.inc,cosP,sinP,scale,"rgb(36,40,56)");}
+  for(i=0;i<sy.kuiper.length;i++){var ku=sy.kuiper[i];var o=orbit(ku.a,ku.e,ku.peri,ku.inc,ku.M0+ku.rev*TAU*t);var sp=project(o[0],o[1],o[2],cosP,sinP,scale);plot(sp[0],sp[1],"rgb(80,140,170)");}
+  for(i=0;i<sy.asteroids.length;i++){var as=sy.asteroids[i];var o=orbit(as.a,as.e,as.peri,as.inc,as.M0+as.rev*TAU*t);var sp=project(o[0],o[1],o[2],cosP,sinP,scale);plot(sp[0],sp[1],"rgb(160,145,105)");}
+  for(i=0;i<sy.embryos.length;i++){var em=sy.embryos[i];var o=orbit(em.a,0.05,em.ph,0,em.M0+em.rev*TAU*t);var sp=project(o[0],o[1],o[2],cosP,sinP,scale);
+    var fl=0.3+0.7*Math.abs(Math.sin(clock*0.05+em.ph));body(sp[0],sp[1],PX*1.5,sh([150,160,210],fl),clock*0.03);}
+  for(i=0;i<sy.stars.length;i++){var st=sy.stars[i];var sxx=0,syy=0;
+    if(sy.binary){var off=st.off;sxx=off*Math.cos(sy.binRev*TAU*t);syy=off*Math.sin(sy.binRev*TAU*t);}
+    var sp=project(sxx,syy,0,cosP,sinP,scale);var sr=Math.min(PX*10,PX*(4+STAR[st.cls].rad*1.8));starBody(sp[0],sp[1],sr,STAR[st.cls].col,clock*0.007);}
+  for(i=0;i<sy.planets.length;i++){var pl=sy.planets[i];var o=orbit(pl.a,pl.e,pl.peri,pl.inc,pl.M0+pl.rev*TAU*t);var sp=project(o[0],o[1],o[2],cosP,sinP,scale);
+    var pt=PTYPE[pl.type],base=mix(pt.base,sy.scheme[i%2],0.22),pr=PX*pt.sz*pl.szMul;
+    if(pl.ring) for(var q=0;q<72;q++){var ra=q/72*TAU+pl.spin+clock*0.01,rr=pr*(1.5+0.55*(q%3)/2);plot(sp[0]+Math.cos(ra)*rr,sp[1]+Math.sin(ra)*rr*tilt,rs(sh(base,0.6)));}
+    body(sp[0],sp[1],pr,base,pl.spin+clock*0.022);
+    for(var m=0;m<pl.moons.length;m++){var mo=pl.moons[m];var mp=orbit(mo.a,0.02,mo.peri,0,mo.M0+mo.rev*TAU*t);
+      var sp2=project(o[0]+mp[0],o[1]+mp[1],o[2]+mp[2],cosP,sinP,scale);body(sp2[0],sp2[1],PX*1.3,[180,180,200],mo.M0+clock*0.05);}}
+  for(i=0;i<sy.comets.length;i++){var cm=sy.comets[i];var tailLen=36;
+    for(var s=tailLen;s>=1;s--){var t0=t-s*(0.007+cm.e*0.003),tt=cm.M0+cm.rev*TAU*t0;var o2=orbit(cm.a,cm.e,cm.peri,cm.inc,tt);var tp=project(o2[0],o2[1],o2[2],cosP,sinP,scale);
+      var f=s/tailLen,col=s<8?lt([210,220,255],(8-s)/8*0.7):s<20?rs([190,230,255]):mix([255,210,130],[130,220,255],(s-20)/(tailLen-20));plot(tp[0],tp[1],col);}
+    var oh=orbit(cm.a,cm.e,cm.peri,cm.inc,cm.M0+cm.rev*TAU*t);var sp=project(oh[0],oh[1],oh[2],cosP,sinP,scale);body(sp[0],sp[1],PX*1.5,[205,238,255],clock*0.06);}}
+
+/* ── decide which piece this token is, build it ── */
+var mode,feat={};
+if(INV<3){
+  SUN=SUN_PARAMS[INV]; buildStar(CORE_SEEDS[INV]); mode='star'; tilt=0.30;
+  feat={Kind:"Great Star",Name:JOSEPH_15[INV],Kingdom:"Celestial"};
+}else if(INV<15){
+  var ci=Math.max(0,Math.min(11,ppInt('archetype',INV-3)));   // Creator-mode: archetype swap (PMP)
+  var cseed=CORE_SEEDS[3+(INV-3)];
+  system=buildSystem(cseed,0); extremize(system,mk((cseed^0xABCDEF)>>>0),ci);
+  mode='system';
+  feat={Kind:"Core System",Name:JOSEPH_15[3+(INV-3)],Archetype:CORE_PROFILES[ci],Kingdom:"Celestial"};
+}else{
+  var tier=Math.max(0,Math.min(2,ppInt('tier',2)));            // tier from PMP (owner-advanced)
+  var seed=hashSeed(tokenData.hash);
+  system=buildSystem(seed,tier); applyRelics(system,tier,mk((seed^0x9E5C17)>>>0));
+  mode='system';
+  feat={Kind:"Throne",Kingdom:TIER_NAMES[tier].charAt(0)+TIER_NAMES[tier].slice(1).toLowerCase(),
+        Star:STAR[system.stars[0].cls].c,Planets:system.planets.length};
+}
+window.$features=feat;
+
+/* ── loop ── */
+function loop(){clock+=0.3; if(mode==='star') renderStar(); else renderSystem(); requestAnimationFrame(loop);}
+loop();
+</script>
+</body>
+</html>

@@ -190,6 +190,42 @@ p{max-width:54ch;font-weight:300}
 #score b{color:#fff;font-weight:400}
 @media(max-width:760px){#score{top:auto;bottom:12px;right:10px;font-size:9px;gap:4px}}
 
+/* ── expandable detail blocks (pitch page) ───────────────────────────── */
+.exp{border-top:1px solid var(--line)}
+.exp:last-of-type{border-bottom:1px solid var(--line)}
+.exp>summary{cursor:pointer;padding:15px 0;list-style:none;display:flex;align-items:center;
+  justify-content:space-between;gap:14px;font:11px/1.4 var(--mono);letter-spacing:.14em;
+  color:var(--dim);text-transform:uppercase;-webkit-tap-highlight-color:transparent}
+.exp>summary::-webkit-details-marker{display:none}
+.exp>summary::after{content:"+";font-size:17px;color:var(--dim)}
+.exp[open]>summary::after{content:"\2013"}
+.exp>summary:hover{color:#fff}
+.exp .body{padding:2px 0 20px;color:var(--dim);font-size:15px;max-width:64ch}
+.exp .body p{margin:0 0 10px}
+.exp .body code{font:12px var(--mono);color:#bfe6ff;background:rgba(255,255,255,.05);padding:1px 5px;border-radius:3px}
+.exp .body ul{margin:0;padding-left:18px}.exp .body li{margin:4px 0}
+
+/* big plain statement */
+.say{font-size:clamp(22px,3.4vw,34px);line-height:1.35;color:#fff;font-weight:200;
+  letter-spacing:.01em;max-width:24ch}
+
+/* 15 vs 129 split bar */
+.split{display:flex;gap:1px;background:var(--line);border:1px solid var(--line);margin-top:10px}
+.split>div{background:#000;padding:26px 22px}
+.split .core{flex:1;border-top:3px solid var(--gold)}
+.split .thr{flex:3.4;border-top:3px solid var(--cyan)}
+.split .n{font-family:var(--font);font-weight:500;font-size:30px;color:#fff;line-height:1}
+.split .l{font:10px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin-top:8px}
+.split p{margin:10px 0 0;font-size:13px;color:var(--dim)}
+@media(max-width:600px){.split{flex-direction:column}}
+
+/* simple price table */
+.ptab{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}
+.ptab td,.ptab th{text-align:left;padding:13px 10px;border-bottom:1px solid var(--line)}
+.ptab th{font:10px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
+.ptab .price{font-family:var(--mono);color:#fff;text-align:right;white-space:nowrap}
+.ptab .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:9px;vertical-align:middle}
+
 /* ── footer ──────────────────────────────────────────────────────────── */
 .foot{border-top:1px solid var(--line);padding:54px 34px;margin-top:40px;
   font:10px/2 var(--mono);letter-spacing:.12em;color:var(--dim);text-align:center}
