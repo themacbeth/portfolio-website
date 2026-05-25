@@ -84,10 +84,16 @@ CORES.forEach(function(s,i){
     '<h3>'+s.n+'</h3><p class="dim">'+s.p+'</p></a>';
 });
 document.getElementById('cores').innerHTML=cH;
-// lazy-load each live piece only when it scrolls near view
+// lazy-load on approach; pause/resume so only on-screen pieces actually render
 var io=new IntersectionObserver(function(es){es.forEach(function(e){
-  if(e.isIntersecting){var f=e.target; if(!f.src) f.src=f.dataset.src; io.unobserve(f);}});
-},{rootMargin:'250px'});
+  var f=e.target;
+  if(e.isIntersecting){
+    if(!f.src) f.src=f.dataset.src;                                  // load on approach
+    try{f.contentWindow.postMessage('kolob:play','*');}catch(_){}    // resume
+  } else {
+    try{f.contentWindow.postMessage('kolob:pause','*');}catch(_){}   // freeze off-screen
+  }
+});},{rootMargin:'120px',threshold:0.01});
 document.querySelectorAll('.liveframe').forEach(function(f){io.observe(f);});
 </script>
 </body>

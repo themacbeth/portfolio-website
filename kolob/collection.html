@@ -126,6 +126,11 @@ function compare(){
 document.getElementById('cmpGo').addEventListener('click',compare);
 document.getElementById('cmpNum').addEventListener('keydown',function(e){if(e.key==='Enter')compare();});
 compare();
+// pause the comparison pods when they scroll off-screen
+var cio=new IntersectionObserver(function(es){es.forEach(function(e){
+  try{e.target.contentWindow.postMessage(e.isIntersecting?'kolob:play':'kolob:pause','*');}catch(_){}
+});},{threshold:0.01});
+cio.observe(document.getElementById('cmpA')); cio.observe(document.getElementById('cmpB'));
 </script>
 </body>
 </html>

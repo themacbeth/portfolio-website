@@ -255,10 +255,11 @@ function cluster(sx,sy,r,base,count,rot,PX,plot){
 var ARMS=GRND.pick([2,2,3,4]), WIND=GRND.rng(1.9,3.0), BARANG=GRND()*TAU;
 // phones can't push the full particle count — render fewer automatically
 var IS_MOBILE=(typeof matchMedia!=="undefined"&&matchMedia('(max-width:760px),(pointer:coarse)').matches)||false;
+var EMBED=/^#?embed=/.test(location.hash||"");   // chrome-free thumbnail → skip the galaxy build
 var N=48000, gpuN=IS_MOBILE?11000:24000, gN=gpuN;
 var gR=new Float32Array(N),gA=new Float32Array(N),gZ=new Float32Array(N),
     gRev=new Int16Array(N),gK=new Uint8Array(N),gLv=new Uint8Array(N);
-for(var i=0;i<gpuN;i++){
+if(!EMBED) for(var i=0;i<gpuN;i++){
   var r,th;
   if(i<2200){
     r=Math.abs(GRND.g())*0.13; th=GRND()*TAU;
@@ -454,7 +455,7 @@ function orbit(a,e,peri,inc,M){
 var cv=document.getElementById('c'),ctx=cv.getContext('2d');
 var W,H,CX,CY,PX,GW,GH,scaleRef,dens,dpr;
 function resize(){
-  dpr=window.devicePixelRatio||1;
+  dpr=Math.min(window.devicePixelRatio||1, EMBED?1.25:(IS_MOBILE?1.5:2));  // cap pixels for perf
   W=cv.width=innerWidth*dpr;H=cv.height=innerHeight*dpr;
   cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';
   CX=W/2;CY=H/2;
@@ -1293,7 +1294,11 @@ function goCore(ci){
   $throneNum.disabled=true;$throneGo.disabled=true;
 }
 
+var renderPaused=false;   // off-screen embeds are paused by the parent page
+addEventListener('message',function(e){var d=e&&e.data;
+  if(d==='kolob:pause')renderPaused=true; else if(d==='kolob:play')renderPaused=false;});
 function loop(){
+  if(renderPaused){ requestAnimationFrame(loop); return; }   // idle when scrolled off-screen
   if(!paused) clock+=speed;
   // veil cinematic takes over the whole frame while it plays
   if(veilActive){

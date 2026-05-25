@@ -42,3 +42,12 @@
   }
   render(); addEventListener('storage',render); setInterval(render,4000);
 })();
+
+/* pause the hero galaxy when it scrolls off-screen */
+(function(){
+  var hb=document.querySelector('iframe.hero-bg');
+  if(!hb || !('IntersectionObserver' in window)) return;
+  new IntersectionObserver(function(es){es.forEach(function(e){
+    try{e.target.contentWindow.postMessage(e.isIntersecting?'kolob:play':'kolob:pause','*');}catch(_){}
+  });},{threshold:0.01}).observe(hb);
+})();
