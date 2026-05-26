@@ -166,6 +166,36 @@
   <div class="seFt"><button id="seReset">RESET</button><button id="seSeal" class="seSealBtn">SEAL ✦</button></div>
 </div>
 <button id="seOpen" title="Creator Mode">✦ CREATOR</button>
+
+<!-- ── Core System editor (Creator Mode, gated by &own + coreView>=0) ── -->
+<div id="coreEditor">
+  <div class="seHd"><span>CREATOR MODE</span><button id="ceClose" title="close">✕</button></div>
+  <label class="seRow"><span>Name</span>
+    <input id="ceName" type="text" maxlength="24" autocomplete="off"></label>
+  <label class="seRow"><span>Archetype</span>
+    <select id="ceArch"></select></label>
+  <div class="seFt"><button id="ceReset">RESET</button><button id="ceSeal" class="seSealBtn">SEAL ✦</button></div>
+</div>
+<button id="ceOpen" title="Creator Mode">✦ CREATOR</button>
+<style>
+  /* Core editor reuses the star editor's visual language */
+  #coreEditor{position:fixed;right:14px;top:54px;z-index:220;width:260px;
+    background:rgba(8,8,12,0.96);border:1px solid rgba(255,255,255,0.14);border-radius:6px;
+    padding:10px 12px 12px;color:#eaf0f7;display:none;
+    font:11px/1.5 ui-monospace,Menlo,monospace;letter-spacing:.04em}
+  #coreEditor.open{display:block}
+  #coreEditor select{flex:1;background:#000;color:#fff;border:1px solid #232336;
+    border-radius:3px;padding:5px 7px;font:inherit}
+  #ceOpen{position:fixed;right:14px;top:14px;z-index:215;display:none;
+    background:rgba(8,8,12,0.92);color:#eaf0f7;border:1px solid rgba(255,255,255,0.18);
+    border-radius:3px;padding:8px 14px;font:10px/1 ui-monospace,monospace;letter-spacing:.20em;cursor:pointer;
+    -webkit-tap-highlight-color:transparent}
+  #ceOpen:hover{background:rgba(20,20,32,0.96);color:#fff}
+  body.veil #coreEditor,body.veil #ceOpen,body.hero #coreEditor,body.hero #ceOpen,
+  body.idle #coreEditor,body.idle #ceOpen,body.screensaver #coreEditor,body.screensaver #ceOpen{
+    display:none!important;opacity:0!important;pointer-events:none!important}
+  @media(max-width:600px){#coreEditor{width:220px;right:8px;top:48px;font-size:10px}#ceOpen{right:8px;top:8px}}
+</style>
 <style>
   #starEditor{position:fixed;right:14px;top:54px;z-index:220;width:260px;
     background:rgba(8,8,12,0.96);border:1px solid rgba(255,255,255,0.14);border-radius:6px;
@@ -784,7 +814,8 @@ function goGalaxy(){mode="galaxy";zoom=1;az=0;tilt=0.52;starIdx=-1;
     $throneNum.disabled=false;$throneGo.disabled=false;}
   else {$back.style.display='none';}
   AUDIO.setMode('galaxy',0,null);
-  if(typeof starEditor!=='undefined') starEditor.sync();}
+  if(typeof starEditor!=='undefined') starEditor.sync();
+  if(typeof coreEditor!=='undefined') coreEditor.sync();}
 var OD_DEADLINE=Date.UTC(2026,9,22);          // Outer Darkness deadline: 22 October 2026 UTC
 function goSystem(idx,ft){
   if(idx<0||idx>128)return;
@@ -799,7 +830,8 @@ function goSystem(idx,ft){
   // Outer Darkness: any Telestial throne past the deadline drifts into the void, silent
   if(tr===2 && Date.now()>=OD_DEADLINE){ system._od=true; AUDIO.silent(); }
   else AUDIO.setMode('system',nd.seed,tr);
-  if(typeof starEditor!=='undefined') starEditor.sync();}
+  if(typeof starEditor!=='undefined') starEditor.sync();
+  if(typeof coreEditor!=='undefined') coreEditor.sync();}
 $back.addEventListener('click',goGalaxy);
 $back.addEventListener('touchend',function(e){e.preventDefault();goGalaxy();});
 $throneGo.addEventListener('click',function(){var v=parseInt($throneNum.value);
@@ -1428,7 +1460,12 @@ function applyStarOverride(idx){
     if(ovr.name) STAR_NAMES_OVR[idx]=ovr.name; else delete STAR_NAMES_OVR[idx];
   } else delete STAR_NAMES_OVR[idx];
 }
-function starDisplayName(idx){return STAR_NAMES_OVR[idx]||JOSEPH_15[idx];}
+// CORE_NAMES_OVR is keyed by core index 0..11 (matches goCore(ci))
+var CORE_NAMES_OVR={};
+function starDisplayName(idx){
+  if(idx<3) return STAR_NAMES_OVR[idx]||JOSEPH_15[idx];
+  return CORE_NAMES_OVR[idx-3]||JOSEPH_15[idx];                       // galaxy-view hover (idx 0..14)
+}
 
 function goStar(idx){
   stopSlideshow();
@@ -1440,6 +1477,7 @@ function goStar(idx){
   $throneNum.disabled=true;$throneGo.disabled=true;
   AUDIO.setMode('star',CORE_SEEDS[idx],0);
   starEditor.sync();
+  if(typeof coreEditor!=='undefined') coreEditor.sync();
 }
 
 // Editor controller
@@ -1633,23 +1671,84 @@ function coreBoost(sys,r){
     peri:r()*TAU,inc:r.g()*0.5,rev:r.pick([2,3,4,5]),M0:r()*TAU});
   return sys;
 }
+function _ceKey(c){return "kolob:core:"+c;}
+function loadCoreOverride(c){try{return JSON.parse(localStorage.getItem(_ceKey(c))||"null");}catch(e){return null;}}
+// Build the system for core index ci, honouring any sealed archetype/name override
+function applyCoreOverride(ci){
+  var seed=CORE_SEEDS[3+ci],ovr=loadCoreOverride(ci);
+  var arch=(ovr&&typeof ovr.archetype==='number')?Math.max(0,Math.min(11,ovr.archetype|0)):ci;
+  system=buildSystem(seed,0);
+  extremize(system,mk((seed^0xABCDEF)>>>0),arch);
+  coreBoost(system,mk((seed^0x5A17C0)>>>0));
+  system.isCore=true;system._arch=arch;
+  system.coreProfile=CORE_PROFILES[arch];
+  if(ovr&&ovr.name){CORE_NAMES_OVR[ci]=ovr.name;system.coreName=ovr.name;}
+  else{delete CORE_NAMES_OVR[ci];system.coreName=JOSEPH_15[3+ci];}
+}
 function goCore(ci){
   stopSlideshow();
-  var seed=CORE_SEEDS[3+ci];               // LOCKED seed
-  system=buildSystem(seed,0);
-  extremize(system,mk((seed^0xABCDEF)>>>0),ci);
-  coreBoost(system,mk((seed^0x5A17C0)>>>0));
-  system.isCore=true;
-  system.coreName=JOSEPH_15[3+ci];
-  system.coreProfile=CORE_PROFILES[ci];
+  applyCoreOverride(ci);                   // builds with locked seed + any Creator-Mode overrides
   curNode=-1;coreView=ci;
   mode="system";zoom=1;az=0;tilt=0.52;clock=0;
   $back.style.display='block';
   $throneNum.disabled=true;$throneGo.disabled=true;
   starIdx=-1;
-  AUDIO.setMode('system',seed,0);
+  AUDIO.setMode('system',CORE_SEEDS[3+ci],0);
   if(typeof starEditor!=='undefined') starEditor.sync();
+  if(typeof coreEditor!=='undefined') coreEditor.sync();
 }
+
+// Core System editor controller
+var coreEditor=(function(){
+  var $panel=document.getElementById('coreEditor'),
+      $open =document.getElementById('ceOpen'),
+      $close=document.getElementById('ceClose'),
+      $name =document.getElementById('ceName'),
+      $arch =document.getElementById('ceArch'),
+      $reset=document.getElementById('ceReset'),
+      $seal =document.getElementById('ceSeal');
+  CORE_PROFILES.forEach(function(p,i){var o=document.createElement('option');
+    o.value=i;o.textContent=(i+1<10?'0':'')+(i+1)+' · '+p.replace(/_/g,' ');$arch.appendChild(o);});
+  function fill(){
+    $arch.value=(system&&system._arch!=null)?system._arch:coreView;
+    $name.value=CORE_NAMES_OVR[coreView]||JOSEPH_15[3+coreView]||'';
+  }
+  function visible(){return ownMode && mode==='system' && coreView>=0 && !cinematic && !document.body.classList.contains('hero');}
+  function sync(){
+    var v=visible();
+    $open.style.display=v && !$panel.classList.contains('open')?'block':'none';
+    if(!v) $panel.classList.remove('open');
+    if($panel.classList.contains('open')) fill();
+  }
+  $arch.addEventListener('change',function(){
+    var ci=coreView, arch=+$arch.value, seed=CORE_SEEDS[3+ci];
+    system=buildSystem(seed,0);
+    extremize(system,mk((seed^0xABCDEF)>>>0),arch);
+    coreBoost(system,mk((seed^0x5A17C0)>>>0));
+    system.isCore=true; system._arch=arch; system.coreProfile=CORE_PROFILES[arch];
+    system.coreName=CORE_NAMES_OVR[ci]||JOSEPH_15[3+ci];
+  });
+  $name.addEventListener('input',function(){
+    var v=$name.value.trim(),ci=coreView;
+    if(v && v!==JOSEPH_15[3+ci]) CORE_NAMES_OVR[ci]=v; else delete CORE_NAMES_OVR[ci];
+    if(system) system.coreName=CORE_NAMES_OVR[ci]||JOSEPH_15[3+ci];
+  });
+  $open.addEventListener('click',function(){$panel.classList.add('open'); fill(); sync();});
+  $close.addEventListener('click',function(){$panel.classList.remove('open'); sync();});
+  $reset.addEventListener('click',function(){
+    localStorage.removeItem(_ceKey(coreView));
+    delete CORE_NAMES_OVR[coreView];
+    applyCoreOverride(coreView); fill();
+  });
+  $seal.addEventListener('click',function(){
+    var ci=coreView,payload={archetype:system._arch};
+    var nm=CORE_NAMES_OVR[ci];
+    if(nm && nm!==JOSEPH_15[3+ci]) payload.name=nm;
+    localStorage.setItem(_ceKey(ci),JSON.stringify(payload));
+    $seal.textContent='SEALED ✦'; setTimeout(function(){$seal.textContent='SEAL ✦';},1400);
+  });
+  return {sync:sync};
+})();
 
 var renderPaused=false;   // off-screen embeds are paused by the parent page
 addEventListener('message',function(e){var d=e&&e.data;

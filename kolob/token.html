@@ -407,7 +407,9 @@ if(INV<3){
   system=buildSystem(cseed,0); extremize(system,mk((cseed^0xABCDEF)>>>0),ci); coreBoost(system,mk((cseed^0x5A17C0)>>>0)); system.isCore=true;
   mode='system';
   var tc=deriveTraits(cseed,0);
-  feat={Kind:"Core System",Name:JOSEPH_15[3+(INV-3)],Archetype:CORE_PROFILES[ci],Kingdom:"Celestial",
+  var cName=ppStr('name',JOSEPH_15[3+(INV-3)]);
+  feat={Kind:"Core System",Name:cName,Archetype:CORE_PROFILES[ci],Kingdom:"Celestial",
+    Authored:(PP.archetype!=null||PP.name)?"yes":"no",
     Intelligence:tc.Intelligence,Affinity:tc.Affinity,Dispensation:tc.Dispensation,Glory:"Celestial"};
 }else{
   var tier=Math.max(0,Math.min(2,ppInt('tier',2)));            // tier from PMP (owner-advanced)
