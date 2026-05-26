@@ -410,33 +410,6 @@ if(INV<3){
 }
 window.$features=feat;
 
-/* ── KOLOB sound, deterministic Web Audio drone, initialised on first interaction ── */
-(function(){var ac,master,lpf,drone=[],ready=false;
-  function init(){if(ac)return;var AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
-    ac=new AC();master=ac.createGain();master.gain.value=0;master.connect(ac.destination);
-    lpf=ac.createBiquadFilter();lpf.type='lowpass';lpf.frequency.value=900;lpf.Q.value=0.7;lpf.connect(master);
-    for(var i=0;i<3;i++){var o=ac.createOscillator();o.type=i?(i===1?'triangle':'sine'):'sine';
-      var g=ac.createGain();g.gain.value=0;o.connect(g);g.connect(lpf);o.start();drone.push({o:o,g:g});}
-    var lfo=ac.createOscillator();lfo.frequency.value=0.16;var lfg=ac.createGain();lfg.gain.value=140;
-    lfo.connect(lfg);lfg.connect(lpf.frequency);lfo.start();ready=true;tune();}
-  function tune(){if(!ready)return;
-    if(system&&system._od){master.gain.setTargetAtTime(0,ac.currentTime,0.6);return;}  // Outer Darkness is silent
-    var seed=(mode==='star'?CORE_SEEDS[INV]:INV<15?CORE_SEEDS[INV]:hashSeed(tokenData.hash))^0xA9D0;
-    var rng=function(){seed=(Math.imul(seed,1664525)+1013904223)|0;return((seed>>>0)/4294967296);};rng();
-    var t=(mode==='star'?0:INV<15?0:tier);
-    var base=(mode==='star'?174:t===0?165:t===1?147:110)*(1+(rng()-0.5)*0.06);
-    var iv=mode==='star'?[1,1.2599,1.4983]:t===2?[1,1.4983,0]:t===1?[1,1.4983,1.7818]:[1,1.2599,1.4983];
-    var n=ac.currentTime;
-    for(var i=0;i<3;i++){var f=iv[i]>0?base*iv[i]:0;
-      drone[i].o.frequency.setTargetAtTime(f||1,n,1.4);
-      drone[i].o.detune.setValueAtTime((i-1)*6+(rng()-0.5)*22,n);
-      drone[i].g.gain.setTargetAtTime(f?0.04:0,n,1.2);}
-    lpf.frequency.setTargetAtTime(mode==='star'?2400:t===0?1800:t===1?1100:650,n,1.6);
-    master.gain.setTargetAtTime(0.20,n,0.6);}
-  addEventListener('pointerdown',function(){init();if(ac&&ac.state==='suspended')ac.resume();});
-  addEventListener('keydown',function(){init();if(ac&&ac.state==='suspended')ac.resume();});
-})();
-
 /* ── loop ── */
 function loop(){clock+=0.3; if(mode==='star') renderStar(); else renderSystem(); requestAnimationFrame(loop);}
 loop();

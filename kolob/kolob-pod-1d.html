@@ -239,82 +239,9 @@ function sat(c,k){var m=(c[0]+c[1]+c[2])/3,cl=function(x){return x<0?0:x>255?255
   return[cl(m+(c[0]-m)*k),cl(m+(c[1]-m)*k),cl(m+(c[2]-m)*k)];}
 function rs(c){return"rgb("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+")";}
 
-// ── KOLOB sound layer ────────────────────────────────────────────────────
-// Deterministic Web Audio drone: tunes itself to each system from its seed,
-// shifts timbre per kingdom (Celestial open, Telestial cold), and runs a
-// dust+glissando sweep during the veil crossing.
-var AUDIO=(function(){
-  var ac,master,lpf,lfo,drone=[],ready=false,enabled=true;
-  function init(){
-    if(ac)return ac;
-    var AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;
-    ac=new AC();
-    master=ac.createGain();master.gain.value=0;master.connect(ac.destination);
-    lpf=ac.createBiquadFilter();lpf.type='lowpass';lpf.frequency.value=800;lpf.Q.value=0.7;
-    lpf.connect(master);
-    for(var i=0;i<3;i++){var o=ac.createOscillator();
-      o.type=i===0?'sine':(i===1?'triangle':'sine');
-      var g=ac.createGain();g.gain.value=0;
-      o.connect(g);g.connect(lpf);o.start();
-      drone.push({o:o,g:g});}
-    lfo=ac.createOscillator();lfo.frequency.value=0.16;lfo.type='sine';
-    var lfg=ac.createGain();lfg.gain.value=140;
-    lfo.connect(lfg);lfg.connect(lpf.frequency);lfo.start();
-    ready=true;return ac;}
-  function resume(){if(ac&&ac.state==='suspended')ac.resume();}
-  function setMode(kind,seed,tier){
-    if(!ready)return;var n=ac.currentTime;
-    var s=(seed||0)^0xA9D0,rng=function(){s=(Math.imul(s,1664525)+1013904223)|0;return((s>>>0)/4294967296);};
-    rng();rng();           // warm up
-    var base=kind==='galaxy'?55:kind==='star'?174:(tier===0?165:tier===1?147:110);
-    // tiny seeded micro-tuning so every system sits on its own note
-    base*=1+(rng()-0.5)*0.06;
-    var iv=kind==='galaxy'?[1,1.5,3]:
-           kind==='star'?  [1,1.2599,1.4983]:
-           tier===2?       [1,1.4983,0]:
-           tier===1?       [1,1.4983,1.7818]:
-                           [1,1.2599,1.4983];
-    for(var i=0;i<drone.length;i++){var f=iv[i]>0?base*iv[i]:0;
-      drone[i].o.frequency.setTargetAtTime(f||1,n,1.4);
-      drone[i].o.detune.setValueAtTime((i-1)*6+(rng()-0.5)*22,n);
-      drone[i].g.gain.setTargetAtTime(f?(kind==='galaxy'?0.055:0.04):0,n,1.2);}
-    var lpFreq=kind==='galaxy'?700:kind==='star'?2400:(tier===0?1800:tier===1?1100:650);
-    lpf.frequency.setTargetAtTime(lpFreq,n,1.6);
-    master.gain.setTargetAtTime(enabled?0.22:0,n,0.6);}
-  function veilSweep(){
-    if(!ready)return;var n=ac.currentTime;
-    // sustained dust noise, covers the withdrawal and veil phases
-    var buf=ac.createBuffer(1,ac.sampleRate*3.5,ac.sampleRate),d=buf.getChannelData(0);
-    for(var i=0;i<d.length;i++){var t=i/d.length;
-      var env=t<0.15?(t/0.15):(t<0.5?1:Math.max(0,1-(t-0.5)/0.5));
-      d[i]=(Math.random()*2-1)*env*0.55;}
-    var src=ac.createBufferSource();src.buffer=buf;
-    var ng=ac.createGain();ng.gain.value=0.22;
-    var nf=ac.createBiquadFilter();nf.type='bandpass';nf.frequency.value=900;nf.Q.value=0.6;
-    src.connect(nf);nf.connect(ng);ng.connect(master);
-    src.start(n);src.stop(n+3.5);
-    // drone glissando, descend into darkness, ascend richer
-    for(var k=0;k<drone.length;k++){var f=drone[k].o.frequency.value||110;
-      drone[k].o.frequency.cancelScheduledValues(n);
-      drone[k].o.frequency.setValueAtTime(f,n);
-      drone[k].o.frequency.linearRampToValueAtTime(f*0.45,n+2.4);
-      drone[k].o.frequency.linearRampToValueAtTime(f*1.20,n+5.6);}
-    lpf.frequency.cancelScheduledValues(n);
-    lpf.frequency.setValueAtTime(lpf.frequency.value,n);
-    lpf.frequency.linearRampToValueAtTime(180,n+2.4);
-    lpf.frequency.linearRampToValueAtTime(1800,n+5.6);
-    // master: hold, dip to silence through darkness, re-emerge
-    master.gain.cancelScheduledValues(n);
-    master.gain.setValueAtTime(master.gain.value,n);
-    master.gain.linearRampToValueAtTime(0.10,n+1.8);
-    master.gain.linearRampToValueAtTime(0.005,n+3.0);   // silent threshold
-    master.gain.linearRampToValueAtTime(enabled?0.22:0,n+5.2);}
-  function toggle(){enabled=!enabled;if(ready){var n=ac.currentTime;
-    master.gain.cancelScheduledValues(n);master.gain.setTargetAtTime(enabled?0.22:0,n,0.4);}return enabled;}
-  function silent(){if(!ready)return;var n=ac.currentTime;       // force-quiet (Outer Darkness)
-    master.gain.cancelScheduledValues(n);master.gain.setTargetAtTime(0,n,0.8);}
-  return {init:init,resume:resume,setMode:setMode,veilSweep:veilSweep,toggle:toggle,silent:silent,isOn:function(){return enabled;}};
-})();
+// ── Sound layer removed: KOLOB is visual-only. Stub so callers remain valid. ──
+var AUDIO={init:function(){},resume:function(){},setMode:function(){},
+  veilSweep:function(){},toggle:function(){return false;},silent:function(){},isOn:function(){return false;}};
 
 // Star names
 // KOLOB is the axis-mundi (non-mintable visual at galaxy centre).
@@ -919,8 +846,6 @@ var ptrs=new Map(),pinchDist=0,pinchAng=0,pinching=false;
 var lastTap=0,dblTapDelay=300;
 function ptrArr(){return [].slice.call(ptrs.values());}
 cv.addEventListener('pointerdown',function(e){
-  if(!AUDIO._inited){AUDIO._inited=true; AUDIO.init(); AUDIO.resume(); AUDIO.setMode(mode==='galaxy'?'galaxy':(mode==='star'?'star':'system'),(system&&system.seed)||0,system?system.wealth:null);}
-  AUDIO.resume();
   if(cinematic){ exitCinematic(); return; }   // a click ends the cinematic (cursor move does not)
   ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   try{cv.setPointerCapture(e.pointerId);}catch(_){}
@@ -1003,7 +928,6 @@ addEventListener('keydown',function(e){var k=e.key.toLowerCase();
   if(k==="escape"||(k==="g"&&mode!=="galaxy")){if(cinematic)exitCinematic();goGalaxy();keySel=-1;}
   else if(k===" "){e.preventDefault();paused=!paused;}
   else if(k==="h"){hud=!hud;}
-  else if(k==="m"){AUDIO.toggle();}
   else if(k==="]"){speed=Math.min(4,speed*1.5);}
   else if(k==="["){speed=Math.max(0.04,speed/1.5);}
   // ←/→ step through thrones · ↑/↓ orbit around the galaxy
