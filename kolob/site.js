@@ -55,6 +55,15 @@
   render(); addEventListener('storage',render); setInterval(render,4000);
 })();
 
+/* Outer Darkness countdown — populates any element with id="odDays" or class="odDays" */
+(function(){
+  var DEADLINE=new Date('2026-10-22T00:00:00Z').getTime();
+  function days(){return Math.max(0,Math.ceil((DEADLINE-Date.now())/86400000));}
+  function set(){var n=days(),els=[].slice.call(document.querySelectorAll('#odDays,.odDays'));
+    els.forEach(function(e){e.textContent=n;});}
+  set(); setInterval(set,60000);
+})();
+
 /* pause the hero galaxy when it scrolls off-screen */
 (function(){
   var hb=document.querySelector('iframe.hero-bg');
