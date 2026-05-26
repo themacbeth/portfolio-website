@@ -233,9 +233,12 @@ function sat(c,k){var m=(c[0]+c[1]+c[2])/3,cl=function(x){return x<0?0:x>255?255
 function rs(c){return"rgb("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+")";}
 
 // Star names
-var JOSEPH_15=["Kolob","Oleblish","Enish-go-on-dosh","Kai-e-vanrash",
+// KOLOB is the axis-mundi (non-mintable visual at galaxy centre).
+// The 15 mintable pieces: 3 triangle great stars + 12 governing systems.
+var KOLOB_NAME="KOLOB";
+var JOSEPH_15=["Oleblish","Enish-go-on-dosh","Kai-e-vanrash",
  "Lindi","Zip","Vusel","Vauiste","Waine","Way-ho-ox-oan",
- "Oansli","Kible","Shineflis","Flis","Os"];
+ "Oansli","Kible","Shineflis","Flis","Os","Ondi"];
 var SYL=["ko","lob","ol","ib","lish","en","ish","go","dosh","kae","van",
  "rash","kli","flos","is","es","hah","beam","rauk","yang","shin","ehah",
  "jah","oh","eh","gno","laum","kok","ob","ole","a","flo","eese","seth"];
@@ -1028,13 +1031,22 @@ function renderGalaxy(){
     }
   }
 
-  // KOLOB — central black hole + accretion disc
-  var bh=Math.max(PX*8,scale*0.075);
-  for(i=0;i<140;i++){var p=CTPL[i];          // dark sphere
+  // KOLOB — axis-mundi: larger black-hole well + accretion disc + a tight white particle cluster
+  var bh=Math.max(PX*12,scale*0.108);
+  for(i=0;i<200;i++){var p=CTPL[i%CTPL.length];   // dark sphere (bigger)
     plot(CX+p[0]*bh,CY+p[1]*bh,"rgb(2,2,5)");}
-  for(i=0;i<170;i++){var aa=i/170*TAU+clock*0.06;  // accretion disc glow
+  for(i=0;i<220;i++){var aa=i/220*TAU+clock*0.06;  // accretion disc glow
     var rr2=bh*(1.18+(i%5)*0.07);
     plot(CX+Math.cos(aa)*rr2,CY+Math.sin(aa)*rr2*tilt,rs(mix(P.c2,P.c3,(i%5)/5)));}
+  // KOLOB itself — small bright cluster of white particles at the very centre
+  var kc=Math.max(PX*1.7,bh*0.18),kspin=clock*0.05;
+  for(i=0;i<90;i++){                                // soft outer halo
+    var ka=i*2.39996+kspin, kr=kc*(0.35+((i*0.6180339)%1)*0.85);
+    plot(CX+Math.cos(ka)*kr,CY+Math.sin(ka)*kr*tilt,
+      "rgba(255,255,255,"+(0.55+0.4*Math.sin(i+kspin)).toFixed(2)+")");}
+  for(i=0;i<28;i++){                                // crisp white core
+    var ka2=i*TAU/28+kspin*1.4, kr2=kc*(0.05+(i%4)*0.10);
+    plot(CX+Math.cos(ka2)*kr2,CY+Math.sin(ka2)*kr2,"rgb(255,255,255)");}
 
   // 15 fixed stars — great 3 = equilateral triangle · core 12 = icosahedron
   var fp=[];

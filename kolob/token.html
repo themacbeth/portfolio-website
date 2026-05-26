@@ -80,8 +80,9 @@ function makePalette(R){var h0=R()*360,sc=R.int(0,2),spread=sc===0?28:sc===1?120
 function palType(p,t){return t===0?p.rocky:t===1?p.gas:t===2?p.ice:p.hot;}
 
 /* ── names ── */
-var JOSEPH_15=["Kolob","Oleblish","Enish-go-on-dosh","Kai-e-vanrash","Lindi","Zip","Vusel",
- "Vauiste","Waine","Way-ho-ox-oan","Oansli","Kible","Shineflis","Flis","Os"];
+// KOLOB is the axis-mundi (non-mintable). The 15 pieces: 3 triangle great stars + 12 governing systems.
+var JOSEPH_15=["Oleblish","Enish-go-on-dosh","Kai-e-vanrash","Lindi","Zip","Vusel",
+ "Vauiste","Waine","Way-ho-ox-oan","Oansli","Kible","Shineflis","Flis","Os","Ondi"];
 var SYL=["ko","lob","ol","ib","lish","en","ish","go","dosh","kae","van","rash","kli","flos",
  "is","es","hah","beam","rauk","yang","shin","ehah","jah","oh","eh","gno","laum","kok","ob","ole","a","flo","eese","seth"];
 function aname(r){var n=r.int(2,3),s="";for(var i=0;i<n;i++)s+=r.pick(SYL);return s.charAt(0).toUpperCase()+s.slice(1);}
@@ -352,24 +353,42 @@ function renderSystem(){
       var f=s/tailLen,col=s<8?lt([210,220,255],(8-s)/8*0.7):s<20?rs(lt(PAL.comet,0.45)):mix(lt(PAL.star,0.4),PAL.comet,(s-20)/(tailLen-20));plot(tp[0],tp[1],col);}
     var oh=orbit(cm.a,cm.e,cm.peri,cm.inc,cm.M0+cm.rev*TAU*t);var sp=project(oh[0],oh[1],oh[2],cosP,sinP,scale);body(sp[0],sp[1],PX*1.5,lt(PAL.comet,0.55),clock*0.06);}}
 
+/* ── extended cosmological trait vocabulary (deterministic from seed) ── */
+var INTELLIGENCE=["Noble","Quickening","Veiled","Encircled","Witnessing","Risen","Wrought","Foreseen"];
+var AFFINITY=["Resonant","Concordant","Cascading","Inverted","Eccentric","Tessellated","Linear","Bound"];
+var DISPENSATION=["First","Second","Third","Fourth","Fifth","Sixth","Seventh","Eighth","Ninth","Tenth"];
+var GLORY=["Celestial","Terrestrial","Telestial","Outer"];
+function _bk(seed,salt,arr){return arr[((seed^salt)>>>0)%arr.length];}
+function deriveTraits(seed,tier){return {
+  Intelligence:_bk(seed,0x1A8F,INTELLIGENCE),
+  Affinity:    _bk(seed,0x2B6D,AFFINITY),
+  Dispensation:_bk(seed,0x3C5E,DISPENSATION),
+  Glory:       GLORY[Math.min(3,tier|0)]};}
+
 /* ── decide which piece this token is, build it ── */
 var mode,feat={};
 if(INV<3){
   SUN=SUN_PARAMS[INV]; buildStar(CORE_SEEDS[INV]); mode='star'; tilt=0.30;
-  feat={Kind:"Great Star",Name:JOSEPH_15[INV],Kingdom:"Celestial"};
+  var tg=deriveTraits(CORE_SEEDS[INV],0);
+  feat={Kind:"Great Star",Name:JOSEPH_15[INV],Kingdom:"Celestial",
+    Intelligence:tg.Intelligence,Affinity:tg.Affinity,Dispensation:tg.Dispensation,Glory:"Celestial"};
 }else if(INV<15){
   var ci=Math.max(0,Math.min(11,ppInt('archetype',INV-3)));   // Creator-mode: archetype swap (PMP)
   var cseed=CORE_SEEDS[3+(INV-3)];
   system=buildSystem(cseed,0); extremize(system,mk((cseed^0xABCDEF)>>>0),ci); coreBoost(system,mk((cseed^0x5A17C0)>>>0)); system.isCore=true;
   mode='system';
-  feat={Kind:"Core System",Name:JOSEPH_15[3+(INV-3)],Archetype:CORE_PROFILES[ci],Kingdom:"Celestial"};
+  var tc=deriveTraits(cseed,0);
+  feat={Kind:"Core System",Name:JOSEPH_15[3+(INV-3)],Archetype:CORE_PROFILES[ci],Kingdom:"Celestial",
+    Intelligence:tc.Intelligence,Affinity:tc.Affinity,Dispensation:tc.Dispensation,Glory:"Celestial"};
 }else{
   var tier=Math.max(0,Math.min(2,ppInt('tier',2)));            // tier from PMP (owner-advanced)
   var seed=hashSeed(tokenData.hash);
   system=buildSystem(seed,tier); applyRelics(system,tier,mk((seed^0x9E5C17)>>>0));
   mode='system';
+  var tt=deriveTraits(seed,tier);
   feat={Kind:"Throne",Kingdom:TIER_NAMES[tier].charAt(0)+TIER_NAMES[tier].slice(1).toLowerCase(),
-        Star:STAR[system.stars[0].cls].c,Planets:system.planets.length};
+        Star:STAR[system.stars[0].cls].c,Planets:system.planets.length,
+        Intelligence:tt.Intelligence,Affinity:tt.Affinity,Dispensation:tt.Dispensation,Glory:tt.Glory};
 }
 window.$features=feat;
 
