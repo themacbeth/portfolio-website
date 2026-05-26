@@ -56,6 +56,12 @@ function mk(seed){var r=PRNG(seed>>>0);
 function pmp(){try{return tokenData.externalAssetDependencies[0].data||{};}catch(e){return {};}}
 var PP=pmp();
 function ppInt(k,d){var n=parseInt(PP[k]);return isNaN(n)?d:n;}
+function ppFlt(k,d){var n=parseFloat(PP[k]);return isNaN(n)?d:n;}            // float field
+function ppStr(k,d){var v=PP[k];return (typeof v==='string'&&v.length)?v:d;}  // string field
+function ppCol(k,d){var v=PP[k];if(v==null)return d;                          // colour: "#rrggbb" or int
+  if(typeof v==='number'){return [(v>>16)&255,(v>>8)&255,v&255];}
+  var m=String(v).match(/^#?([0-9a-f]{6})$/i); if(!m) return d;
+  var n=parseInt(m[1],16); return [(n>>16)&255,(n>>8)&255,n&255];}
 
 /* ── which piece is this token? ── */
 var INV=(function(){var u=new URLSearchParams(location.search),q=u.get('inv');
@@ -383,9 +389,17 @@ function deriveTraits(seed,tier){return {
 /* ── decide which piece this token is, build it ── */
 var mode,feat={};
 if(INV<3){
-  SUN=SUN_PARAMS[INV]; buildStar(CORE_SEEDS[INV]); mode='star'; tilt=0.30;
+  // Great Star: start from the locked SUN_PARAMS, then apply Creator-Mode PostParams (token-owner authored)
+  var bs=SUN_PARAMS[INV];
+  SUN={col:ppCol('col',bs.col.slice()),size:bs.size,density:ppFlt('density',bs.density),
+       noise:bs.noise,speed:ppFlt('speed',bs.speed),length:ppFlt('length',bs.length),
+       curl:ppFlt('curl',bs.curl),rot:ppFlt('rot',bs.rot),
+       orbit:bs.orbit,big:ppFlt('big',bs.big)};
+  buildStar(CORE_SEEDS[INV]); mode='star'; tilt=0.30;
   var tg=deriveTraits(CORE_SEEDS[INV],0);
-  feat={Kind:"Great Star",Name:JOSEPH_15[INV],Kingdom:"Celestial",
+  var sName=ppStr('name',JOSEPH_15[INV]);
+  feat={Kind:"Great Star",Name:sName,Kingdom:"Celestial",
+    Authored:(PP.col||PP.density||PP.length||PP.rot||PP.speed||PP.curl||PP.big||PP.name)?"yes":"no",
     Intelligence:tg.Intelligence,Affinity:tg.Affinity,Dispensation:tg.Dispensation,Glory:"Celestial"};
 }else if(INV<15){
   var ci=Math.max(0,Math.min(11,ppInt('archetype',INV-3)));   // Creator-mode: archetype swap (PMP)
