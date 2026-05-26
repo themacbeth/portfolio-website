@@ -106,7 +106,7 @@
   <button id="throneGo">GO</button>
 </div>
 <div id="galaxyTools">
-  <button class="gtBtn" id="gtGpu" title="Exalt — 2× particle density (desktop only)">EXALT</button>
+  <button class="gtBtn" id="gtGpu" title="Exalt, 2× particle density (desktop only)">EXALT</button>
   <button class="gtBtn" id="gtCinema" title="Slideshow [c]">▶</button>
 </div>
 <style>
@@ -124,8 +124,15 @@
   body.idle #menuToggle,body.idle #menuPanel,body.idle #galaxyTools,body.idle #back{
     opacity:0 !important;pointer-events:none !important;transition:opacity .5s}
   body.idle #c{cursor:none}
+  /* screensaver: 30s of no input fades all chrome, current view keeps animating */
+  body.screensaver #hud,body.screensaver #controls,body.screensaver #mintInfo,
+  body.screensaver #slideshowUI,body.screensaver #menuToggle,body.screensaver #menuPanel,
+  body.screensaver #galaxyTools,body.screensaver #back,body.screensaver #advanceBtn,
+  body.screensaver #reward{
+    opacity:0 !important;pointer-events:none !important;transition:opacity 1.6s ease}
+  body.screensaver #c{cursor:none}
   @media(max-width:600px){#galaxyTools{right:8px;bottom:16px}}
-  /* EXALT (2× particles) is desktop-only — phones can't push the count */
+  /* EXALT (2× particles) is desktop-only, phones can't push the count */
   @media(max-width:760px),(pointer:coarse){#gtGpu{display:none!important}}
   #slideshowUI{display:none!important}   /* play is a single button now, no options */
   /* hero embed (index background): galaxy loop only, zero chrome */
@@ -209,7 +216,7 @@ function sh(c,f){f=Math.min(1.5,f*1.3);   // everything a touch brighter, always
 function lt(c,f){f=Math.min(1,f*1.3);
   return[c[0]+(255-c[0])*f,c[1]+(255-c[1])*f,c[2]+(255-c[2])*f];}
 function mix(a,b,f){return[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f];}
-// HSL→RGB — the engine for per-system vivid, individual-yet-family palettes
+// HSL→RGB, the engine for per-system vivid, individual-yet-family palettes
 function hsl(h,s,l){h=((h%360)+360)%360/360;
   function f(n){var k=(n+h*12)%12;return 255*(l-s*Math.min(l,1-l)*Math.max(-1,Math.min(k-3,9-k,1)));}
   return [f(0),f(8),f(4)];}
@@ -231,6 +238,81 @@ function palType(p,t){return t===0?p.rocky:t===1?p.gas:t===2?p.ice:p.hot;}
 function sat(c,k){var m=(c[0]+c[1]+c[2])/3,cl=function(x){return x<0?0:x>255?255:x;};
   return[cl(m+(c[0]-m)*k),cl(m+(c[1]-m)*k),cl(m+(c[2]-m)*k)];}
 function rs(c){return"rgb("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+")";}
+
+// ── KOLOB sound layer ────────────────────────────────────────────────────
+// Deterministic Web Audio drone: tunes itself to each system from its seed,
+// shifts timbre per kingdom (Celestial open, Telestial cold), and runs a
+// dust+glissando sweep during the veil crossing.
+var AUDIO=(function(){
+  var ac,master,lpf,lfo,drone=[],ready=false,enabled=true;
+  function init(){
+    if(ac)return ac;
+    var AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;
+    ac=new AC();
+    master=ac.createGain();master.gain.value=0;master.connect(ac.destination);
+    lpf=ac.createBiquadFilter();lpf.type='lowpass';lpf.frequency.value=800;lpf.Q.value=0.7;
+    lpf.connect(master);
+    for(var i=0;i<3;i++){var o=ac.createOscillator();
+      o.type=i===0?'sine':(i===1?'triangle':'sine');
+      var g=ac.createGain();g.gain.value=0;
+      o.connect(g);g.connect(lpf);o.start();
+      drone.push({o:o,g:g});}
+    lfo=ac.createOscillator();lfo.frequency.value=0.16;lfo.type='sine';
+    var lfg=ac.createGain();lfg.gain.value=140;
+    lfo.connect(lfg);lfg.connect(lpf.frequency);lfo.start();
+    ready=true;return ac;}
+  function resume(){if(ac&&ac.state==='suspended')ac.resume();}
+  function setMode(kind,seed,tier){
+    if(!ready)return;var n=ac.currentTime;
+    var s=(seed||0)^0xA9D0,rng=function(){s=(Math.imul(s,1664525)+1013904223)|0;return((s>>>0)/4294967296);};
+    rng();rng();           // warm up
+    var base=kind==='galaxy'?55:kind==='star'?174:(tier===0?165:tier===1?147:110);
+    // tiny seeded micro-tuning so every system sits on its own note
+    base*=1+(rng()-0.5)*0.06;
+    var iv=kind==='galaxy'?[1,1.5,3]:
+           kind==='star'?  [1,1.2599,1.4983]:
+           tier===2?       [1,1.4983,0]:
+           tier===1?       [1,1.4983,1.7818]:
+                           [1,1.2599,1.4983];
+    for(var i=0;i<drone.length;i++){var f=iv[i]>0?base*iv[i]:0;
+      drone[i].o.frequency.setTargetAtTime(f||1,n,1.4);
+      drone[i].o.detune.setValueAtTime((i-1)*6+(rng()-0.5)*22,n);
+      drone[i].g.gain.setTargetAtTime(f?(kind==='galaxy'?0.055:0.04):0,n,1.2);}
+    var lpFreq=kind==='galaxy'?700:kind==='star'?2400:(tier===0?1800:tier===1?1100:650);
+    lpf.frequency.setTargetAtTime(lpFreq,n,1.6);
+    master.gain.setTargetAtTime(enabled?0.22:0,n,0.6);}
+  function veilSweep(){
+    if(!ready)return;var n=ac.currentTime;
+    // sustained dust noise, covers the withdrawal and veil phases
+    var buf=ac.createBuffer(1,ac.sampleRate*3.5,ac.sampleRate),d=buf.getChannelData(0);
+    for(var i=0;i<d.length;i++){var t=i/d.length;
+      var env=t<0.15?(t/0.15):(t<0.5?1:Math.max(0,1-(t-0.5)/0.5));
+      d[i]=(Math.random()*2-1)*env*0.55;}
+    var src=ac.createBufferSource();src.buffer=buf;
+    var ng=ac.createGain();ng.gain.value=0.22;
+    var nf=ac.createBiquadFilter();nf.type='bandpass';nf.frequency.value=900;nf.Q.value=0.6;
+    src.connect(nf);nf.connect(ng);ng.connect(master);
+    src.start(n);src.stop(n+3.5);
+    // drone glissando, descend into darkness, ascend richer
+    for(var k=0;k<drone.length;k++){var f=drone[k].o.frequency.value||110;
+      drone[k].o.frequency.cancelScheduledValues(n);
+      drone[k].o.frequency.setValueAtTime(f,n);
+      drone[k].o.frequency.linearRampToValueAtTime(f*0.45,n+2.4);
+      drone[k].o.frequency.linearRampToValueAtTime(f*1.20,n+5.6);}
+    lpf.frequency.cancelScheduledValues(n);
+    lpf.frequency.setValueAtTime(lpf.frequency.value,n);
+    lpf.frequency.linearRampToValueAtTime(180,n+2.4);
+    lpf.frequency.linearRampToValueAtTime(1800,n+5.6);
+    // master: hold, dip to silence through darkness, re-emerge
+    master.gain.cancelScheduledValues(n);
+    master.gain.setValueAtTime(master.gain.value,n);
+    master.gain.linearRampToValueAtTime(0.10,n+1.8);
+    master.gain.linearRampToValueAtTime(0.005,n+3.0);   // silent threshold
+    master.gain.linearRampToValueAtTime(enabled?0.22:0,n+5.2);}
+  function toggle(){enabled=!enabled;if(ready){var n=ac.currentTime;
+    master.gain.cancelScheduledValues(n);master.gain.setTargetAtTime(enabled?0.22:0,n,0.4);}return enabled;}
+  return {init:init,resume:resume,setMode:setMode,veilSweep:veilSweep,toggle:toggle,isOn:function(){return enabled;}};
+})();
 
 // Star names
 // KOLOB is the axis-mundi (non-mintable visual at galaxy centre).
@@ -286,7 +368,7 @@ function cluster(sx,sy,r,base,count,rot,PX,plot){
 
 // THE GALAXY
 var ARMS=GRND.pick([2,2,3,4]), WIND=GRND.rng(1.9,3.0), BARANG=GRND()*TAU;
-// phones can't push the full particle count — render fewer automatically
+// phones can't push the full particle count, render fewer automatically
 var IS_MOBILE=(typeof matchMedia!=="undefined"&&matchMedia('(max-width:760px),(pointer:coarse)').matches)||false;
 var EMBED=/^#?embed=/.test(location.hash||"");   // chrome-free thumbnail → skip the galaxy build
 var N=48000, gpuN=IS_MOBILE?11000:24000, gN=gpuN;
@@ -309,7 +391,7 @@ if(!EMBED) for(var i=0;i<gpuN;i++){
   gRev[i]=Math.max(1,Math.min(14,Math.round(0.42*Math.pow(r,-1.5))));
 }
 
-// ── GPU RESEED — populate second half of particle arrays ──────────────────
+// ── GPU RESEED, populate second half of particle arrays ──────────────────
 function gpuReseed(){
   var orig_GRND=GRND; // keep existing state
   GRND=mk(hashSeed(tokenData.hash)+0xDEAD);
@@ -330,7 +412,7 @@ for(var k=0;k<GAL_BASES.length;k++){var base=GAL_BASES[k],lvA=[];
     lvA.push(dA);}
   GAL_COLS.push(lvA);}
 
-// 15 FIXED STARS — great 3 = equilateral triangle · core 12 = icosahedron
+// 15 FIXED STARS, great 3 = equilateral triangle · core 12 = icosahedron
 var ICO12=(function(){var g=1.61803398875,
   v=[[0,1,g],[0,1,-g],[0,-1,g],[0,-1,-g],
      [1,g,0],[1,-g,0],[-1,g,0],[-1,-g,0],
@@ -339,23 +421,23 @@ var ICO12=(function(){var g=1.61803398875,
   for(var k2=0;k2<12;k2++) o.push([v[k2][0]/L,v[k2][1]/L,v[k2][2]/L]);
   return o;})();
 
-// ═══ CORE-15 — LOCKED, the most powerful & expensive pieces ═══════════════
+// ═══ CORE-15, LOCKED, the most powerful & expensive pieces ═══════════════
 // Hand-picked constant seeds. These do NOT vary with the token hash: the 15
 // core pieces are curated and identical across the collection. Nothing a
 // throne can be upgraded to will ever match them.
 var CORE_SEEDS=[
-  0x4B4F4C00,0x4B414505,0x4B4C4909,            // great 3 — particle suns
-  0x0C0DE101,0x0C0DE202,0x0C0DE303,0x0C0DE404, // core 12 — extreme systems
+  0x4B4F4C00,0x4B414505,0x4B4C4909,            // great 3, particle suns
+  0x0C0DE101,0x0C0DE202,0x0C0DE303,0x0C0DE404, // core 12, extreme systems
   0x0C0DE505,0x0C0DE606,0x0C0DE707,0x0C0DE808,
   0x0C0DE909,0x0C0DEA0A,0x0C0DEB0B,0x0C0DEC0C];
 // Each great sun has a baked, visibly DIFFERENT identity.
 var SUN_PARAMS=[
  {col:[255,234,168],size:1.30,density:0.92,noise:1.0,speed:0.65,length:1.30,
-  curl:2.2,rot:0.45,orbit:0.55,big:0.16},   // KOLOB — vast gold throne, long flares
+  curl:2.2,rot:0.45,orbit:0.55,big:0.16},   // KOLOB, vast gold throne, long flares
  {col:[150,212,255],size:0.95,density:0.74,noise:1.4,speed:1.70,length:0.65,
-  curl:4.6,rot:1.50,orbit:0.95,big:0.07},   // KAE-E-VANRASH — blue, restless, many orbiters
+  curl:4.6,rot:1.50,orbit:0.95,big:0.07},   // KAE-E-VANRASH, blue, restless, many orbiters
  {col:[255,116,64], size:1.18,density:0.55,noise:1.1,speed:0.50,length:1.45,
-  curl:6.8,rot:0.30,orbit:0.22,big:0.22}];  // KLI-FLOS-IS-ES — red, lazy curling giant
+  curl:6.8,rot:0.30,orbit:0.22,big:0.22}];  // KLI-FLOS-IS-ES, red, lazy curling giant
 // Each core-12 system is a distinct, never-alike character.
 var CORE_PROFILES=["RINGED DYNASTY","MOON SWARM","ASTEROID EMPIRE",
  "COMET STORM","EMBRYO NURSERY","ECCENTRIC CHAOS","BINARY HEART",
@@ -367,11 +449,11 @@ for(i=0;i<15;i++){
   var fr=mk(CORE_SEEDS[i]);             // LOCKED seed → fixed identity
   var great=i<3;
   FIXED.push({great:great,
-    r: great?0.22:0,                   // great 3: equal radius
-    a: great?i*TAU/3+0.4:0,            // great 3: 120° apart → equilateral
-    rev: great?0.00065:0,              // equal rev → triangle stays rigid
+    r: great?0.34:0,                   // great 3: equal radius (pushed outside the larger KOLOB well)
+    a: great?i*TAU/3+0.4:0,            // great 3: 120 degrees apart, equilateral
+    rev: great?0.00065:0,              // equal rev, triangle stays rigid
     ico: great?null:ICO12[i-3],        // core 12: fixed icosahedron vertex
-    icoR: 0.32,
+    icoR: 0.46,
     col: great?SUN_PARAMS[i].col:STAR[2+((fr()*5)|0)].col,  // suns show true colour
     ph:fr()*TAU, sx:0, sy:0});
 }
@@ -535,7 +617,7 @@ function newCamTarget(){                       // gentle re-framing of the SAME 
   camDur=Math.max(120,camFreq*60*0.82);
   camToAz=az+(Math.random()*2-1)*1.3;          // slow pan / orbit
   camToTilt=0.40+(Math.random()*2-1)*0.18;     // gentle tilt
-  camToZoom=zoom;                              // keep zoom fixed — the pixel grid stays crisp
+  camToZoom=zoom;                              // keep zoom fixed, the pixel grid stays crisp
 }
 function reqFS(){try{if(!document.fullscreenElement)document.documentElement.requestFullscreen().catch(function(){});}catch(e){}}
 function exitFS(){try{if(document.fullscreenElement)document.exitFullscreen().catch(function(){});}catch(e){}}
@@ -646,16 +728,20 @@ if($gtCinema) $gtCinema.addEventListener('click',function(e){e.stopPropagation()
   if(cinematic) exitCinematic(); else enterCinematic();});
 syncTools();
 
-// ── IDLE AUTO-HIDE — fullscreen only: hide all chrome after inactivity ──
-var lastActivity=Date.now();
+// ── IDLE AUTO-HIDE, fullscreen only: hide all chrome after inactivity ──
+var lastActivity=Date.now(),SCREENSAVER_MS=30000;
 function poke(){ lastActivity=Date.now();
-  if(document.body.classList.contains('idle')) document.body.classList.remove('idle'); }
+  if(document.body.classList.contains('idle')) document.body.classList.remove('idle');
+  if(document.body.classList.contains('screensaver')) document.body.classList.remove('screensaver'); }
 ['pointermove','pointerdown','wheel','keydown','touchstart'].forEach(function(ev){
   addEventListener(ev,poke,{passive:true}); });
 document.addEventListener('fullscreenchange',poke);
 function idleCheck(){
-  if(document.fullscreenElement && Date.now()-lastActivity>2500)
-    document.body.classList.add('idle');
+  var dt=Date.now()-lastActivity;
+  if(document.fullscreenElement && dt>2500) document.body.classList.add('idle');
+  // screensaver: 30s of any-mode inactivity, hide chrome, hold the current view, no camera move
+  if(!cinematic && !document.body.classList.contains('hero') && dt>SCREENSAVER_MS)
+    document.body.classList.add('screensaver');
 }
 
 
@@ -687,8 +773,8 @@ document.querySelectorAll('.menuItem').forEach(function(item){
 
 // rewards granted by advancing inward through the veils
 function applyRelics(sys,tier,r){
-  if(tier===0) sys.scheme=[[255,206,120],[255,168,86]];        // celestial — gold palette
-  else if(tier===1) sys.scheme=[[255,128,150],[255,96,120]];   // terrestrial — warm palette
+  if(tier===0) sys.scheme=[[255,206,120],[255,168,86]];        // celestial, gold palette
+  else if(tier===1) sys.scheme=[[255,128,150],[255,96,120]];   // terrestrial, warm palette
   if(tier<=1 && sys.planets.length){                            // signature ringed giant
     var g=sys.planets[Math.min(1,sys.planets.length-1)];
     g.type=1; g.ring=true; g.szMul*=1.5;
@@ -705,7 +791,8 @@ function applyRelics(sys,tier,r){
 function goGalaxy(){mode="galaxy";zoom=1;az=0;tilt=0.52;
   if(!cinematic){$back.style.display='none';
     $throneNum.disabled=false;$throneGo.disabled=false;}
-  else {$back.style.display='none';}}
+  else {$back.style.display='none';}
+  AUDIO.setMode('galaxy',0,null);}
 function goSystem(idx,ft){
   if(idx<0||idx>128)return;
   curNode=idx;coreView=-1;var nd=NODES[idx];
@@ -714,7 +801,8 @@ function goSystem(idx,ft){
   applyRelics(system,tr,mk((nd.seed^0x9E5C17)>>>0));
   mode="system";zoom=1;az=0;tilt=0.52;clock=0;
   $back.style.display='block';
-  $throneNum.value=idx;$throneNum.disabled=false;$throneGo.disabled=false;}
+  $throneNum.value=idx;$throneNum.disabled=false;$throneGo.disabled=false;
+  AUDIO.setMode('system',nd.seed,tr);}
 $back.addEventListener('click',goGalaxy);
 $back.addEventListener('touchend',function(e){e.preventDefault();goGalaxy();});
 $throneGo.addEventListener('click',function(){var v=parseInt($throneNum.value);
@@ -723,7 +811,7 @@ $throneNum.addEventListener('keydown',function(e){if(e.key==='Enter'){
   var v=parseInt($throneNum.value);
   if(!isNaN(v)&&v>=0&&v<=128)goSystem(v);}});
 
-// ── KINGDOM ADVANCE — warp through the veil to the next kingdom ──────────
+// ── KINGDOM ADVANCE, warp through the veil to the next kingdom ──────────
 var $advanceBtn=document.getElementById('advanceBtn');
 var $reward=document.getElementById('reward');
 var rewardTO=0;
@@ -736,55 +824,74 @@ function showReward(t){ if(!$reward)return; $reward.textContent=REWARD[t]||"";
 // veil cinematic state
 var veilActive=false,veilT=0,veilNode=-1,veilDidAdvance=false,veilSpin=0,veilNz=0;
 var veilFrom=[110,215,255],veilTo=[255,110,210],veilPts=[],warpStars=[];
-var VEIL_DUR=IS_MOBILE?150:175;                 // frames (~2.6–2.9s)
+// Ceremonial veil, slow passage through dust, total darkness, palette-shift emergence
+var VEIL_DUR=IS_MOBILE?320:380;                 // ~5.3–6.3s, deliberately slow
 function buildVeil(){
-  var nP=IS_MOBILE?5000:13000,nW=IS_MOBILE?900:2200,r=mk((curNode*2654435761+777)>>>0),i;
+  var nP=IS_MOBILE?2400:5200,nW=IS_MOBILE?500:1100,r=mk((curNode*2654435761+777)>>>0),i;
+  // dust particles in polar coords: drift inward then outward
   veilPts=[];
-  for(i=0;i<nP;i++){var u=r()*TAU,ct=2*r()-1,st=Math.sqrt(1-ct*ct);
-    veilPts.push([st*Math.cos(u),ct,st*Math.sin(u)]);}        // [x, lat-y, z]
+  for(i=0;i<nP;i++) veilPts.push({
+    a:r()*TAU, r0:0.04+r()*1.10, sp:0.35+r()*1.05,
+    sw:r()*TAU, sz:0.6+r()*1.6, bri:0.45+r()*0.55});
+  // veil-membrane curtain threads
   warpStars=[];
-  for(i=0;i<nW;i++) warpStars.push({x:(r()*2-1)*1.7,y:(r()*2-1)*1.7,z:0.12+r()*3.8,pz:0});
-}
-function veilCurve(t){                            // warp speed: ramp → hold → ease-out
-  if(t<0.14){var a=t/0.14;return a*a;}
-  if(t<0.5) return 1;
-  var k=(t-0.5)/0.5;return 1-(k*k*k*(k*(k*6-15)+10));
-}
-function bandCol(lat,sw){                         // gas-giant latitude bands (Jupiter-ish)
-  var b=Math.sin(lat*8.5+(sw-0.5)*2.0);          // bands, gently disturbed by the swirl
-  return b>0.45?[236,220,184]:b>0?[210,162,108]:b>-0.45?[150,102,64]:[228,210,176];
+  for(i=0;i<nW;i++) warpStars.push({
+    a:r()*TAU, z:r(), ph:r()*TAU, bri:0.4+r()*0.6});
 }
 function renderVeil(){
   ctx.globalCompositeOperation='source-over';
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
-  var t=veilT,cx=CX,cy=CY,vc=veilCurve(t);
-  // ── warp starfield ──
+  var t=veilT,cx=CX,cy=CY,i,minD=Math.min(W,H);
+  // phase weights, withdrawal · veil · darkness · emergence
+  var withW=Math.max(0,1-t/0.25);
+  var memW =Math.max(0,Math.min(1,(t-0.18)/0.18))*Math.max(0,1-(t-0.46)/0.10);
+  var darkW=Math.max(0,Math.min(1,(t-0.42)/0.06))*Math.max(0,1-(t-0.55)/0.06);
+  var emrgW=Math.max(0,Math.min(1,(t-0.55)/0.22));
+  // ── dust cloud: drifts inward then re-expands outward, slow ──
   ctx.globalCompositeOperation='lighter';
-  var v=vc*0.27,fov=Math.min(W,H)*0.92,i;
-  for(i=0;i<warpStars.length;i++){var s=warpStars[i];
-    s.pz=s.z; s.z-=v*s.z;                         // accelerate as they near
-    if(s.z<0.09){s.z=3.8;s.pz=3.8;s.x=(Math.random()*2-1)*1.7;s.y=(Math.random()*2-1)*1.7;}
-    var x1=cx+s.x/s.z*fov,y1=cy+s.y/s.z*fov,x0=cx+s.x/s.pz*fov,y0=cy+s.y/s.pz*fov;
-    var b=Math.min(1,(1-s.z/3.8)*0.7+vc*0.7);
-    ctx.strokeStyle='rgba(255,255,255,'+b.toFixed(2)+')';
-    ctx.lineWidth=Math.max(1,(1-s.z/3.8)*2.2*dpr);
-    ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();}
-  ctx.globalCompositeOperation='source-over';
-  // ── rotating gas-giant; colour shifts, bands rearrange ──
-  veilSpin+=0.006; veilNz+=0.004+vc*0.03;
-  var R=Math.min(W,H)*0.185,cs=Math.cos(veilSpin),sn=Math.sin(veilSpin);
-  var shift=t*t*(3-2*t),tint=mix(veilFrom,veilTo,shift);
-  var DOTp=Math.max(1,Math.round(Math.min(W,H)/470));   // fine micro-particles, like the stars
+  var dotSz=Math.max(1,Math.round(minD/520))*dpr;
   for(i=0;i<veilPts.length;i++){var p=veilPts[i];
-    var x=p[0]*cs-p[2]*sn,z=p[0]*sn+p[2]*cs,y=p[1];
-    if(z<-0.04) continue;                         // front hemisphere
-    var sw=vnoise(x*2.0+veilNz,y*2.0,z*2.0);      // swirl that drifts → bands rearrange
-    var col=mix(bandCol(y,sw),tint,0.22);         // Jupiter bands, lightly kingdom-tinted
-    ctx.fillStyle=rs(sh(col,0.4+0.6*Math.max(0,z)));
-    ctx.fillRect((cx+x*R)|0,(cy-y*R)|0,DOTp,DOTp);}
-  // fade in / out at the ends
-  if(t<0.12||t>0.9){var fa=t<0.12?(0.12-t)/0.12:(t-0.9)/0.1;
-    ctx.fillStyle='rgba(0,0,0,'+Math.min(1,fa).toFixed(2)+')';ctx.fillRect(0,0,W,H);}
+    var phase=t<0.5?-p.sp*t*0.75:p.sp*(t-0.5)*0.85;
+    var rad=Math.max(0.02,p.r0+phase);
+    var ang=p.a+Math.sin(t*1.6+p.sw)*0.14+(t<0.5?-t*0.55:(t-0.5)*0.55);
+    var x=cx+Math.cos(ang)*rad*minD*0.55, y=cy+Math.sin(ang)*rad*minD*0.55;
+    var dustA=(withW*0.45+emrgW*0.65)*p.bri*(1-darkW);     // suppressed during black
+    if(dustA<0.02)continue;
+    var srcCol=t<0.5?veilFrom:veilTo;
+    var dCol=mix([170,170,195],srcCol,t<0.5?0.30:0.62);
+    ctx.fillStyle='rgba('+(dCol[0]|0)+','+(dCol[1]|0)+','+(dCol[2]|0)+','+dustA.toFixed(2)+')';
+    ctx.fillRect(x|0,y|0,p.sz*dotSz|0,p.sz*dotSz|0);}
+  // ── veil membrane: shimmering thin curtain ──
+  if(memW>0.05){var vR=minD*(0.20+0.04*Math.sin(t*3.5));
+    for(i=0;i<warpStars.length;i++){var s=warpStars[i];
+      var ang=s.a+t*0.25+Math.sin(t*1.3+s.ph)*0.04;
+      var r1=vR*(0.85+0.32*s.z+0.04*Math.sin(t*7+s.ph));
+      var x=cx+Math.cos(ang)*r1, y=cy+Math.sin(ang)*r1;
+      var shim=0.5+0.5*Math.sin(t*11+s.ph);
+      var a=memW*0.55*s.bri*shim*(1-darkW);
+      if(a<0.02)continue;
+      ctx.fillStyle='rgba(248,248,255,'+a.toFixed(2)+')';
+      ctx.fillRect(x|0,y|0,1,1);}}
+  // ── total darkness: pure black, single threshold pulse at midpoint ──
+  if(darkW>0){
+    ctx.globalCompositeOperation='source-over';
+    ctx.fillStyle='rgba(0,0,0,'+darkW.toFixed(2)+')';ctx.fillRect(0,0,W,H);
+    if(t>0.475&&t<0.525){var pul=Math.sin((t-0.475)/0.05*Math.PI);
+      var pr=minD*0.05*pul;
+      ctx.fillStyle='rgba(255,255,255,'+(0.18*pul).toFixed(2)+')';
+      ctx.beginPath();ctx.arc(cx,cy,pr,0,TAU);ctx.fill();}}
+  // ── emergence: new palette blooms from centre outward ──
+  if(emrgW>0.04){
+    ctx.globalCompositeOperation='lighter';
+    var bR=minD*0.65*emrgW;
+    var g=ctx.createRadialGradient(cx,cy,0,cx,cy,bR);
+    g.addColorStop(0,'rgba('+(veilTo[0]|0)+','+(veilTo[1]|0)+','+(veilTo[2]|0)+','+(0.30*emrgW).toFixed(2)+')');
+    g.addColorStop(1,'rgba('+(veilTo[0]|0)+','+(veilTo[1]|0)+','+(veilTo[2]|0)+',0)');
+    ctx.fillStyle=g;ctx.fillRect(cx-bR,cy-bR,bR*2,bR*2);}
+  ctx.globalCompositeOperation='source-over';
+  // gentle global fades at the very edges
+  if(t<0.04){ctx.fillStyle='rgba(0,0,0,'+(1-t/0.04).toFixed(2)+')';ctx.fillRect(0,0,W,H);}
+  else if(t>0.93){ctx.fillStyle='rgba(0,0,0,'+((t-0.93)/0.07).toFixed(2)+')';ctx.fillRect(0,0,W,H);}
 }
 function doAdvance(){
   if(veilActive||mode!=="system"||coreView>=0) return;
@@ -792,6 +899,7 @@ function doAdvance(){
   veilNode=i; veilFrom=TIER_COL[tierOf(i)]; veilTo=TIER_COL[tierOf(i)-1];
   buildVeil(); veilActive=true; veilT=0; veilDidAdvance=false; veilSpin=0; veilNz=0;
   document.body.classList.add('veil');
+  AUDIO.veilSweep();
 }
 if($advanceBtn) $advanceBtn.addEventListener('click',function(e){e.stopPropagation();doAdvance();});
 
@@ -800,12 +908,14 @@ cv.addEventListener('wheel',function(e){e.preventDefault();
   zoom*=Math.exp(-e.deltaY*0.0012);zoom=Math.max(0.3,Math.min(9,zoom));
 },{passive:false});
 
-// Pointer / touch — pinch zoom uses a live map of active pointers
+// Pointer / touch, pinch zoom uses a live map of active pointers
 var drag=false,moved=0,lx=0,ly=0;
 var ptrs=new Map(),pinchDist=0,pinchAng=0,pinching=false;
 var lastTap=0,dblTapDelay=300;
 function ptrArr(){return [].slice.call(ptrs.values());}
 cv.addEventListener('pointerdown',function(e){
+  if(!AUDIO._inited){AUDIO._inited=true; AUDIO.init(); AUDIO.resume(); AUDIO.setMode(mode==='galaxy'?'galaxy':(mode==='star'?'star':'system'),(system&&system.seed)||0,system?system.wealth:null);}
+  AUDIO.resume();
   if(cinematic){ exitCinematic(); return; }   // a click ends the cinematic (cursor move does not)
   ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   try{cv.setPointerCapture(e.pointerId);}catch(_){}
@@ -845,7 +955,7 @@ cv.addEventListener('pointermove',function(e){
 cv.addEventListener('pointerup',function(e){
   ptrs.delete(e.pointerId);
   try{cv.releasePointerCapture(e.pointerId);}catch(_){}
-  if(ptrs.size===1){ // one finger lifted from a pinch — resume single-finger drag
+  if(ptrs.size===1){ // one finger lifted from a pinch, resume single-finger drag
     var a=ptrArr()[0]; drag=true;pinching=false;lx=a.x;ly=a.y;return;
   }
   if(ptrs.size===0){drag=false;pinching=false;
@@ -858,7 +968,7 @@ cv.addEventListener('pointerup',function(e){
       lastTap=now;
       if(mode==="galaxy"){
         var mx=e.clientX*dpr,my=e.clientY*dpr;
-        // core 15 first — great 3 = particle sun · core 12 = extreme system
+        // core 15 first, great 3 = particle sun · core 12 = extreme system
         var bs=PX*30,fhit=-1;
         for(var i2=0;i2<FIXED.length;i2++){
           var fd=Math.abs(FIXED[i2].sx-mx)+Math.abs(FIXED[i2].sy-my);
@@ -888,6 +998,7 @@ addEventListener('keydown',function(e){var k=e.key.toLowerCase();
   if(k==="escape"||(k==="g"&&mode!=="galaxy")){if(cinematic)exitCinematic();goGalaxy();keySel=-1;}
   else if(k===" "){e.preventDefault();paused=!paused;}
   else if(k==="h"){hud=!hud;}
+  else if(k==="m"){AUDIO.toggle();}
   else if(k==="]"){speed=Math.min(4,speed*1.5);}
   else if(k==="["){speed=Math.max(0.04,speed/1.5);}
   // ←/→ step through thrones · ↑/↓ orbit around the galaxy
@@ -900,7 +1011,7 @@ addEventListener('keydown',function(e){var k=e.key.toLowerCase();
     az+=(k==="arrowup")?-0.18:0.18;
     e.preventDefault();
   }
-  // 1-9 — camera presets (0 resets)
+  // 1-9, camera presets (0 resets)
   else if(k>="1"&&k<="9"){
     var cam=parseInt(k)-1;
     var prs=[
@@ -919,7 +1030,7 @@ addEventListener('keydown',function(e){var k=e.key.toLowerCase();
     a.href=cv.toDataURL('image/png');a.click();}
   else if(k==="enter"&&keySel>=0&&mode==="galaxy"){goSystem(keySel);}
   else if(k==='f'){toggleFs();}
-  // palette lock — cool palette only
+  // palette lock, cool palette only
 });
 
 // Render primitives
@@ -984,9 +1095,9 @@ function renderGalaxy(){
     if(gR[i]<0.07)kk2=0;else if(gR[i]<0.20)kk2=1;else if(gR[i]<0.27)kk2=2;else if(gR[i]<0.50)kk2=3;else kk2=4;
     plot(window.sX[i],window.sY[i],GAL_COLS[kk2][kk2<2?3:kk2<4?2:1][D]);}
 
-  // Veils — two thin white particle barriers (denser + vertical spread)
+  // Veils, two thin white particle barriers (denser + vertical spread)
   var veilSeeds=[12345,67890];
-  for(var v=0;v<2;v++){var vr=v?0.235:0.50,vs=veilSeeds[v];
+  for(var v=0;v<2;v++){var vr=v?0.30:0.56,vs=veilSeeds[v];   // pushed outward to clear the larger KOLOB well
     // Layer A: dense inner band
     for(i=0;i<480;i++){var a=i/480*TAU+(v?clock*0.0005:-clock*0.0004);
       var rr=vr+(Math.sin(a*13+vs)*0.003+Math.sin(a*23+vs+clock*0.002)*0.002);
@@ -1009,7 +1120,7 @@ function renderGalaxy(){
       plot(sp[0],sp[1],"rgba(230,235,245,"+(0.15+0.2*shim).toFixed(2)+")");}
   }
 
-  // TELESTIAL — extra drifting detail in the galaxy's outer ring
+  // TELESTIAL, extra drifting detail in the galaxy's outer ring
   for(i=0;i<800;i++){
     var tr=0.74+0.34*((i*0.61803399)%1);
     var ta=i*2.39996 + t*TAU*(0.45+tr*0.5) + 0.3*Math.sin(clock*0.01+i);
@@ -1018,7 +1129,7 @@ function renderGalaxy(){
     var tw=0.4+0.6*Math.sin(i*0.9+clock*0.02);
     plot(tsp[0],tsp[1],rs(sh(mix(P.c0,TIER_COL[2],0.55),0.28+0.42*tw)));
   }
-  // OUTER DARKNESS — churning dark matter banished beyond the galaxy
+  // OUTER DARKNESS, churning dark matter banished beyond the galaxy
   for(i=0;i<WORMS.length;i++){var w=WORMS[i];
     var wr=w.r+0.06*Math.sin(clock*0.02+w.ph);
     var wa=w.a+0.05*Math.sin(clock*0.013+w.ph)+t*TAU*0.30;
@@ -1031,14 +1142,16 @@ function renderGalaxy(){
     }
   }
 
-  // KOLOB — axis-mundi: larger black-hole well + accretion disc + a tight white particle cluster
-  var bh=Math.max(PX*12,scale*0.108);
-  for(i=0;i<200;i++){var p=CTPL[i%CTPL.length];   // dark sphere (bigger)
-    plot(CX+p[0]*bh,CY+p[1]*bh,"rgb(2,2,5)");}
-  for(i=0;i<220;i++){var aa=i/220*TAU+clock*0.06;  // accretion disc glow
-    var rr2=bh*(1.18+(i%5)*0.07);
+  // KOLOB, axis-mundi: large clean black disc (SHAPE-style) + accretion disc + tight white particle cluster
+  var bh=Math.max(PX*24,scale*0.216);                  // 2x prominence, reads as the SHAPE L2 circle
+  ctx.fillStyle='#000';                                 // crisp solid black disc
+  ctx.beginPath();ctx.arc(CX,CY,bh,0,TAU);ctx.fill();
+  for(i=0;i<360;i++){var p=CTPL[i%CTPL.length];        // soft particle texture inside the well
+    plot(CX+p[0]*bh*0.96,CY+p[1]*bh*0.96,"rgb(2,2,5)");}
+  for(i=0;i<260;i++){var aa=i/260*TAU+clock*0.06;      // accretion disc glow, hugs the rim
+    var rr2=bh*(1.06+(i%5)*0.05);
     plot(CX+Math.cos(aa)*rr2,CY+Math.sin(aa)*rr2*tilt,rs(mix(P.c2,P.c3,(i%5)/5)));}
-  // KOLOB itself — small bright cluster of white particles at the very centre
+  // KOLOB itself, small bright cluster of white particles at the very centre
   var kc=Math.max(PX*1.7,bh*0.18),kspin=clock*0.05;
   for(i=0;i<90;i++){                                // soft outer halo
     var ka=i*2.39996+kspin, kr=kc*(0.35+((i*0.6180339)%1)*0.85);
@@ -1048,7 +1161,7 @@ function renderGalaxy(){
     var ka2=i*TAU/28+kspin*1.4, kr2=kc*(0.05+(i%4)*0.10);
     plot(CX+Math.cos(ka2)*kr2,CY+Math.sin(ka2)*kr2,"rgb(255,255,255)");}
 
-  // 15 fixed stars — great 3 = equilateral triangle · core 12 = icosahedron
+  // 15 fixed stars, great 3 = equilateral triangle · core 12 = icosahedron
   var fp=[];
   var icoAy=clock*0.0009, icoAx=clock*0.0006;
   for(i=0;i<15;i++){var fx=FIXED[i];
@@ -1082,7 +1195,7 @@ function renderGalaxy(){
     nd.sx=sp[0];nd.sy=sp[1];
     var col=STAR[nd.star].col,gr=PX*(i===hover?3.4:i===keySel?2.8:2.4);
     var tc=TIER_COL[tierOf(i)];
-    var bcol=mix(col,tc,0.6);            // tier-tinted body — cores still read white
+    var bcol=mix(col,tc,0.6);            // tier-tinted body, cores still read white
     if(i===hover || i===keySel){
       var glowR=gr*(i===keySel?2.0:2.2);
       for(var q=0;q<12;q++){var a4=clock*0.02+q/12*TAU;
@@ -1152,7 +1265,7 @@ function renderSystem(){
     if(sy.binary){var off=st.off;
       sxx=off*Math.cos(sy.binRev*TAU*t);syy=off*Math.sin(sy.binRev*TAU*t);}
     var sp=project(sxx,syy,0,cosP,sinP,scale);
-    if(sy.isCore){   // Core 12 — a mini, surface-emission particle sun at heart
+    if(sy.isCore){   // Core 12, a mini, surface-emission particle sun at heart
       var ccol=mix(STAR[st.cls].col,PAL.star,0.65);   // stays saturated, no white blow-out
       renderCoreStar(sp[0],sp[1],Math.min(PX*9,PX*(5+STAR[st.cls].rad*2)),
         (sy.seed^(0x51F0+i*97))>>>0,ccol);
@@ -1177,7 +1290,7 @@ function renderSystem(){
       body(sp2[0],sp2[1],PX*1.3,[180,180,200],mo.M0+clock*0.05);}
   }
   for(i=0;i<sy.comets.length;i++){var cm=sy.comets[i];
-    /* Coiled gas tail — 36 steps, slow rotation, amber-to-cyan fade */
+    /* Coiled gas tail, 36 steps, slow rotation, amber-to-cyan fade */
     var tailLen=36;
     for(var s=tailLen;s>=1;s--){var t0=t-s*(0.007+cm.e*0.003),tt=cm.M0+cm.rev*TAU*t0;
       var o2=orbit(cm.a,cm.e,cm.peri,cm.inc,tt);
@@ -1218,7 +1331,7 @@ function fbm(x,y,z){var s=0,a=0.5,f=1;for(var o=0;o<3;o++){s+=a*vnoise(x*f,y*f,z
 function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
 function norm(v){var l=Math.hypot(v[0],v[1],v[2])||1;return [v[0]/l,v[1]/l,v[2]/l];}
 
-// ── Core-12 mini particle sun — the great-star engine, scaled & simplified ──
+// ── Core-12 mini particle sun, the great-star engine, scaled & simplified ──
 var _csData=null,_csSeed=null;
 function buildCoreStar(seed){
   var r=mk(seed>>>0),arr=[],i,nS=IS_MOBILE?170:(gpuMode?520:340);
@@ -1296,6 +1409,7 @@ function goStar(idx){
   mode="star";zoom=1;az=0;tilt=0.30;clock=0;
   $back.style.display='block';
   $throneNum.disabled=true;$throneGo.disabled=true;
+  AUDIO.setMode('star',CORE_SEEDS[idx],0);
 }
 function renderStar(){
   ctx.globalCompositeOperation='source-over';
@@ -1354,7 +1468,7 @@ function extremize(sys,r,ci){
   for(i=0;i<sys.planets.length;i++){var pl=sys.planets[i];
     pl.szMul*=1.3+r()*0.7;pl.e=Math.min(0.5,pl.e+r()*0.18);}
   switch(ci){
-   case 0:  // RINGED DYNASTY — every world ringed
+   case 0:  // RINGED DYNASTY, every world ringed
      for(i=0;i<sys.planets.length;i++){sys.planets[i].ring=true;sys.planets[i].szMul*=1.35;} break;
    case 1:  // MOON SWARM
      for(i=0;i<sys.planets.length;i++){var p1=sys.planets[i],mr=[12,9,7,5,4,3,2],ad=r.int(4,9)*gm;
@@ -1374,29 +1488,29 @@ function extremize(sys,r,ci){
      sys.kuiper=[];for(i=0;i<700*gm;i++){var ka=r.rng(1.1,1.9);
        sys.kuiper.push({a:ka,e:r()*0.4,peri:r()*TAU,inc:r.g()*0.3,
          rev:Math.max(1,Math.round(Math.pow(ka,-1.5))),M0:r()*TAU});} break;
-   case 6:  // BINARY HEART — twin stars, near-circular circumbinary worlds
+   case 6:  // BINARY HEART, twin stars, near-circular circumbinary worlds
      if(sys.stars.length<2){sys.stars.push({cls:Math.min(6,sys.stars[0].cls+1)});}
      sys.binary=true;sys.sep=0.13;sys.binRev=12;
      var mm=STAR[sys.stars[0].cls].rad+STAR[sys.stars[1].cls].rad;
      sys.stars[0].off=sys.sep*STAR[sys.stars[1].cls].rad/mm;
      sys.stars[1].off=-sys.sep*STAR[sys.stars[0].cls].rad/mm;
      for(i=0;i<sys.planets.length;i++)sys.planets[i].e=Math.min(0.25,sys.planets[i].e); break;
-   case 7:  // RESONANCE CATHEDRAL — many planets, tight low-e chain
+   case 7:  // RESONANCE CATHEDRAL, many planets, tight low-e chain
      for(i=0;i<sys.planets.length;i++){sys.planets[i].e*=0.3;sys.planets[i].inc*=0.4;}
      if(sys.planets[0]){var b7=sys.planets[0].a,r7=sys.planets[0].rev;
        for(i=0;i<3;i++)sys.planets.push({a:b7*Math.pow(0.55,i+1),e:0.02,peri:r()*TAU,inc:0.02,
          rev:r7*(i+2),M0:r()*TAU,type:0,spin:r()*TAU,ring:false,szMul:0.8,moons:[]});} break;
-   case 8:  // FROZEN KUIPER — vast icy outer realm
+   case 8:  // FROZEN KUIPER, vast icy outer realm
      sys.kuiper=[];for(i=0;i<1500*gm;i++){var ka2=r.rng(1.05,1.78);
        sys.kuiper.push({a:ka2,e:r()*0.3,peri:r()*TAU,inc:r.g()*0.2,
          rev:Math.max(1,Math.round(Math.pow(ka2,-1.5))),M0:r()*TAU});} break;
-   case 9:  // HOT-JUPITER FORGE — close-in giants, scorched worlds
+   case 9:  // HOT-JUPITER FORGE, close-in giants, scorched worlds
      for(i=0;i<sys.planets.length;i++){var p3=sys.planets[i];
        if(p3.a<0.5){p3.type=1;p3.szMul*=1.6;p3.ring=r()<0.5;}else p3.type=3;} break;
-   case 10: // MEGA-RING WORLD — one colossal ringed giant, sparse else
+   case 10: // MEGA-RING WORLD, one colossal ringed giant, sparse else
      sys.planets=sys.planets.slice(0,Math.min(3,sys.planets.length));
      if(sys.planets[0]){sys.planets[0].type=1;sys.planets[0].ring=true;sys.planets[0].szMul*=2.4;} break;
-   case 11: // TROJAN SWARMS — co-orbital clouds at a host's L4/L5
+   case 11: // TROJAN SWARMS, co-orbital clouds at a host's L4/L5
      sys.asteroids=[];var host=sys.planets[Math.min(1,sys.planets.length-1)];
      if(host)for(i=0;i<1400*gm;i++){var lead=r()<0.5;
        sys.asteroids.push({a:host.a*(1+r.g()*0.04),e:host.e+r()*0.03,peri:host.peri,inc:r.g()*0.05,
@@ -1404,7 +1518,7 @@ function extremize(sys,r,ci){
   }
   return sys;
 }
-// Core-12 grandeur pass — more planets (well-spaced), 2× belts, prominent comets
+// Core-12 grandeur pass, more planets (well-spaced), 2× belts, prominent comets
 function coreBoost(sys,r){
   var orig=sys.planets,oc=orig.length,i;
   // target ~3× planets, but capped so every orbit keeps breathing room
@@ -1446,6 +1560,7 @@ function goCore(ci){
   mode="system";zoom=1;az=0;tilt=0.52;clock=0;
   $back.style.display='block';
   $throneNum.disabled=true;$throneGo.disabled=true;
+  AUDIO.setMode('system',seed,0);
 }
 
 var renderPaused=false;   // off-screen embeds are paused by the parent page
@@ -1462,7 +1577,7 @@ function loop(){
     if(veilT>=1){ veilActive=false; document.body.classList.remove('veil'); }
     else { renderVeil(); requestAnimationFrame(loop); return; }
   }
-  // ── CINEMATIC — easy-ease glides to a fresh composition every camFreq sec ──
+  // ── CINEMATIC, easy-ease glides to a fresh composition every camFreq sec ──
   if(cinematic){
     camT++;
     var p=Math.min(1,camT/camDur), e=p*p*p*(p*(p*6-15)+10);   // smootherstep
@@ -1475,12 +1590,12 @@ function loop(){
   var heroM=document.body.classList.contains('hero');
   var chrome=!cinematic&&!heroM;
   if($galaxyTools) $galaxyTools.style.display=chrome?'flex':'none';
-  // EXALT only in galaxy / great-star / core-system views — never on a throne
+  // EXALT only in galaxy / great-star / core-system views, never on a throne
   if($gtGpu) $gtGpu.style.display=(mode==='galaxy'||mode==='star'||(mode==='system'&&coreView>=0))?'':'none';
   if($controls) $controls.style.display=(mode==='galaxy'&&chrome)?'flex':'none';
   if($back) $back.style.display=(mode!=='galaxy'&&chrome)?'block':'none';
   if($advanceBtn){
-    // advance is a paid action — only shown when managing an owned throne (#…&own)
+    // advance is a paid action, only shown when managing an owned throne (#…&own)
     var up=(ownMode&&mode==='system'&&coreView<0&&chrome&&tierOf(curNode)>0);
     $advanceBtn.style.display=up?'block':'none';
     if(up) $advanceBtn.textContent="ADVANCE TO "+TIER_NAMES[tierOf(curNode)-1]+" ▸";
@@ -1491,7 +1606,7 @@ function loop(){
   requestAnimationFrame(loop);
 }
 
-// ── deep-link router — lets the website link straight to a destination ───
+// ── deep-link router, lets the website link straight to a destination ───
 function applyHash(){
   var h=(location.hash||'').replace('#','');
   ownMode=/(?:^|[&:])own\b/.test(h);   // #throne=N&own → manage mode (advance enabled)

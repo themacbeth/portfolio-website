@@ -3,9 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Theorem — KOLOB</title>
+<title>Theorem, KOLOB</title>
 <link rel="stylesheet" href="site.css">
 <script defer src="site.js"></script>
+<style>
+  .mig{position:relative;margin:18px 0 28px;border:1px solid #1a1a22;background:#000;border-radius:6px;overflow:hidden}
+  .mig canvas{display:block;width:100%;height:auto;background:#000}
+  .mig .leg{position:absolute;left:14px;bottom:12px;font:11px/1.6 var(--mono);color:#7d818f;letter-spacing:.04em}
+  .mig .leg b{color:#fff;font-weight:500}
+  .vocab{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px}
+  .vocab .v{border:1px solid #181820;border-radius:6px;padding:14px 16px;background:#08080c}
+  .vocab .v h4{margin:0 0 6px;font:13px/1.4 var(--mono);letter-spacing:.12em;color:#fff;text-transform:uppercase}
+  .vocab .v p{margin:0;font:13px/1.7 var(--mono);color:#9aa0ad}
+  .vocab .v .vs{margin-top:8px;font:10px/1.6 var(--mono);color:#5a5e6b;letter-spacing:.04em}
+  .poem{font:italic 17px/1.85 Georgia,serif;color:#cdd0d8;margin:18px 0 6px}
+  .small{font:11px/1.7 var(--mono);color:#6b6f7c;letter-spacing:.04em}
+</style>
 </head>
 <body>
 
@@ -18,41 +31,95 @@
   <a class="enter" href="kolob-pod-1d.html">ENTER ▸</a>
 </nav>
 
-<section class="wrap" style="padding-top:150px;padding-bottom:28px">
+<section class="wrap" style="padding-top:150px;padding-bottom:18px">
   <div class="article">
     <p class="eyebrow">The Theorem</p>
-    <h1 style="font-size:clamp(40px,7vw,80px)">A galactic journey</h1>
+    <h1 style="font-size:clamp(40px,7vw,80px)">One galaxy. Three glories.<br>A sealed core.</h1>
+    <p class="lede" style="margin-top:26px;max-width:60ch">A cosmology of light, drawn live by the chain.
+    Every piece a system; every system a place in the order. The galaxy is fixed in shape and shifting in
+    breath, and a hash is enough to find your way home.</p>
   </div>
 </section>
 
-<section class="wrap" style="padding-top:0">
+<section class="wrap" style="padding-top:18px">
   <div class="article">
 
-    <h2>Kolob</h2>
-    <p>The core. A black hole while all else moves around it. It swallows spent worlds
-    and casts new ones out.</p>
+    <h2>The Axis · Kolob</h2>
+    <p>At the very centre, a single tight cluster of white particles: Kolob. Neither star
+    nor throne, but the axis upon which the galaxy turns. A black-hole well wraps it, and
+    it swallows spent worlds and casts new ones outward. It is not minted. It is what
+    everything else is measured against, and the whole galaxy takes its name from this
+    place. The project is KOLOB; the centre is Kolob; and the two are one.</p>
 
-    <h2>The CORE 15</h2>
-    <p>Three great suns, bound in affinity. Twelve governing systems, turning as one solid.</p>
+    <h2>The Triangle</h2>
+    <p>Three great suns surround the axis in perfect equilateral relation, holding the inner
+    order: <b>Oleblish</b>, <b>Enish-go-on-dosh</b>, <b>Kai-e-vanrash</b>. They turn together as
+    a rigid figure, a measure of the noble Intelligences from before the foundation of light.</p>
 
-    <h2>Three Kingdoms</h2>
-    <p>Concentric zones of light.</p>
-    <p><span class="chip t-cel">Celestial</span> &nbsp;gold center</p>
-    <p><span class="chip t-ter">Terrestrial</span> &nbsp;in-between</p>
-    <p><span class="chip t-tel">Telestial</span> &nbsp;outer rim</p>
+    <h2>The Twelve</h2>
+    <p>Beyond the triangle, twelve governing systems, Lindi, Zip, Vusel, Vauiste, Waine,
+    Way-ho-ox-oan, Oansli, Kible, Shineflis, Flis, Os, Ondi, each bearing a single
+    distinguishing Affinity: a ringed dynasty, a moon swarm, an asteroid empire, a comet
+    storm, an embryo nursery, an eccentric chaos, a binary heart, a resonance cathedral,
+    a frozen kuiper, a hot-jupiter forge, a mega-ring world, trojan swarms. They turn as
+    one icosahedral solid. Together with the triangle they make the <b>Core 15</b>, sealed
+    in identity, authored by those who hold them.</p>
+
+    <h2>The Three Glories</h2>
+    <p>Beyond the Core, every throne lives in one of three concentric kingdoms. Further in
+    is rarer, denser, the light more elaborate.</p>
+    <p><span class="chip t-cel">Celestial</span> &nbsp;the gold inner ring, binary stars, comet swarms</p>
+    <p><span class="chip t-ter">Terrestrial</span> &nbsp;the richer middle, ringed giants, warmer worlds</p>
+    <p><span class="chip t-tel">Telestial</span> &nbsp;the cold outer rim, every throne begins here</p>
 
     <h2>The Veils</h2>
-    <p>Two bands of dust dividing the Kingdoms rings. One must pass through a veil.</p>
+    <p>Between the kingdoms hang two veils, thin shimmering bands of dust. To move inward,
+    a throne must pass through, and the passage is ceremonial: the worlds dim, dust pulls
+    inward and swallows everything, the music drops to silence at the threshold, and the
+    soul emerges into a richer palette. The crossing cannot be undone. It cannot be hurried.</p>
 
     <h2>The Migration</h2>
-    <p>One world is alive in the chart. Born at the core, cast to the rim, drawn home again.</p>
-    
+    <p class="poem">One world is alive in the chart. Born at the core, cast to the rim,
+    drawn home again.</p>
+    <p class="small">A single throne is highlighted below. Watch it ascend through the veils,
+    return to the rim, and begin again, a complete migratory cycle, deterministic and silent.</p>
+    <div class="mig">
+      <canvas id="mig" width="900" height="540"></canvas>
+      <div class="leg"><b>·</b> migrating throne &nbsp; <b>○</b> veils &nbsp; <b>✦</b> Core 15</div>
+    </div>
 
-    <h2>Outer Darkness</h2>
-    <p>Beyond the last veil: no light, no heat, no stars.</p>
+    <h2>The Trait Vocabulary</h2>
+    <p>Every minted piece carries four cosmological measurements, deterministic from its
+    hash. They are the language collectors use to speak about the worlds beyond the names.</p>
+    <div class="vocab">
+      <div class="v"><h4>Intelligence</h4>
+        <p>The density and order of a system's particles, its inward fire. A measure of what
+        the world remembers from before its formation.</p>
+        <div class="vs">Noble · Quickening · Veiled · Encircled · Witnessing · Risen · Wrought · Foreseen</div></div>
+      <div class="v"><h4>Affinity</h4>
+        <p>The orbital signature: how the worlds chord with one another. Whether they ring in
+        whole-number resonance, fall in cascades, or hold one another bound.</p>
+        <div class="vs">Resonant · Concordant · Cascading · Inverted · Eccentric · Tessellated · Linear · Bound</div></div>
+      <div class="v"><h4>Dispensation</h4>
+        <p>The era of emission. KOLOB casts worlds outward in waves; a Dispensation marks which
+        wave a piece belongs to.</p>
+        <div class="vs">First · Second · Third · Fourth · Fifth · Sixth · Seventh · Eighth · Ninth · Tenth</div></div>
+      <div class="v"><h4>Glory</h4>
+        <p>The kingdom a piece presently inhabits. Glory advances with the veil crossing;
+        it can also be lost.</p>
+        <div class="vs">Celestial · Terrestrial · Telestial · Outer</div></div>
+    </div>
 
-    <p style="margin-top:64px"><a class="btn primary" href="kolob-pod-1d.html#cinematic">SEE IT ▸</a>
-      <a class="btn ghost" href="core15.html">CORE 15</a></p>
+    <h2 style="margin-top:60px">Outer Darkness</h2>
+    <p>Beyond the last veil there is no light, no heat, no stars. A throne that holds too
+    long at the Telestial rim drifts outward into Outer Darkness, and the chain remembers
+    the drift. To advance is to hold a place in the light. To wait is to slip from it.</p>
+
+    <p style="margin-top:64px">
+      <a class="btn primary" href="kolob-pod-1d.html#cinematic">SEE IT ▸</a>
+      <a class="btn ghost" href="core15.html">CORE 15</a>
+      <a class="btn ghost" href="pitch.html">HOW IT WORKS</a>
+    </p>
   </div>
 </section>
 
@@ -64,6 +131,103 @@
   </div>
   KOLOB · pure code, no assets
 </footer>
+
+<script>
+/* The Migration, animated diagram of a single throne's full journey */
+(function(){
+  var cv=document.getElementById('mig'); if(!cv) return;
+  var ctx=cv.getContext('2d'),W,H,DPR=Math.min(2,window.devicePixelRatio||1);
+  function fit(){var w=cv.clientWidth; cv.width=W=w*DPR; cv.height=H=(w*0.6)*DPR;
+    cv.style.height=(w*0.6)+'px';}
+  fit(); addEventListener('resize',fit);
+  // Galaxy ring radii (normalized to min(W,H)*0.46)
+  var R={cel:0.18, ver1:0.30, ter:0.40, ver2:0.55, tel:0.74, dark:0.94};
+  // Deterministic point sets, thrones in each ring, core stars
+  function rng(s){var x=s>>>0;return function(){x^=x<<13;x^=x>>>17;x^=x<<5;return((x>>>0)/4294967296);};}
+  var r=rng(20260516);
+  // 3 great suns on an equilateral triangle (inner), 12 governing systems evenly on a ring (outer)
+  var cores=[];
+  for(var i=0;i<3;i++)  cores.push({a:i*(Math.PI*2/3)+0.4, r:0.085, k:'great'});  // triangle
+  for(i=0;i<12;i++)     cores.push({a:i*(Math.PI*2/12),     r:0.170, k:'core'});   // even 30 degrees
+  var thrones=[]; var TT=[{n:45,rg:'tel',r0:R.tel,r1:R.dark*0.95},{n:38,rg:'ter',r0:R.ter,r1:R.ver2*0.96},{n:30,rg:'cel',r0:R.cel,r1:R.ver1*0.96}];
+  for(var g=0;g<TT.length;g++){var tg=TT[g]; for(i=0;i<tg.n;i++){thrones.push({a:r()*Math.PI*2, r:tg.r0+r()*(tg.r1-tg.r0), rg:tg.rg});}}
+  // Migration script (normalized t 0..1 → polar position of the migrating world)
+  // Telestial rim → veil2 → terrestrial → veil1 → celestial → return outward → loop
+  function mig(t){
+    var seg=[
+      {t:0.00,t1:0.18,r0:0.82,r1:R.ver2,a0:-0.4,a1:0.6},      // drift inward in telestial
+      {t:0.18,t1:0.24,r0:R.ver2,r1:R.ver2,a0:0.6,a1:0.6,veil:true},  // pass veil 2
+      {t:0.24,t1:0.40,r0:R.ver2*0.96,r1:R.ver1,a0:0.6,a1:2.2}, // orbit terrestrial inward
+      {t:0.40,t1:0.46,r0:R.ver1,r1:R.ver1,a0:2.2,a1:2.2,veil:true}, // veil 1
+      {t:0.46,t1:0.58,r0:R.ver1*0.96,r1:R.cel,a0:2.2,a1:3.6},  // arrive celestial
+      {t:0.58,t1:0.72,r0:R.cel,r1:R.cel,a0:3.6,a1:6.2},        // celestial orbit
+      {t:0.72,t1:0.90,r0:R.cel,r1:0.82,a0:6.2,a1:8.0},         // cast back outward
+      {t:0.90,t1:1.00,r0:0.82,r1:0.82,a0:8.0,a1:8.6}           // resume telestial
+    ];
+    for(var s=0;s<seg.length;s++){var x=seg[s]; if(t>=x.t&&t<=x.t1){
+      var p=(t-x.t)/(x.t1-x.t); var ee=p*p*(3-2*p);
+      return {r:x.r0+(x.r1-x.r0)*ee, a:x.a0+(x.a1-x.a0)*ee, veil:x.veil||false, phase:s};
+    }} return {r:0.82,a:0,veil:false,phase:7};
+  }
+  var t0=performance.now();
+  function draw(){
+    var now=performance.now(), t=((now-t0)/22000)%1;       // 22s loop
+    var cx=W/2, cy=H/2, k=Math.min(W,H)*0.46;
+    ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
+    // ring guides
+    function ring(rad,col,dash){ctx.strokeStyle=col;ctx.lineWidth=1*DPR;ctx.setLineDash(dash||[]);
+      ctx.beginPath();ctx.arc(cx,cy,rad*k,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);}
+    ring(R.cel,  'rgba(233,201,135,0.35)');
+    ring(R.ver1, 'rgba(255,255,255,0.18)', [2*DPR,3*DPR]);
+    ring(R.ter,  'rgba(233,143,206,0.28)');
+    ring(R.ver2, 'rgba(255,255,255,0.18)', [2*DPR,3*DPR]);
+    ring(R.tel,  'rgba(127,200,255,0.22)');
+    ring(R.dark, 'rgba(80,80,90,0.28)', [1*DPR,4*DPR]);
+    // Kolob, the white axis at centre
+    ctx.fillStyle='rgba(255,255,255,0.95)';
+    ctx.beginPath();ctx.arc(cx,cy,3*DPR,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.lineWidth=1*DPR;
+    ctx.beginPath();ctx.arc(cx,cy,9*DPR,0,Math.PI*2);ctx.stroke();
+    // core 15, triangle + icosahedron projected as a slow spin
+    var spin=now*0.00012;
+    for(var i=0;i<15;i++){var c=cores[i];var a=c.a+(c.k==='great'?spin*1.5:spin);
+      var x=cx+Math.cos(a)*c.r*k, y=cy+Math.sin(a)*c.r*k;
+      ctx.fillStyle=c.k==='great'?'rgba(255,236,180,0.95)':'rgba(220,232,255,0.85)';
+      ctx.beginPath();ctx.arc(x,y,(c.k==='great'?2.8:2.0)*DPR,0,Math.PI*2);ctx.fill();}
+    // draw the equilateral triangle connecting the 3 great suns
+    ctx.strokeStyle='rgba(255,236,180,0.30)';ctx.lineWidth=1*DPR;ctx.beginPath();
+    for(i=0;i<3;i++){var ca=cores[i].a+spin*1.5,cx2=cx+Math.cos(ca)*cores[i].r*k,cy2=cy+Math.sin(ca)*cores[i].r*k;
+      if(i===0)ctx.moveTo(cx2,cy2);else ctx.lineTo(cx2,cy2);} ctx.closePath();ctx.stroke();
+    // thrones, faint, slow drift
+    var dft=now*0.00006;
+    for(i=0;i<thrones.length;i++){var th=thrones[i];
+      var aa=th.a+dft*(th.rg==='tel'?0.5:th.rg==='ter'?0.9:1.4);
+      var x=cx+Math.cos(aa)*th.r*k, y=cy+Math.sin(aa)*th.r*k;
+      var col=th.rg==='cel'?'rgba(233,201,135,0.55)':th.rg==='ter'?'rgba(233,143,206,0.45)':'rgba(127,200,255,0.35)';
+      ctx.fillStyle=col;ctx.fillRect(x-1*DPR,y-1*DPR,2*DPR,2*DPR);}
+    // the migrating throne, bright, with a fading trail
+    var TR=72;
+    for(var s=TR;s>=0;s--){var tt=t-s*0.0009; if(tt<0)tt+=1;
+      var p=mig(tt); var x=cx+Math.cos(p.a)*p.r*k, y=cy+Math.sin(p.a)*p.r*k;
+      var f=1-s/TR;
+      ctx.fillStyle='rgba(255,255,255,'+(f*0.85).toFixed(2)+')';
+      ctx.fillRect(x-1.5*DPR,y-1.5*DPR,3*DPR,3*DPR);}
+    // veil flash when crossing
+    var head=mig(t);
+    if(head.veil){
+      ctx.strokeStyle='rgba(255,255,255,0.55)';ctx.lineWidth=1.5*DPR;
+      ctx.beginPath();ctx.arc(cx,cy,head.r*k,0,Math.PI*2);ctx.stroke();}
+    // phase label
+    var labels=['Telestial · drift inward','Veil II','Terrestrial · orbit inward','Veil I','Arriving Celestial','Celestial · circling','Cast back outward','Returning to the rim'];
+    ctx.fillStyle='rgba(255,255,255,0.85)';
+    ctx.font=(12*DPR)+'px ui-monospace,Menlo,monospace';
+    ctx.textAlign='right';
+    ctx.fillText(labels[head.phase]||'', W-14*DPR, 22*DPR);
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
 
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>How It Works — KOLOB</title>
+<title>How It Works, KOLOB</title>
 <link rel="stylesheet" href="site.css">
 <script defer src="site.js"></script>
 </head>
@@ -24,7 +24,7 @@
   <p class="eyebrow">How it works</p>
   <h1 style="font-size:clamp(38px,7vw,78px)">A living galaxy,<br>drawn by the chain.</h1>
   <p class="lede" style="margin-top:26px;max-width:54ch">Every KOLOB is a unique solar system,
-  generated live from its token — no images, no servers. Collectors can <em>advance</em> their
+  generated live from its token, no images, no servers. Collectors can <em>advance</em> their
   world inward through the kingdoms, and the fifteen at the core can be <em>authored</em>.</p>
 </section>
 
@@ -43,20 +43,20 @@
 <section class="wrap" style="padding-top:60px">
   <div class="article" style="max-width:760px">
 
-    <!-- 1 — the idea -->
+    <!-- 1, the idea -->
     <p class="say">It's code, not a picture.</p>
     <p class="dim" style="margin-top:14px">When you mint, the blockchain hands the artwork a unique
-    number. That number grows a one-of-a-kind solar system — stars, planets, moons, comets, belts —
+    number. That number grows a one-of-a-kind solar system, stars, planets, moons, comets, belts,
     live in your browser, forever, with nothing stored off-chain.</p>
     <details class="exp"><summary>The technical bit</summary><div class="body">
       <p>Deterministic generative art: <code>tokenData.hash</code> seeds a PRNG that builds the
-      whole system. Same hash → same output, every time. Pure vanilla canvas — <b>zero external
+      whole system. Same hash → same output, every time. Pure vanilla canvas, <b>zero external
       dependencies</b>, so it qualifies as fully on-chain.</p>
       <p>Orbits are real Keplerian ellipses in integer mean-motion resonance; belts carry Kirkwood
       gaps; everything is particles (the "pixel-as-token" aesthetic).</p>
     </div></details>
 
-    <!-- 2 — collection structure -->
+    <!-- 2, collection structure -->
     <h2 style="margin-top:70px">144 worlds. 15 are different.</h2>
     <p class="dim">The collection splits in two: a sealed <b>Core 15</b> at the centre, and
     <b>129 thrones</b> in the rings around them.</p>
@@ -72,17 +72,17 @@
       thrones (seeded by the token's own hash). Deterministic and permanent.</p>
     </div></details>
 
-    <!-- 3 — kingdoms -->
+    <!-- 3, kingdoms -->
     <h2 style="margin-top:70px">Three kingdoms of light.</h2>
     <p class="dim">Every throne lives in one of three concentric rings. Further in = rarer, denser,
     more elaborate.</p>
     <div class="kings" style="margin-top:14px">
       <div class="king" style="--kc:var(--cyan)"><p class="kn">Telestial</p><p>The sparse outer rim. Where every throne begins.</p></div>
-      <div class="king" style="--kc:var(--mag)"><p class="kn">Terrestrial</p><p>Richer worlds — more planets, moons, a signature ringed giant.</p></div>
-      <div class="king" style="--kc:var(--gold)"><p class="kn">Celestial</p><p>The gold core — binary star, comet swarm, the densest systems.</p></div>
+      <div class="king" style="--kc:var(--mag)"><p class="kn">Terrestrial</p><p>Richer worlds, more planets, moons, a signature ringed giant.</p></div>
+      <div class="king" style="--kc:var(--gold)"><p class="kn">Celestial</p><p>The gold core, binary star, comet swarm, the densest systems.</p></div>
     </div>
 
-    <!-- 4 — minting -->
+    <!-- 4, minting -->
     <h2 style="margin-top:70px">Minting.</h2>
     <p class="dim">Thrones mint at the base (Telestial). The Core 15 are the premium, one-of-one tier.</p>
     <table class="ptab">
@@ -94,42 +94,42 @@
       <tr><td><span class="dot" style="background:#fff"></span>Great star (×3)</td><td class="price">0.50 ETH</td></tr>
     </table>
     <details class="exp"><summary>How the sale runs</summary><div class="body">
-      <p>Distribution uses the <b>Art Blocks Minter Suite</b> — fixed-price, Dutch auction, or
+      <p>Distribution uses the <b>Art Blocks Minter Suite</b>, fixed-price, Dutch auction, or
       allowlist phases, collector-to-contract, non-custodial. The mint is dry-run testable today on
       the <a href="mint.html" style="color:var(--cyan)">Mint page</a>.</p>
     </div></details>
 
-    <!-- 5 — advancing -->
+    <!-- 5, advancing -->
     <h2 style="margin-top:70px">Advance through the veil.</h2>
-    <p class="dim">A throne isn't frozen. Pay to move it inward — Telestial → Terrestrial →
-    Celestial — and it crosses a veil of dust in a warp-jump cinematic, emerging richer.</p>
+    <p class="dim">A throne isn't frozen. Pay to move it inward, Telestial → Terrestrial →
+    Celestial, and it crosses a veil of dust in a warp-jump cinematic, emerging richer.</p>
     <div class="steps" style="margin-top:8px">
       <div class="step"><h3>Terrestrial</h3><p>Unlocks a signature ringed giant, a warmer palette, and more worlds.</p></div>
-      <div class="step"><h3>Celestial</h3><p>Adds a binary companion star, a comet swarm, a gold palette — the richest state.</p></div>
+      <div class="step"><h3>Celestial</h3><p>Adds a binary companion star, a comet swarm, a gold palette, the richest state.</p></div>
     </div>
     <p class="dim" style="margin-top:18px;font:11px/1.7 var(--mono);color:#c9a96b">⚠ Thrones left in
-    the Telestial rim drift toward <b style="color:#e0d6c2">Outer Darkness</b> — advancing holds
+    the Telestial rim drift toward <b style="color:#e0d6c2">Outer Darkness</b>, advancing holds
     your place in the light.</p>
     <details class="exp"><summary>How advancing works on-chain</summary><div class="body">
       <p>A throne's kingdom is an on-chain <b>PostParam</b> (Art Blocks PMP) set by the token owner;
-      the artwork reads it and re-renders the new tier. PMP supports <b>lock dates</b> and min/max —
+      the artwork reads it and re-renders the new tier. PMP supports <b>lock dates</b> and min/max,
       so the "drift to Outer Darkness" deadline is enforceable on-chain. Requires <b>Engine Flex
       (core v3.2.5+)</b>.</p>
     </div></details>
 
-    <!-- 6 — creator mode -->
+    <!-- 6, creator mode -->
     <h2 style="margin-top:70px">The Core 15 are authored.</h2>
-    <p class="dim">Holders of the fifteen don't just own a body — they shape it. Sliders for a sun's
+    <p class="dim">Holders of the fifteen don't just own a body, they shape it. Sliders for a sun's
     color, flares and rotation; an archetype swap and palette for a core system; their deity's name.
     Sealed to their token, it becomes a true 1/1.</p>
     <details class="exp"><summary>How authorship works</summary><div class="body">
       <p>Each locked seed is a <em>starting point</em>. The owner's choices are stored as on-chain
-      PostParams (Token-Owner authorized) and encoded into the render — bounded so every result still
+      PostParams (Token-Owner authorized) and encoded into the render, bounded so every result still
       reads as a KOLOB. Authored pieces carry a ✦ badge in the collection.</p>
       <p>Gated by token ownership (wallet signature at launch; mint-state today).</p>
     </div></details>
 
-    <!-- 7 — on-chain / AB fit -->
+    <!-- 7, on-chain / AB fit -->
     <h2 style="margin-top:70px">Built for Art Blocks.</h2>
     <p class="dim">One script, no dependencies, deterministic, and small enough to live entirely
     on Ethereum.</p>
@@ -143,14 +143,14 @@
     </table>
     <details class="exp"><summary>Compliance checklist</summary><div class="body">
       <ul>
-        <li>Seeds only from <code>tokenData.hash</code> — no <code>Math.random</code></li>
+        <li>Seeds only from <code>tokenData.hash</code>, no <code>Math.random</code></li>
         <li>Uses the generator's <code>&lt;canvas&gt;</code>; resolution-agnostic</li>
         <li>Fully on-chain (no CDN, IPFS, or Arweave assets required)</li>
         <li>Tier + Creator settings via PostParams (owner-authorized, lock dates)</li>
         <li>Particle counts tuned for headless CPU capture</li>
       </ul>
       <p style="margin-top:10px">See the actual on-chain renderer:
-      <a href="token.html" style="color:var(--cyan)">token.html</a> — try
+      <a href="token.html" style="color:var(--cyan)">token.html</a>, try
       <code>?inv=0</code> (a sun), <code>?inv=5</code> (a core system),
       <code>?inv=20</code> (a throne).</p>
     </div></details>

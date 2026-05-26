@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mint — KOLOB</title>
+<title>Mint, KOLOB</title>
 <link rel="stylesheet" href="site.css">
 <script defer src="site.js"></script>
 <style>
@@ -58,7 +58,7 @@
 
     <div style="text-align:left">
       <h2 style="margin-top:46px;font-size:18px">Thrones <span class="dim" style="font-size:13px;font-family:var(--mono)" id="thLeft"></span></h2>
-      <p class="dim" style="font-size:13px;margin:2px 0 0">Mints Telestial; advance later through the veils — or mint already advanced.</p>
+      <p class="dim" style="font-size:13px;margin:2px 0 0">Mints Telestial; advance later through the veils, or mint already advanced.</p>
       <div class="mintlist" id="thrones"></div>
 
       <h2 style="margin-top:42px;font-size:18px">The Core 15 <span class="dim" style="font-size:13px;font-family:var(--mono)">sealed · celestial</span></h2>
@@ -67,7 +67,7 @@
       <h2 style="margin-top:46px;font-size:18px">What you unlock</h2>
       <div class="mintlist">
         <div class="mrow"><span class="dot" style="background:#7fc8ff"></span>
-          <span class="nm">Telestial<small>your starting system — sparse, on the rim</small></span></div>
+          <span class="nm">Telestial<small>your starting system, sparse, on the rim</small></span></div>
         <div class="mrow"><span class="dot" style="background:#e98fce"></span>
           <span class="nm">Terrestrial<small>+ signature ringed giant · warmer palette · more planets, moons &amp; density</small></span></div>
         <div class="mrow"><span class="dot" style="background:#e9c987"></span>
@@ -92,7 +92,7 @@
     <a href="collection.html">Collection</a><a href="pitch.html">How It Works</a>
     <a href="mint.html">Mint</a><a href="kolob-pod-1d.html">Explore</a>
   </div>
-  KOLOB · dry-run mint — no transaction is sent
+  KOLOB · dry-run mint, no transaction is sent
 </footer>
 
 <script>
@@ -162,7 +162,7 @@ function mintThrone(k){
     mintedTh.push({i:i,tier:o.tier}); save('kolob:mint:thrones',mintedTh);
     setTier(i,o.tier);                       // so it renders at that kingdom in the explorer
     logLine('Minted <b>Throne '+("00"+i).slice(-3)+'</b> · '+o.nm+' · '+o.price+
-      ' ETH — <a href="'+POD+'#throne='+i+'&own">VIEW ▸</a>');
+      ' ETH, <a href="'+POD+'#throne='+i+'&own">VIEW ▸</a>');
     render();
   });
 }
@@ -175,7 +175,7 @@ function mintCore(kind){
     mintedCore.push(idx); save('kolob:mint:core',mintedCore);
     var link=kind==='star'?POD+'#sun='+idx:POD+'#core='+(idx-3);
     var nm=kind==='star'?'Great Star '+(idx+1):'Core System '+(idx-2);
-    logLine('Minted <b>'+nm+'</b> · '+price+' ETH — <a href="'+link+'">VIEW ▸</a>');
+    logLine('Minted <b>'+nm+'</b> · '+price+' ETH, <a href="'+link+'">VIEW ▸</a>');
     render();
   });
 }
