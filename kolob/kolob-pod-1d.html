@@ -1086,8 +1086,8 @@ function renderGalaxy(){
   for(i=0;i<160;i++){var aa=i/160*TAU+clock*0.06;      // accretion disc glow, hugs the rim
     var rr2=bh*(1.08+(i%5)*0.06);
     plot(CX+Math.cos(aa)*rr2,CY+Math.sin(aa)*rr2*tilt,rs(mix(P.c2,P.c3,(i%5)/5)));}
-  // Kolob: a tight cluster of 12 white dots (regular dodecagon), slow rotation
-  var decR=Math.max(PX*1.6,bh*0.18),decSpin=clock*0.012;
+  // Kolob: a very tight cluster of 12 white dots (regular dodecagon), slow rotation
+  var decR=Math.max(PX*1,bh*0.09),decSpin=clock*0.012;
   for(i=0;i<12;i++){var ka=i*TAU/12-Math.PI/2+decSpin;
     plot(CX+Math.cos(ka)*decR,CY+Math.sin(ka)*decR,"rgb(255,255,255)");}
 
