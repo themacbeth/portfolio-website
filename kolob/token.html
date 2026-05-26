@@ -264,12 +264,12 @@ function extremize(sys,r,ci){var i,m,gm=1;
   } return sys;}
 /* Core-12 grandeur pass — more planets (well-spaced), 2× belts, prominent comets */
 function coreBoost(sys,r){var orig=sys.planets,oc=orig.length,i;
-  var N=Math.min(oc*3,IS_MOBILE?8:11),aIn=0.14,aOut=1.0,ratio=N>1?Math.pow(aOut/aIn,1/(N-1)):1.3;
-  while(ratio<1.20&&N>2){N--;ratio=Math.pow(aOut/aIn,1/(N-1));}
+  var N=Math.min(oc*3,IS_MOBILE?9:14),aIn=0.14,aOut=1.0,ratio=N>1?Math.pow(aOut/aIn,1/(N-1)):1.3;
+  while(ratio<1.16&&N>2){N--;ratio=Math.pow(aOut/aIn,1/(N-1));}
   var out=[],a=aIn,pl;
   for(i=0;i<N;i++){
     if(i<oc){pl=orig[i];}else{var src=orig[i%oc];pl={type:src.type,spin:r()*TAU,ring:(r()<0.35),szMul:src.szMul*(0.8+r()*0.5),moons:[]};}
-    pl.a=a;pl.e=Math.min(pl.e||0,0.05);pl.peri=r()*TAU;pl.inc=r()*0.20;
+    pl.a=a;pl.e=Math.min(pl.e||0,0.04);pl.peri=r()*TAU;pl.inc=r()*0.20;
     if(pl.M0==null)pl.M0=r()*TAU;pl.rev=Math.max(1,Math.round(Math.pow(a,-1.5)*4));
     out.push(pl);a*=ratio;}
   sys.planets=out;
