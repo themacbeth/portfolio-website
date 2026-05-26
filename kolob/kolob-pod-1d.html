@@ -505,7 +505,10 @@ function resize(){
   W=cv.width=innerWidth*dpr;H=cv.height=innerHeight*dpr;
   cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';
   CX=W/2;CY=H/2;
-  PX=Math.max(1,Math.round(Math.min(W,H)/720));
+  // Cinematic / fullscreen: keep PX scaled like normal browsing so the dots
+  // do not become "chunky" when the viewport grows.
+  var ref=(cinematic||document.fullscreenElement)?1200:720;
+  PX=Math.max(1,Math.round(Math.min(W,H)/ref));
   scaleRef=Math.min(W,H)*0.40;
   GW=Math.ceil(W/PX)+1;GH=Math.ceil(H/PX)+1;
   dens=new Int16Array(GW*GH);
@@ -552,8 +555,10 @@ function reqFS(){try{if(!document.fullscreenElement)document.documentElement.req
 function exitFS(){try{if(document.fullscreenElement)document.exitFullscreen().catch(function(){});}catch(e){}}
 // PLAY = fullscreen, slow easy-ease cinematic of the current scene; exit on click/key
 function enterCinematic(){ cinematic=true;hud=false; newCamTarget(); reqFS();
+  resize();                                          // recompute PX so cinematic stays crisp
   if($gtCinema)$gtCinema.classList.add('on'); }
 function exitCinematic(){ cinematic=false;hud=true; exitFS();
+  resize();
   if($gtCinema)$gtCinema.classList.remove('on'); }
 
 // SLIDESHOW FUNCTIONS
@@ -1081,9 +1086,9 @@ function renderGalaxy(){
   for(i=0;i<160;i++){var aa=i/160*TAU+clock*0.06;      // accretion disc glow, hugs the rim
     var rr2=bh*(1.08+(i%5)*0.06);
     plot(CX+Math.cos(aa)*rr2,CY+Math.sin(aa)*rr2*tilt,rs(mix(P.c2,P.c3,(i%5)/5)));}
-  // Kolob: 10 white dots, regular decagon, slow rotation
-  var decR=Math.max(PX*3.2,bh*0.34),decSpin=clock*0.012;
-  for(i=0;i<10;i++){var ka=i*TAU/10-Math.PI/2+decSpin;
+  // Kolob: a tight cluster of 12 white dots (regular dodecagon), slow rotation
+  var decR=Math.max(PX*1.6,bh*0.18),decSpin=clock*0.012;
+  for(i=0;i<12;i++){var ka=i*TAU/12-Math.PI/2+decSpin;
     plot(CX+Math.cos(ka)*decR,CY+Math.sin(ka)*decR,"rgb(255,255,255)");}
 
   // 15 fixed stars, great 3 = equilateral triangle · core 12 = icosahedron
