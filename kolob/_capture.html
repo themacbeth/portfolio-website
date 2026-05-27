@@ -62,8 +62,10 @@ function placeholder(inv){var k=kindOf(inv),cls='cell empty'+(k==='sun'?' sun':k
   return '<div class="'+cls+'" id="c'+inv+'"><span class="id">'+pad(inv)+' · '+k+'</span></div>';}
 var html=''; for(var i=0;i<N;i++) html+=placeholder(i); grid.innerHTML=html;
 
+// Dev layout has /site/_capture.html with token.html one level up; production is flat.
+var TOKEN_PATH=(location.pathname.indexOf('/site/')>=0)?'../token.html':'token.html';
 function url(inv){
-  var u='token.html?inv='+inv+'&v='+Date.now();
+  var u=TOKEN_PATH+'?inv='+inv+'&v='+Date.now();
   if(document.getElementById('od').checked && inv>=15) u+='&od';   // request the Outer Darkness path
   return u;
 }

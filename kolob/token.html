@@ -177,11 +177,15 @@ function resize(){
   dpr=Math.min(window.devicePixelRatio||1, IS_MOBILE?1.5:2);
   W=cv.width=Math.floor(innerWidth*dpr);H=cv.height=Math.floor(innerHeight*dpr);
   cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';
-  CX=W/2;CY=H/2;PX=Math.max(1,Math.round(Math.min(W,H)/720));scaleRef=Math.min(W,H)*0.40;}
+  CX=W/2;CY=H/2;PX=Math.max(2,Math.round(Math.min(W,H)/720));scaleRef=Math.min(W,H)*0.46;}
 addEventListener('resize',resize);resize();
 
 /* ── view (light interactivity for the live view) ── */
-var az=0,tilt=0.52,zoom=1,clock=0;
+// Seed-deterministic clock offset so thumbnails capture an iconic spread frame, not the t=0 cluster.
+var az=0,tilt=0.52,zoom=1,clock=( (function(){try{
+  var s=parseInt(String(tokenData.tokenId).slice(-8),16)||hashSeed(tokenData.hash||'0x0');
+  return (s%1373)*0.7;
+}catch(e){return 0;}})() );
 var drag=false,lx=0,ly=0;
 cv.addEventListener('pointerdown',function(e){drag=true;lx=e.clientX;ly=e.clientY;cv.setPointerCapture(e.pointerId);});
 cv.addEventListener('pointermove',function(e){if(!drag)return;az+=(e.clientX-lx)*0.006;tilt=Math.max(0.12,Math.min(1,tilt+(e.clientY-ly)*0.004));lx=e.clientX;ly=e.clientY;});
@@ -287,7 +291,7 @@ function coreBoost(sys,r){var orig=sys.planets,oc=orig.length,i;
   return sys;}
 
 /* ── the great-sun engine ── */
-var SUN,sunStrands=[],sunOrbits=[],sunSpin=0,starIntroT=0;
+var SUN,sunStrands=[],sunOrbits=[],sunSpin=0,starIntroT=1;   // pre-warmed so the sun reads at frame 0 for thumbnails
 function buildStar(seed){var r=mk(seed>>>0),i;sunStrands=[];sunOrbits=[];
   var nS=IS_MOBILE?1600:3600,nO=IS_MOBILE?240:400;
   for(i=0;i<nS;i++){var u=r()*TAU,ct=2*r()-1,st=Math.sqrt(1-ct*ct);var d=[st*Math.cos(u),st*Math.sin(u),ct];
@@ -333,14 +337,16 @@ function ellipse(a,e,peri,inc,cosP,sinP,scale,col){for(var u=0;u<TAU;u+=0.05){
 // Outer Darkness, Cold Drift: silent monochrome void, no orbits, eternal drift
 function renderColdDrift(sy){
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
-  if(!sy._drift){var r=mk((sy.seed^0xDEAD)>>>0),n=IS_MOBILE?500:1200;sy._drift=[];
-    for(var i=0;i<n;i++) sy._drift.push({x:r()*W,y:r()*H,
-      vx:(0.18+r()*0.42),vy:(r()*0.18-0.09),sz:r()<0.10?2:1,bri:0.35+r()*0.55});}
+  if(!sy._drift){var r=mk((sy.seed^0xDEAD)>>>0),n=IS_MOBILE?900:2200;sy._drift=[];
+    for(var i=0;i<n;i++) sy._drift.push({
+      x:r()*W,y:r()*H,
+      vx:(0.18+r()*0.42),vy:(r()*0.18-0.09),
+      sz:r()<0.12?2:1,bri:0.40+r()*0.55});}
   var P=sy._drift;
   for(var i=0;i<P.length;i++){var p=P[i];p.x+=p.vx;p.y+=p.vy;
     if(p.x>W+8)p.x=-8;if(p.x<-8)p.x=W+8;
     if(p.y>H+8)p.y=-8;if(p.y<-8)p.y=H+8;
-    ctx.fillStyle='rgba(160,180,210,'+(p.bri*0.50).toFixed(2)+')';
+    ctx.fillStyle='rgba(170,190,220,'+(p.bri*0.62).toFixed(2)+')';
     ctx.fillRect(p.x|0,p.y|0,p.sz,p.sz);}
 }
 function renderSystem(){
