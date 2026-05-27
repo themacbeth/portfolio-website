@@ -379,11 +379,15 @@ var INTELLIGENCE=["Noble","Quickening","Veiled","Encircled","Witnessing","Risen"
 var AFFINITY=["Resonant","Concordant","Cascading","Inverted","Eccentric","Tessellated","Linear","Bound"];
 var DISPENSATION=["First","Second","Third","Fourth","Fifth","Sixth","Seventh","Eighth","Ninth","Tenth"];
 var GLORY=["Celestial","Terrestrial","Telestial","Outer"];
-function _bk(seed,salt,arr){return arr[((seed^salt)>>>0)%arr.length];}
+// MurmurHash3 finalizer, ~50% avalanche per input bit. Decorrelates the four
+// trait fields from each other and from the seed's bit pattern.
+function _mix(x){x=Math.imul((x^(x>>>16))>>>0,0x85ebca6b);
+  x=Math.imul((x^(x>>>13))>>>0,0xc2b2ae35);x=(x^(x>>>16))>>>0;return x>>>0;}
+function _bk(seed,salt,arr){return arr[_mix((seed^salt)>>>0)%arr.length];}
 function deriveTraits(seed,tier){return {
-  Intelligence:_bk(seed,0x1A8F,INTELLIGENCE),
-  Affinity:    _bk(seed,0x2B6D,AFFINITY),
-  Dispensation:_bk(seed,0x3C5E,DISPENSATION),
+  Intelligence:_bk(seed,0x1A8F2D71,INTELLIGENCE),
+  Affinity:    _bk(seed,0x2B6D4F93,AFFINITY),
+  Dispensation:_bk(seed,0x3C5E61B5,DISPENSATION),
   Glory:       GLORY[Math.min(3,tier|0)]};}
 
 /* ── decide which piece this token is, build it ── */

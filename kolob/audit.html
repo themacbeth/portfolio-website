@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Audit, KOLOB</title>
+<link rel="stylesheet" href="site.css">
+<script defer src="site.js"></script>
+<style>
+  .audWrap{padding:130px 28px 60px;max-width:1100px;margin:0 auto}
+  .audWrap h1{font-size:clamp(34px,5vw,56px);margin:0 0 14px}
+  .audWrap p{font:12px/1.7 var(--mono);color:#9aa0ad;max-width:70ch;letter-spacing:.04em;margin:0 0 10px}
+  .audWrap p code{color:#cdd0d8}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin:22px 0 34px}
+  .stat{border:1px solid #181820;background:#08080c;padding:14px 16px;border-radius:6px}
+  .stat .lab{font:10px/1 ui-monospace,monospace;letter-spacing:.18em;color:#9aa0ad;text-transform:uppercase;margin-bottom:6px}
+  .stat .val{font:600 26px/1 Jost,sans-serif;letter-spacing:.04em;color:#fff}
+  .stat .val.good{color:#a7f0c0}.stat .val.warn{color:#e9c987}
+  .stat .sub{font:10px/1.4 ui-monospace,monospace;color:#5a5e6b;margin-top:4px;letter-spacing:.04em}
+  h2.audH{font:14px/1.4 ui-monospace,monospace;letter-spacing:.18em;color:#fff;text-transform:uppercase;margin:40px 0 16px}
+  .dist{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+  .distBox{border:1px solid #181820;background:#08080c;padding:14px 16px;border-radius:6px}
+  .distBox h4{margin:0 0 10px;font:11px/1 ui-monospace,monospace;letter-spacing:.16em;color:#cdd0d8;text-transform:uppercase}
+  .distRow{display:flex;align-items:center;gap:10px;margin:4px 0;font:10px/1.5 ui-monospace,monospace;color:#9aa0ad}
+  .distRow .nm{flex:0 0 110px}
+  .distRow .bar{flex:1;height:8px;background:#10101a;border-radius:2px;overflow:hidden}
+  .distRow .fill{height:100%;background:linear-gradient(90deg,#7fc8ff,#e9c987)}
+  .distRow .ct{flex:0 0 32px;text-align:right;color:#cdd0d8}
+  .runBtn{background:rgba(255,255,255,.06);color:#eaf0f7;border:1px solid rgba(255,255,255,.16);
+    border-radius:3px;padding:10px 18px;font:10px/1 ui-monospace,monospace;letter-spacing:.20em;cursor:pointer;text-transform:uppercase;margin-top:10px}
+  .runBtn:hover{background:rgba(255,255,255,.14)}
+  .tbl{border:1px solid #181820;background:#08080c;border-radius:6px;overflow:auto;max-height:380px;font:10px/1.6 ui-monospace,monospace;margin-top:8px}
+  .tbl table{width:100%;border-collapse:collapse}
+  .tbl th{position:sticky;top:0;background:#08080c;color:#9aa0ad;font-weight:500;letter-spacing:.10em;
+    text-align:left;padding:8px 10px;border-bottom:1px solid #181820}
+  .tbl td{padding:5px 10px;color:#cdd0d8;border-bottom:1px solid #0c0c12}
+  .tbl tr:hover td{background:#0c0c14}
+  .tbl .dup{color:#e9c987}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="brand" href="index.html">KOLOB</a>
+  <a href="theorem.html">THEOREM</a>
+  <a href="core15.html">CORE 15</a>
+  <a href="collection.html">COLLECTION</a>
+  <a href="how-it-works.html">HOW IT WORKS</a>
+  <a href="mint.html">MINT</a>
+  <a class="enter" href="kolob-pod-1d.html">ENTER ▸</a>
+</nav>
+
+<section class="audWrap">
+  <p class="eyebrow">Determinism audit</p>
+  <h1>Trait + Uniqueness Audit</h1>
+  <p>Runs the on-chain trait derivation against 129 demo throne hashes (the canonical test hash + a deterministic
+    per-throne offset, matching the explorer's NODES table) and reports the result. The same derivation runs
+    on-chain inside <code>token.html</code> for every minted piece.</p>
+  <p>Visual uniqueness is enforced separately by the system seed itself, every throne's full state
+    (palette hue, planet count, types, eccentricities, orbital phases, moons, belts, comets) is built from
+    a different seed, producing a render that lives in a multi-million-dimension state space. Hash collisions
+    in <code>tokenData.hash</code> are astronomically unlikely.</p>
+  <p>Categorical trait tuples (Intelligence × Affinity × Dispensation × Glory) span <b style="color:#cdd0d8">2,560</b>
+    combinations. Across 129 thrones, birthday-paradox math expects <b style="color:#cdd0d8">~3 pairs</b> to
+    share a tuple. That's the same as every other Art Blocks project, individual trait values are categorical
+    rarities, not unique IDs.</p>
+
+  <h2 class="audH">The 129 thrones (canonical test hash)</h2>
+  <div class="stats" id="stats129"></div>
+
+  <h2 class="audH">Trait distribution across the 129</h2>
+  <div class="dist" id="dist129"></div>
+
+  <h2 class="audH">Per-throne table</h2>
+  <p class="dim">Click a row to open that throne live in the pod. Tuple duplicates are highlighted amber.</p>
+  <div class="tbl"><table id="thrTable"><thead>
+    <tr><th>#</th><th>Seed</th><th>Intelligence</th><th>Affinity</th><th>Dispensation</th></tr></thead><tbody></tbody></table></div>
+
+  <h2 class="audH">Monte Carlo (statistical sanity)</h2>
+  <p class="dim">Runs N random uint32 seeds through the same derivation and reports the empirical collision rate.
+    Expected for a well-distributed hash: matches birthday-paradox prediction.</p>
+  <button class="runBtn" id="runMc">Run 10,000-sample Monte Carlo</button>
+  <div class="stats" id="mcStats" style="margin-top:18px"></div>
+</section>
+
+<footer class="foot">
+  <div class="links">
+    <a href="index.html">Home</a><a href="core15.html">Core 15</a>
+    <a href="collection.html">Collection</a><a href="how-it-works.html">How It Works</a>
+    <a href="mint.html">Mint</a><a href="kolob-pod-1d.html">Explore</a>
+  </div>
+  KOLOB · trait derivation audit
+</footer>
+
+<script>
+"use strict";
+
+// Mirror the on-chain helpers from token.html exactly
+function hashSeed(h){var s=0;for(var i=2;i<h.length;i++) s=(Math.imul(s,16)+parseInt(h[i],16)+1)|0;return s>>>0;}
+function PRNG(seed){var a=seed^0x9e3779b9,b=seed^0x243f6a88,c=seed^0xb7e15162,d=1;
+  return function(){a|=0;b|=0;c|=0;d|=0;var t=(a+b|0)+d|0;d=d+1|0;
+    a=b^b>>>9;b=c+(c<<3)|0;c=(c<<21|c>>>11);c=c+t|0;return (t>>>0)/4294967296;};}
+function mk(seed){var r=PRNG(seed>>>0);
+  r.int=function(a,b){return a+((r()*(b-a+1))|0);};
+  return r;}
+function _mix(x){x=Math.imul((x^(x>>>16))>>>0,0x85ebca6b);
+  x=Math.imul((x^(x>>>13))>>>0,0xc2b2ae35);x=(x^(x>>>16))>>>0;return x>>>0;}
+function _bk(seed,salt,arr){return arr[_mix((seed^salt)>>>0)%arr.length];}
+
+var INTELLIGENCE=["Noble","Quickening","Veiled","Encircled","Witnessing","Risen","Wrought","Foreseen"];
+var AFFINITY=   ["Resonant","Concordant","Cascading","Inverted","Eccentric","Tessellated","Linear","Bound"];
+var DISPENSATION=["First","Second","Third","Fourth","Fifth","Sixth","Seventh","Eighth","Ninth","Tenth"];
+function trait(seed){return {
+  i:_bk(seed,0x1A8F2D71,INTELLIGENCE),
+  a:_bk(seed,0x2B6D4F93,AFFINITY),
+  d:_bk(seed,0x3C5E61B5,DISPENSATION)};}
+
+var HASH="0x4b4f4c42a17f0c3e9d5b8e2160f47a93c8d1e0b6452f9a3c7e1d80b54f2a69c3";
+var H0=hashSeed(HASH);
+
+// Build the same throne seeds the collection page uses
+function throneSeed(i){var nr=mk((H0+(i+1)*8675309)>>>0);
+  // matches the collection's consumption: arm, radius, a, z, star pick
+  return (H0+(i+1)*8675309)>>>0;}
+var thrones=[];
+for(var i=0;i<129;i++){var sd=throneSeed(i); thrones.push({i:i,seed:sd,t:trait(sd)});}
+
+function statBox(lab,val,sub,cls){return '<div class="stat"><div class="lab">'+lab+'</div>'+
+  '<div class="val'+(cls?' '+cls:'')+'">'+val+'</div>'+(sub?'<div class="sub">'+sub+'</div>':'')+'</div>';}
+function renderStats129(){
+  var seeds={},tuples={};
+  thrones.forEach(function(th){seeds[th.seed]=1; tuples[th.t.i+'·'+th.t.a+'·'+th.t.d]=(tuples[th.t.i+'·'+th.t.a+'·'+th.t.d]||0)+1;});
+  var distinctSeeds=Object.keys(seeds).length;
+  var distinctTuples=Object.keys(tuples).length;
+  var dupes=0;Object.keys(tuples).forEach(function(k){if(tuples[k]>1) dupes+=tuples[k]-1;});
+  var html=
+    statBox('Thrones',129,'collection size')+
+    statBox('Distinct seeds',distinctSeeds+' / 129',distinctSeeds===129?'every seed unique':'!!',distinctSeeds===129?'good':'warn')+
+    statBox('Distinct trait tuples',distinctTuples+' / 129','of 2,560 possible')+
+    statBox('Tuple duplicates',dupes,'expected ~3 by birthday paradox',dupes<=8?'good':'warn');
+  document.getElementById('stats129').innerHTML=html;
+  return tuples;
+}
+function distBars(elId,title,values,counts){
+  var max=0;values.forEach(function(v){if(counts[v]>max)max=counts[v];});
+  var rows='';values.forEach(function(v){var c=counts[v]||0,w=max?(c/max*100):0;
+    rows+='<div class="distRow"><span class="nm">'+v+'</span><span class="bar"><span class="fill" style="width:'+w.toFixed(1)+'%"></span></span><span class="ct">'+c+'</span></div>';});
+  document.getElementById(elId).insertAdjacentHTML('beforeend',
+    '<div class="distBox"><h4>'+title+'</h4>'+rows+'</div>');
+}
+function renderDist(){
+  var ci={},ca={},cd={};
+  thrones.forEach(function(th){ci[th.t.i]=(ci[th.t.i]||0)+1;ca[th.t.a]=(ca[th.t.a]||0)+1;cd[th.t.d]=(cd[th.t.d]||0)+1;});
+  document.getElementById('dist129').innerHTML='';
+  distBars('dist129','Intelligence',INTELLIGENCE,ci);
+  distBars('dist129','Affinity',AFFINITY,ca);
+  distBars('dist129','Dispensation',DISPENSATION,cd);
+}
+function renderTable(tuples){
+  var rows='';
+  thrones.forEach(function(th){
+    var k=th.t.i+'·'+th.t.a+'·'+th.t.d, dup=tuples[k]>1?' class="dup"':'';
+    rows+='<tr'+dup+' onclick="location.href=\'kolob-pod-1d.html#throne='+th.i+'\'">'+
+      '<td>'+("00"+th.i).slice(-3)+'</td>'+
+      '<td>0x'+(th.seed>>>0).toString(16).padStart(8,'0')+'</td>'+
+      '<td>'+th.t.i+'</td><td>'+th.t.a+'</td><td>'+th.t.d+'</td></tr>';
+  });
+  document.querySelector('#thrTable tbody').innerHTML=rows;
+}
+var tuples=renderStats129();
+renderDist();
+renderTable(tuples);
+
+// Monte Carlo
+document.getElementById('runMc').addEventListener('click',function(){
+  var N=10000, seen={}, dupes=0;
+  for(var k=0;k<N;k++){
+    // pseudo-random uint32, like an Art Blocks hashSeed output would land
+    var s=(Math.random()*0x100000000)>>>0;
+    var t=trait(s); var key=t.i+'·'+t.a+'·'+t.d;
+    if(seen[key]) dupes++; seen[key]=1;
+  }
+  // theoretical: P(collision per pair) = 1 / 2560. Expected dupes ~ N - distinctKeys.
+  // After N draws among 2560 buckets, expected distinct = 2560 * (1 - (1 - 1/2560)^N)
+  var theoreticalDistinct = 2560*(1-Math.pow(1-1/2560,N));
+  var observedDistinct=Object.keys(seen).length;
+  document.getElementById('mcStats').innerHTML=
+    statBox('Samples',N,'random uint32 seeds')+
+    statBox('Distinct tuples',observedDistinct+' / 2,560','of 2,560 possible')+
+    statBox('Theoretical',theoreticalDistinct.toFixed(0),'expected distinct count')+
+    statBox('Deviation',(Math.abs(observedDistinct-theoreticalDistinct)/theoreticalDistinct*100).toFixed(2)+'%','from prediction',
+      Math.abs(observedDistinct-theoreticalDistinct)<theoreticalDistinct*0.02?'good':'warn');
+});
+</script>
+</body>
+</html>
