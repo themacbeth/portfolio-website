@@ -67,6 +67,43 @@
 <body>
 <canvas id="c"></canvas>
 <div id="hud"></div>
+
+<!-- Boot intro: KOLOB wordmark on first visit (skip on embeds, hero, reduced-motion) -->
+<div id="bootIntro" aria-hidden="true">
+  <div class="bk">KOLOB</div>
+  <div class="bs">a galaxy drawn by the chain</div>
+</div>
+<style>
+  #bootIntro{position:fixed;inset:0;z-index:9999;background:#000;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    pointer-events:none;animation:bootFade 2.8s ease-out forwards}
+  #bootIntro .bk{font:600 clamp(34px,8vw,80px) Jost,Inter,system-ui,sans-serif;
+    letter-spacing:.34em;color:#fff;text-shadow:0 0 22px rgba(255,255,255,0.35);
+    opacity:0;animation:bootIn 1.3s ease-out forwards}
+  #bootIntro .bs{margin-top:20px;font:11px/1.6 ui-monospace,monospace;color:#9aa0ad;
+    letter-spacing:.24em;text-transform:uppercase;
+    opacity:0;animation:bootInSlow 1.7s 0.5s ease-out forwards}
+  @keyframes bootIn{
+    0%{opacity:0;letter-spacing:.6em;filter:blur(10px)}
+    55%{opacity:1;letter-spacing:.34em;filter:blur(0)}
+    100%{opacity:1;letter-spacing:.34em}}
+  @keyframes bootInSlow{from{opacity:0;transform:translateY(8px)}to{opacity:.85;transform:none}}
+  @keyframes bootFade{0%,72%{opacity:1}100%{opacity:0;visibility:hidden}}
+  body.hero #bootIntro{display:none!important}
+  @media(prefers-reduced-motion: reduce){#bootIntro{display:none}}
+</style>
+<script>
+  (function(){
+    var el=document.getElementById('bootIntro');
+    var h=location.hash||"";
+    // skip on chrome-free embeds, hero iframe, or if seen this session
+    if(/^#?embed=/.test(h) || /^#?hero$/.test(h)) { el.style.display='none'; return; }
+    try{ if(sessionStorage.getItem('kolob:booted')==='1'){ el.style.display='none'; return; } }catch(e){}
+    try{ sessionStorage.setItem('kolob:booted','1'); }catch(e){}
+    setTimeout(function(){ if(el && el.parentNode) el.parentNode.removeChild(el); },3000);
+  })();
+</script>
+
 <div id="mintInfo"></div>
 <!-- SLIDESHOW POPOVER (opened by the CINEMA button) -->
 <div id="slideshowUI">
@@ -391,6 +428,8 @@ function cluster(sx,sy,r,base,count,rot,PX,plot){
 var ARMS=GRND.pick([2,2,3,4]), WIND=GRND.rng(1.9,3.0), BARANG=GRND()*TAU;
 // phones can't push the full particle count, render fewer automatically
 var IS_MOBILE=(typeof matchMedia!=="undefined"&&matchMedia('(max-width:760px),(pointer:coarse)').matches)||false;
+// prefers-reduced-motion: slow the simulation, disable cinematic auto-tilt, hold a calmer composition
+var REDUCE_MOTION=(typeof matchMedia!=="undefined"&&matchMedia('(prefers-reduced-motion: reduce)').matches)||false;
 var EMBED=/^#?embed=/.test(location.hash||"");   // chrome-free thumbnail → skip the galaxy build
 var N=48000, gpuN=IS_MOBILE?11000:24000, gN=gpuN;
 var gR=new Float32Array(N),gA=new Float32Array(N),gZ=new Float32Array(N),
@@ -609,7 +648,7 @@ addEventListener('resize',resize);resize();
 
 // View state
 var mode="galaxy",system=null,curNode=-1,hoverStar=-1;
-var zoom=1,az=0,tilt=0.52,clock=0,speed=0.3,paused=false,hud=true,hover=-1,keySel=-1,keyHeld=false;
+var zoom=1,az=0,tilt=0.52,clock=0,speed=REDUCE_MOTION?0.08:0.3,paused=false,hud=true,hover=-1,keySel=-1,keyHeld=false;
 var cinematic=false,cinematicTime=0,cinematicUI=true,ownMode=false;
 // cinematic camera: glides to a new composition every camFreq seconds
 var camFreq=10,camT=0,camDur=480,camFromAz=0,camFromTilt=0.5,camFromZoom=1,
@@ -1820,7 +1859,8 @@ function loop(){
     else { renderVeil(); requestAnimationFrame(loop); return; }
   }
   // ── CINEMATIC, easy-ease glides to a fresh composition every camFreq sec ──
-  if(cinematic){
+  // prefers-reduced-motion: hold the current composition, do not auto-pan.
+  if(cinematic && !REDUCE_MOTION){
     camT++;
     var p=Math.min(1,camT/camDur), e=p*p*p*(p*(p*6-15)+10);   // smootherstep
     az  =camFromAz  +(camToAz  -camFromAz)*e;

@@ -205,6 +205,15 @@
       after <b style="color:#e0d6c2">22 October 2026 UTC</b>, any Telestial throne that has
       not been advanced renders as Outer Darkness, a silent monochrome cold-drift visual
       (no orbits, no sound, deterministic per hash).</p>
+    <p class="dim" style="margin-top:14px">For archetype uniqueness on the 12 Core Systems, the rule is
+      enforceable on-chain via a PMP validator. Reference implementation:
+      <a href="KolobArchetypeValidator.sol" style="color:var(--cyan);text-decoration:underline">KolobArchetypeValidator.sol ↗</a>
+      (first-come, first-serve claim with atomic release; rejects writes that would duplicate an existing claim).</p>
+
+    <h3 style="margin-top:34px;font-size:14px;letter-spacing:.10em;text-transform:uppercase">Hash Test Suite</h3>
+    <p class="dim">Every one of the 144 invocations rendered live by the on-chain
+      <code>token.html</code> renderer, in a single page, for reviewer coverage:
+      <a href="hash-suite.html" style="color:var(--cyan);text-decoration:underline">hash-suite.html ▸</a>.</p>
 
     <h3 style="margin-top:34px;font-size:14px;letter-spacing:.10em;text-transform:uppercase">Traits (window.$features)</h3>
     <p class="dim">Deterministic from hash, flow into Art Blocks metadata as filterable columns.</p>

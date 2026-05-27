@@ -160,6 +160,19 @@ p{max-width:54ch;font-weight:300}
 .tcell .ring{position:absolute;inset:20%;border:1px solid rgba(255,255,255,.1);border-radius:50%}
 .tcell .id{position:absolute;bottom:5px;left:6px;font:9px/1 var(--mono);color:var(--dim)}
 .tcell .tg{position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%}
+.tcell.drifted{filter:grayscale(1) brightness(.55);background:#050507}
+.tcell.drifted .dot{background:#7a8294 !important;color:#7a8294 !important;opacity:.45}
+.tcell.drifted .tg{background:#3a3e4a !important}
+.tcell.drifted .id{color:#5a5e6b}
+.tcell.drifted::after{content:'⚠';position:absolute;top:6px;left:6px;font:10px/1 ui-monospace,monospace;color:#7a6248}
+.tcell.drifted:hover{filter:grayscale(1) brightness(.8)}
+
+/* prefers-reduced-motion: calm everything site-wide */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:0.01ms !important;animation-iteration-count:1 !important;
+    transition-duration:0.01ms !important;scroll-behavior:auto !important}
+}
 
 /* ── live embeds (Core 15 cards) ─────────────────────────────────────── */
 .card.live .swatch{height:188px}

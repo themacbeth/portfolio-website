@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hash Test Suite, KOLOB</title>
+<link rel="stylesheet" href="site.css">
+<script defer src="site.js"></script>
+<style>
+  .hsHead{padding:130px 28px 18px;max-width:1400px;margin:0 auto}
+  .hsHead h1{font-size:clamp(34px,5vw,56px);margin:0 0 14px}
+  .hsHead p{font:12px/1.7 var(--mono);color:#9aa0ad;max-width:70ch;letter-spacing:.04em;margin:0 0 6px}
+  .hsHead p code{color:#cdd0d8}
+  .hsLegend{display:flex;flex-wrap:wrap;gap:18px;margin-top:20px;font:10px/1 var(--mono);letter-spacing:.12em;color:#9aa0ad;text-transform:uppercase}
+  .hsLegend b{color:#fff}
+  .hsBand{padding:8px 28px 4px;max-width:1400px;margin:0 auto;font:10px/1 var(--mono);letter-spacing:.16em;color:#5a5e6b;text-transform:uppercase}
+  .hsGrid{display:grid;grid-template-columns:repeat(12,1fr);gap:1px;padding:0 28px 40px;max-width:1400px;margin:0 auto;background:#0c0c10}
+  .hsCell{aspect-ratio:1;background:#000;position:relative}
+  .hsCell iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+  .hsCell .hid{position:absolute;left:4px;bottom:3px;font:8px/1 ui-monospace,monospace;color:rgba(255,255,255,.55);z-index:2;
+    background:rgba(0,0,0,.6);padding:2px 4px;border-radius:2px;letter-spacing:.06em}
+  .hsCell.hsSun{outline:1px solid rgba(255,236,180,.35)}
+  .hsCell.hsCore{outline:1px solid rgba(220,232,255,.30)}
+  @media(max-width:900px){.hsGrid{grid-template-columns:repeat(8,1fr)}}
+  @media(max-width:600px){.hsGrid{grid-template-columns:repeat(4,1fr);padding:0 14px 30px}.hsHead{padding-left:14px;padding-right:14px}.hsBand{padding-left:14px}}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="brand" href="index.html">KOLOB</a>
+  <a href="theorem.html">THEOREM</a>
+  <a href="core15.html">CORE 15</a>
+  <a href="collection.html">COLLECTION</a>
+  <a href="how-it-works.html">HOW IT WORKS</a>
+  <a href="mint.html">MINT</a>
+  <a class="enter" href="kolob-pod-1d.html">ENTER ▸</a>
+</nav>
+
+<section class="hsHead">
+  <p class="eyebrow">For Art Blocks review</p>
+  <h1>Hash Test Suite</h1>
+  <p>Every one of the 144 invocations rendered live by <code>token.html?inv=N</code>, the same single-token
+    renderer that Art Blocks will execute on-chain. Same script, same PRNG, same locked seeds. Loads lazily as
+    you scroll, pauses off-screen.</p>
+  <p>Invocations <code>0 – 2</code> are the three great suns (yellow outline). <code>3 – 14</code> are the twelve
+    governing systems (cool outline). <code>15 – 143</code> are the 129 thrones, seeded by <code>tokenData.hash</code>;
+    here the canonical test hash is used so every cell is deterministic and reproducible.</p>
+  <div class="hsLegend">
+    <span><b>3</b> Great Suns (inv 0-2)</span>
+    <span><b>12</b> Core Systems (inv 3-14)</span>
+    <span><b>129</b> Thrones (inv 15-143)</span>
+    <span><b>144</b> total</span>
+  </div>
+</section>
+
+<div class="hsBand">Great Suns + Core Systems</div>
+<div class="hsGrid" id="hsCore"></div>
+
+<div class="hsBand">Thrones (Telestial default, advance via PMP)</div>
+<div class="hsGrid" id="hsThrones"></div>
+
+<footer class="foot">
+  <div class="links">
+    <a href="index.html">Home</a><a href="core15.html">Core 15</a>
+    <a href="collection.html">Collection</a><a href="how-it-works.html">How It Works</a>
+    <a href="mint.html">Mint</a><a href="kolob-pod-1d.html">Explore</a>
+  </div>
+  KOLOB · 144 cells · single-token renderer · vanilla JS, no library
+</footer>
+
+<script>
+"use strict";
+var TOKEN="token.html";
+function cell(inv){
+  var kind=inv<3?'hsSun':(inv<15?'hsCore':'');
+  var pad=("00"+inv).slice(-3);
+  return '<div class="hsCell '+kind+'"><span class="hid">inv '+pad+'</span>'+
+    '<iframe data-src="'+TOKEN+'?inv='+inv+'" title="inv '+inv+'" loading="lazy"></iframe></div>';
+}
+var core="",thr="";
+for(var i=0;i<15;i++) core+=cell(i);
+for(var j=15;j<144;j++) thr+=cell(j);
+document.getElementById('hsCore').innerHTML=core;
+document.getElementById('hsThrones').innerHTML=thr;
+// lazy-load + pause off-screen so 144 live iframes don't melt the browser
+var io=new IntersectionObserver(function(es){es.forEach(function(e){var f=e.target;
+  if(e.isIntersecting){ if(!f.src) f.src=f.dataset.src;
+    try{f.contentWindow.postMessage('kolob:play','*');}catch(_){}}
+  else { try{f.contentWindow.postMessage('kolob:pause','*');}catch(_){} }
+});},{rootMargin:'200px',threshold:0.01});
+document.querySelectorAll('.hsCell iframe').forEach(function(f){io.observe(f);});
+</script>
+</body>
+</html>

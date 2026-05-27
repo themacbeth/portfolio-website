@@ -48,8 +48,14 @@
     <button data-t="2">TELESTIAL</button>
     <button data-t="1">TERRESTRIAL</button>
     <button data-t="0">CELESTIAL</button>
+    <button data-t="od" id="odFilter" title="Telestial thrones that will drift on 22 Oct 2026">DRIFTED ⚠</button>
   </div>
   <div class="tgrid" id="grid"></div>
+  <p class="dim" id="driftNote" style="display:none;margin-top:18px;font:11px/1.7 var(--mono);color:#c9a96b;letter-spacing:.04em">
+    These thrones are still at the Telestial rim. On <b style="color:#e0d6c2">22 October 2026 UTC</b> (<b class="odDays" style="color:#e0d6c2">…</b> days),
+    any that have not been advanced enter <b style="color:#e0d6c2">Outer Darkness</b>, a silent monochrome drift.
+    <a href="kolob-pod-1d.html#throne=20&od" style="color:var(--cyan);text-decoration:underline">Preview the drift ▸</a>
+  </p>
 </section>
 
 <footer class="foot">
@@ -95,12 +101,19 @@ for(var i=0;i<129;i++){
   NODES.push({i:i,star:star,tier:tierOf(i)});
 }
 function rs(c){return"rgb("+c[0]+","+c[1]+","+c[2]+")";}
+var DEADLINE=Date.UTC(2026,9,22);
+function isDriftAt(now){return now>=DEADLINE;}
 function build(filter){
   var g=document.getElementById('grid'),html="";
+  var drifting=(filter==='od');
+  document.getElementById('driftNote').style.display=drifting?'block':'none';
   NODES.forEach(function(n){
-    if(filter!=='all' && n.tier!=+filter) return;
+    if(filter==='od'){ if(n.tier!==2) return; }                          // OD candidates are Telestial
+    else if(filter!=='all' && n.tier!=+filter) return;
     var sc=rs(STAR[n.star].col), tc=rs(TIER_COL[n.tier]);
-    html+='<a class="tcell" href="'+POD+'#throne='+n.i+'" title="Throne '+n.i+' · '+TIER_NAMES[n.tier]+'">'+
+    var driftClass=drifting?' drifted':'';
+    var href=POD+'#throne='+n.i+(drifting?'&od':'');
+    html+='<a class="tcell'+driftClass+'" href="'+href+'" title="Throne '+n.i+' · '+TIER_NAMES[n.tier]+(drifting?' · Outer Darkness preview':'')+'">'+
       '<span class="ring"></span>'+
       '<span class="dot" style="color:'+sc+';background:'+sc+'"></span>'+
       '<span class="tg" style="background:'+tc+'"></span>'+
