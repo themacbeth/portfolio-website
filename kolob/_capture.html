@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Thumbnail Capture Pass · KOLOB</title>
+<style>
+  :root{--ink:#eaf0f7;--dim:#9aa0ad;--mono:ui-monospace,Menlo,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:#0a0a0e;color:var(--ink);font:12px/1.5 var(--mono)}
+  .top{position:sticky;top:0;z-index:10;padding:12px 20px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;
+    background:#0a0a0e;border-bottom:1px solid #1a1a22}
+  .top h1{font-size:14px;letter-spacing:.18em;text-transform:uppercase;margin:0;color:#fff;flex:0 0 auto}
+  .top button{background:rgba(255,255,255,.06);color:var(--ink);border:1px solid rgba(255,255,255,.16);
+    border-radius:3px;padding:8px 14px;cursor:pointer;font:10px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase}
+  .top button:hover{background:rgba(255,255,255,.14)}
+  .top button.run{background:#fff;color:#000;border-color:#fff}
+  .top label{font-size:10px;letter-spacing:.10em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:6px}
+  .top input[type=number]{background:#000;color:#fff;border:1px solid #232336;border-radius:2px;padding:5px 7px;width:74px;font:11px/1 var(--mono)}
+  .progress{flex:1;background:#1a1a22;height:6px;border-radius:3px;overflow:hidden;min-width:120px}
+  .progress span{display:block;height:100%;background:linear-gradient(90deg,#7fc8ff,#e9c987);width:0%;transition:width .3s ease}
+  #status{color:var(--dim);min-width:160px}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:6px;padding:20px;max-width:1600px;margin:0 auto}
+  .cell{aspect-ratio:1;position:relative;background:#000;border-radius:2px;overflow:hidden}
+  .cell img{width:100%;height:100%;display:block;object-fit:cover}
+  .cell .id{position:absolute;left:4px;bottom:4px;font:8px/1 var(--mono);color:rgba(255,255,255,.7);
+    background:rgba(0,0,0,.65);padding:2px 4px;border-radius:2px;letter-spacing:.06em;z-index:2}
+  .cell.sun{outline:1px solid rgba(255,236,180,.4)}
+  .cell.core{outline:1px solid rgba(220,232,255,.3)}
+  .cell.empty::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,#08080a 0,#08080a 4px,#0c0c10 4px,#0c0c10 8px)}
+  iframe.cap{position:fixed;top:-9999px;left:-9999px;width:512px;height:512px;border:0}
+  @media(max-width:1100px){.grid{grid-template-columns:repeat(8,1fr)}}
+  @media(max-width:600px){.grid{grid-template-columns:repeat(4,1fr);padding:14px;gap:4px}.top{padding:10px 14px}}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Capture pass</h1>
+  <button id="start" class="run">Start</button>
+  <button id="stop">Stop</button>
+  <button id="reset">Reset</button>
+  <label>Delay <input id="delay" type="number" value="3000" min="500" max="20000" step="500"> ms</label>
+  <label>Range
+    <input id="from" type="number" value="0" min="0" max="143" style="width:54px"> to
+    <input id="to" type="number" value="143" min="0" max="143" style="width:54px"></label>
+  <label>OD <input id="od" type="checkbox" style="margin:0"></label>
+  <span id="status">Idle</span>
+  <div class="progress"><span id="bar"></span></div>
+  <button id="download">Download grid</button>
+</div>
+<div class="grid" id="grid"></div>
+<iframe id="cap" class="cap" title="capture"></iframe>
+
+<script>
+"use strict";
+var N=144, cap=document.getElementById('cap'), grid=document.getElementById('grid');
+var $bar=document.getElementById('bar'), $status=document.getElementById('status');
+var captures=new Array(N), running=false, current=0;
+function pad(n){return ("00"+n).slice(-3);}
+function kindOf(inv){return inv<3?'sun':(inv<15?'core':'throne');}
+function placeholder(inv){var k=kindOf(inv),cls='cell empty'+(k==='sun'?' sun':k==='core'?' core':'');
+  return '<div class="'+cls+'" id="c'+inv+'"><span class="id">'+pad(inv)+' · '+k+'</span></div>';}
+var html=''; for(var i=0;i<N;i++) html+=placeholder(i); grid.innerHTML=html;
+
+function url(inv){
+  var u='token.html?inv='+inv+'&v='+Date.now();
+  if(document.getElementById('od').checked && inv>=15) u+='&od';   // request the Outer Darkness path
+  return u;
+}
+function captureOne(inv){
+  return new Promise(function(resolve){
+    var delay=parseInt(document.getElementById('delay').value)||3000;
+    cap.onload=function(){
+      setTimeout(function(){
+        try{
+          var cv=cap.contentDocument.querySelector('canvas');
+          if(!cv){resolve(null);return;}
+          var dataUrl=cv.toDataURL('image/jpeg',0.78);
+          var cell=document.getElementById('c'+inv);
+          cell.classList.remove('empty');
+          var img=cell.querySelector('img');
+          if(!img){img=document.createElement('img');cell.insertBefore(img,cell.firstChild);}
+          img.src=dataUrl; captures[inv]=dataUrl; resolve(dataUrl);
+        }catch(e){console.error('inv',inv,e);resolve(null);}
+      },delay);
+    };
+    cap.src=url(inv);
+  });
+}
+
+document.getElementById('start').addEventListener('click', async function(){
+  if(running) return;
+  var from=Math.max(0,Math.min(N-1,parseInt(document.getElementById('from').value)||0));
+  var to  =Math.max(from,Math.min(N-1,parseInt(document.getElementById('to').value)||N-1));
+  running=true; current=from;
+  while(running && current<=to){
+    $status.textContent='Capturing inv '+pad(current)+'  ('+(current-from+1)+'/'+(to-from+1)+')';
+    $bar.style.width=((current-from+1)/(to-from+1)*100).toFixed(1)+'%';
+    await captureOne(current);
+    current++;
+  }
+  if(running){$status.textContent='Done · '+(to-from+1)+' captured · '+(document.getElementById('od').checked?'Outer Darkness pass':'normal pass');}
+  running=false;
+});
+document.getElementById('stop').addEventListener('click',function(){running=false;$status.textContent='Stopped at inv '+pad(current);});
+document.getElementById('reset').addEventListener('click',function(){
+  running=false; captures=new Array(N); $bar.style.width='0%'; $status.textContent='Reset';
+  grid.innerHTML=''; for(var i=0;i<N;i++) grid.insertAdjacentHTML('beforeend',placeholder(i));
+});
+
+document.getElementById('download').addEventListener('click',function(){
+  var got=captures.filter(function(x){return x;}).length;
+  if(!got){alert('Nothing captured yet'); return;}
+  var tile=240, cols=12, rows=Math.ceil(N/cols);
+  var out=document.createElement('canvas');
+  out.width=cols*tile; out.height=rows*tile;
+  var c=out.getContext('2d');
+  c.fillStyle='#000'; c.fillRect(0,0,out.width,out.height);
+  c.fillStyle='rgba(255,255,255,0.8)'; c.font='14px ui-monospace,monospace'; c.textBaseline='top';
+  var loaded=0, expected=got;
+  for(var i=0;i<N;i++){
+    if(!captures[i]) continue;
+    (function(idx){
+      var img=new Image();
+      img.onload=function(){
+        c.drawImage(img,(idx%cols)*tile,Math.floor(idx/cols)*tile,tile,tile);
+        c.fillStyle='rgba(0,0,0,0.6)'; c.fillRect((idx%cols)*tile+2,Math.floor(idx/cols)*tile+tile-18,38,16);
+        c.fillStyle='#fff'; c.fillText(pad(idx),(idx%cols)*tile+6,Math.floor(idx/cols)*tile+tile-15);
+        loaded++;
+        if(loaded===expected){
+          var a=document.createElement('a');
+          var stamp=(document.getElementById('od').checked?'od-':'')+Date.now();
+          a.download='kolob-thumbnails-'+stamp+'.png';
+          a.href=out.toDataURL('image/png'); a.click();
+        }
+      };
+      img.src=captures[idx];
+    })(i);
+  }
+});
+</script>
+</body>
+</html>

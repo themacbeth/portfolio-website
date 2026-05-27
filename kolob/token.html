@@ -423,7 +423,8 @@ if(INV<3){
   var tt=deriveTraits(seed,tier);
   // Outer Darkness: any Telestial throne past 22 October 2026 drifts into the void, silent
   var OD_DEADLINE=Date.UTC(2026,9,22);
-  if(tier===2 && Date.now()>=OD_DEADLINE){ system._od=true; tt.Glory='Outer'; }
+  var ODoverride=new URLSearchParams(location.search).has('od');
+  if((tier===2 && Date.now()>=OD_DEADLINE) || (tier===2 && ODoverride)){ system._od=true; tt.Glory='Outer'; }
   feat={Kind:"Throne",Kingdom:system._od?"Outer Darkness":(TIER_NAMES[tier].charAt(0)+TIER_NAMES[tier].slice(1).toLowerCase()),
         Star:STAR[system.stars[0].cls].c,Planets:system.planets.length,
         Intelligence:tt.Intelligence,Affinity:tt.Affinity,Dispensation:tt.Dispensation,Glory:tt.Glory};
