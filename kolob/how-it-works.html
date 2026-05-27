@@ -107,9 +107,10 @@
       <div class="step"><h3>Terrestrial</h3><p>Unlocks a signature ringed giant, a warmer palette, and more worlds.</p></div>
       <div class="step"><h3>Celestial</h3><p>Adds a binary companion star, a comet swarm, a gold palette, the richest state.</p></div>
     </div>
-    <p class="dim" style="margin-top:18px;font:11px/1.7 var(--mono);color:#c9a96b">⚠ Thrones left in
-    the Telestial rim drift toward <b style="color:#e0d6c2">Outer Darkness</b>, advancing holds
-    your place in the light. &nbsp;
+    <p class="dim" style="margin-top:18px;font:11px/1.7 var(--mono);color:#c9a96b">⚠ Any Telestial
+    throne still on the rim at <b style="color:#e0d6c2">22 October 2026 UTC</b> drifts into
+    <b style="color:#e0d6c2">Outer Darkness</b>. The drift is <b style="color:#e0d6c2">permanent</b>,
+    the tier PMP locks at the deadline, no repentance, no return. &nbsp;
     <a href="kolob-pod-1d.html#throne=20&od" style="color:var(--cyan);text-decoration:underline">Preview the drift ▸</a></p>
     <details class="exp"><summary>How advancing works on-chain</summary><div class="body">
       <p>A throne's kingdom is an on-chain <b>PostParam</b> (Art Blocks PMP) set by the token owner;
@@ -202,9 +203,11 @@
       <tr><td><code>col</code>, <code>length</code>, <code>rot</code>, <code>density</code>, <code>name</code></td><td>great suns (inv 0–2)</td><td class="price">Creator-mode sun authorship</td></tr>
     </table>
     <p class="dim" style="margin-top:14px">Lock-by-date required on <code>tier</code>:
-      after <b style="color:#e0d6c2">22 October 2026 UTC</b>, any Telestial throne that has
-      not been advanced renders as Outer Darkness, a silent monochrome cold-drift visual
-      (no orbits, no sound, deterministic per hash).</p>
+      at <b style="color:#e0d6c2">22 October 2026 UTC</b> the <code>tier</code> PMP becomes
+      immutable for every token. Any throne still at <code>tier=2</code> at that moment is
+      <b style="color:#e0d6c2">permanently</b> sealed in Outer Darkness, a silent monochrome
+      cold-drift visual (no orbits, no sound, deterministic per hash). No repentance,
+      no later overwrite, no return.</p>
     <p class="dim" style="margin-top:14px">For archetype uniqueness on the 12 Core Systems, the rule is
       enforceable on-chain via a PMP validator. Reference implementation:
       <a href="KolobArchetypeValidator.sol" style="color:var(--cyan);text-decoration:underline">KolobArchetypeValidator.sol ↗</a>

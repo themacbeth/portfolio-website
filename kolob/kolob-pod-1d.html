@@ -897,11 +897,8 @@ function showReward(t){ if(!$reward)return; $reward.textContent=REWARD[t]||"";
 // veil cinematic state
 var veilActive=false,veilT=0,veilNode=-1,veilDidAdvance=false,veilSpin=0,veilNz=0;
 var veilFrom=[110,215,255],veilTo=[255,110,210],veilPts=[],warpStars=[];
-// Veil transition styles: 0 ceremonial (default), 1 light flood, 2 dimensional fold, 3 particle swarm.
-// Override via URL hash &veil=N for preview.
-var veilStyle=0, veilSwarmPts=null;
-var VEIL_DUR=IS_MOBILE?320:380;                 // ceremonial: ~5.3–6.3s
-function veilDuration(){return veilStyle===0?(IS_MOBILE?320:380):(IS_MOBILE?180:220);}
+// Ceremonial veil: slow passage through dust, total darkness, palette-shift emergence
+var VEIL_DUR=IS_MOBILE?320:380;                 // ~5.3–6.3s, deliberately slow
 function buildVeil(){
   var nP=IS_MOBILE?2400:5200,nW=IS_MOBILE?500:1100,r=mk((curNode*2654435761+777)>>>0),i;
   // dust particles in polar coords: drift inward then outward
@@ -915,9 +912,6 @@ function buildVeil(){
     a:r()*TAU, z:r(), ph:r()*TAU, bri:0.4+r()*0.6});
 }
 function renderVeil(){
-  if(veilStyle===1) return renderVeilFlood();
-  if(veilStyle===2) return renderVeilFold();
-  if(veilStyle===3) return renderVeilSwarm();
   ctx.globalCompositeOperation='source-over';
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
   var t=veilT,cx=CX,cy=CY,i,minD=Math.min(W,H);
@@ -973,90 +967,11 @@ function renderVeil(){
   else if(t>0.93){ctx.fillStyle='rgba(0,0,0,'+((t-0.93)/0.07).toFixed(2)+')';ctx.fillRect(0,0,W,H);}
 }
 
-// ── Veil style 1 · LIGHT FLOOD ────────────────────────────────────────────
-// A halo of light grows from the centre outward, fills the screen at the
-// threshold, then recedes outward revealing the new tier.
-function renderVeilFlood(){
-  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
-  var t=veilT,cx=CX,cy=CY,maxR=Math.hypot(W,H);
-  var rad=t<0.5?(t/0.5)*maxR:maxR*(1-(t-0.5)/0.5);
-  var peak=t<0.5?t/0.5:1-(t-0.5)/0.5;
-  var col=t<0.5?veilFrom:veilTo;
-  var g=ctx.createRadialGradient(cx,cy,rad*0.25,cx,cy,Math.max(1,rad));
-  g.addColorStop(0,'rgba('+(255)+','+(255)+','+(255)+','+Math.min(1,peak*1.5).toFixed(2)+')');
-  g.addColorStop(0.55,'rgba('+(col[0]|0)+','+(col[1]|0)+','+(col[2]|0)+','+(peak*0.55).toFixed(2)+')');
-  g.addColorStop(1,'rgba('+(col[0]|0)+','+(col[1]|0)+','+(col[2]|0)+',0)');
-  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-  // brief pulse exactly at the threshold
-  if(t>0.47&&t<0.53){var pul=Math.sin((t-0.47)/0.06*Math.PI);
-    ctx.fillStyle='rgba(255,255,255,'+(0.55*pul).toFixed(2)+')';ctx.fillRect(0,0,W,H);}
-  if(t<0.04){ctx.fillStyle='rgba(0,0,0,'+(1-t/0.04).toFixed(2)+')';ctx.fillRect(0,0,W,H);}
-  else if(t>0.94){ctx.fillStyle='rgba(0,0,0,'+((t-0.94)/0.06).toFixed(2)+')';ctx.fillRect(0,0,W,H);}
-}
-
-// ── Veil style 2 · DIMENSIONAL FOLD ──────────────────────────────────────
-// Concentric rings collapse to a singularity, brief flash, then explode
-// outward in the new kingdom's colour.
-function renderVeilFold(){
-  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
-  var t=veilT,cx=CX,cy=CY,minD=Math.min(W,H);
-  if(t<0.45){var p=t/0.45;
-    for(var r=0;r<24;r++){
-      var rad=minD*(0.55-r*0.020)*(1-p*0.95); if(rad<2)continue;
-      var alpha=(0.10+0.45*(1-p))*(1-r/24);
-      ctx.strokeStyle='rgba('+(veilFrom[0]|0)+','+(veilFrom[1]|0)+','+(veilFrom[2]|0)+','+alpha.toFixed(2)+')';
-      ctx.lineWidth=1*dpr;
-      ctx.beginPath();ctx.arc(cx,cy,rad,0,TAU);ctx.stroke();}
-  } else if(t<0.55){
-    var fp=(t-0.45)/0.10, fa=Math.sin(fp*Math.PI);
-    ctx.fillStyle='rgba(255,255,255,'+(0.92*fa).toFixed(2)+')';ctx.fillRect(0,0,W,H);
-  } else {
-    var p2=(t-0.55)/0.45;
-    for(var rr=0;rr<24;rr++){
-      var rad2=minD*(0.02+p2*0.62+rr*0.020); if(rad2>minD*1.3)continue;
-      var alpha2=(0.10+0.55*(1-p2))*(1-rr/24);
-      ctx.strokeStyle='rgba('+(veilTo[0]|0)+','+(veilTo[1]|0)+','+(veilTo[2]|0)+','+alpha2.toFixed(2)+')';
-      ctx.lineWidth=1*dpr;
-      ctx.beginPath();ctx.arc(cx,cy,rad2,0,TAU);ctx.stroke();}
-  }
-  if(t<0.04){ctx.fillStyle='rgba(0,0,0,'+(1-t/0.04).toFixed(2)+')';ctx.fillRect(0,0,W,H);}
-  else if(t>0.94){ctx.fillStyle='rgba(0,0,0,'+((t-0.94)/0.06).toFixed(2)+')';ctx.fillRect(0,0,W,H);}
-}
-
-// ── Veil style 3 · PARTICLE SWARM ────────────────────────────────────────
-// 800 particles fly in from the edges, swarm at the centre, then disperse
-// outward in tighter rays carrying the new palette.
-function renderVeilSwarm(){
-  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
-  var t=veilT,cx=CX,cy=CY,minD=Math.min(W,H);
-  if(!veilSwarmPts){var sr=mk((veilNode*9176)>>>0),n=IS_MOBILE?500:900;veilSwarmPts=[];
-    for(var i=0;i<n;i++) veilSwarmPts.push({a:sr()*TAU,spin:(sr()*2-1)*1.6,bri:0.4+sr()*0.6,
-      r0:0.50+sr()*0.20});}
-  ctx.globalCompositeOperation='lighter';
-  var P=veilSwarmPts;
-  for(var i=0;i<P.length;i++){var p=P[i],rad,ang;
-    if(t<0.40){var u=t/0.40; rad=p.r0*minD*(1-u*0.95);}
-    else if(t<0.60){var u=(t-0.40)/0.20; rad=p.r0*minD*0.05+Math.sin(u*Math.PI*3)*minD*0.05;}
-    else {var u=(t-0.60)/0.40; rad=p.r0*minD*0.05+u*minD*0.75;}
-    ang=p.a+t*p.spin*1.4;
-    var col=t<0.5?veilFrom:veilTo;
-    var alpha=p.bri*(t<0.5?0.34:0.50);
-    var dot=(t>0.40&&t<0.60)?2*dpr:1*dpr;
-    var x=cx+Math.cos(ang)*rad,y=cy+Math.sin(ang)*rad;
-    ctx.fillStyle='rgba('+(col[0]|0)+','+(col[1]|0)+','+(col[2]|0)+','+alpha.toFixed(2)+')';
-    ctx.fillRect(x|0,y|0,dot,dot);}
-  ctx.globalCompositeOperation='source-over';
-  if(t<0.04){ctx.fillStyle='rgba(0,0,0,'+(1-t/0.04).toFixed(2)+')';ctx.fillRect(0,0,W,H);}
-  else if(t>0.94){ctx.fillStyle='rgba(0,0,0,'+((t-0.94)/0.06).toFixed(2)+')';ctx.fillRect(0,0,W,H);}
-}
-
 function doAdvance(){
   if(veilActive||mode!=="system"||coreView>=0) return;
   var i=curNode; if(tierOf(i)<=0) return;
   veilNode=i; veilFrom=TIER_COL[tierOf(i)]; veilTo=TIER_COL[tierOf(i)-1];
-  buildVeil(); veilSwarmPts=null;     // rebuild swarm per crossing
-  VEIL_DUR=veilDuration();
-  veilActive=true; veilT=0; veilDidAdvance=false; veilSpin=0; veilNz=0;
+  buildVeil(); veilActive=true; veilT=0; veilDidAdvance=false; veilSpin=0; veilNz=0;
   document.body.classList.add('veil');
   AUDIO.veilSweep();
 }
@@ -2060,7 +1975,6 @@ function loop(){
 function applyHash(){
   var h=(location.hash||'').replace('#','');
   ownMode=/(?:^|[&:])own\b/.test(h);   // #throne=N&own → manage mode (advance enabled)
-  var vm=h.match(/[&:]?veil=([0-3])/); if(vm) veilStyle=+vm[1]; else veilStyle=0;
   if(h==='hero'){ document.body.classList.add('hero'); if(cinematic)exitCinematic(); goGalaxy(); return; }
   if(!h||h==='explore'){ if(cinematic)exitCinematic(); goGalaxy(); return; }
   if(h==='cinematic'){ goGalaxy(); if(!cinematic)enterCinematic(); return; }
