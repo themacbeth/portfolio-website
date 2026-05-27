@@ -47,7 +47,7 @@
   <a href="collection.html">COLLECTION</a>
   <a href="how-it-works.html">HOW IT WORKS</a>
   <a href="mint.html">MINT</a>
-  <a class="enter" href="kolob-pod-1d.html">ENTER ▸</a>
+  <a class="enter" href="../kolob-pod-1d.html">ENTER ▸</a>
 </nav>
 
 <section class="audWrap">
@@ -60,10 +60,12 @@
     (palette hue, planet count, types, eccentricities, orbital phases, moons, belts, comets) is built from
     a different seed, producing a render that lives in a multi-million-dimension state space. Hash collisions
     in <code>tokenData.hash</code> are astronomically unlikely.</p>
-  <p>Categorical trait tuples (Intelligence × Affinity × Dispensation × Glory) span <b style="color:#cdd0d8">2,560</b>
-    combinations. Across 129 thrones, birthday-paradox math expects <b style="color:#cdd0d8">~3 pairs</b> to
-    share a tuple. That's the same as every other Art Blocks project, individual trait values are categorical
-    rarities, not unique IDs.</p>
+  <p>Categorical trait tuples from the three hash-derived fields (Intelligence × Affinity × Dispensation)
+    span <b style="color:#cdd0d8">8 × 8 × 10 = 640</b> combinations. Glory is the fourth field, but it is
+    set by the owner's <code>tier</code> PMP at mint/advance time, not derived from the hash, so the
+    Monte Carlo below tests the three hash-derived fields only. Across 129 thrones, birthday-paradox
+    math expects <b style="color:#cdd0d8">~13 pairs</b> to share a 3-field tuple. That's the same as
+    every other Art Blocks project, individual trait values are categorical rarities, not unique IDs.</p>
 
   <h2 class="audH">The 129 thrones (canonical test hash)</h2>
   <div class="stats" id="stats129"></div>
@@ -87,7 +89,7 @@
   <div class="links">
     <a href="index.html">Home</a><a href="core15.html">Core 15</a>
     <a href="collection.html">Collection</a><a href="how-it-works.html">How It Works</a>
-    <a href="mint.html">Mint</a><a href="kolob-pod-1d.html">Explore</a>
+    <a href="mint.html">Mint</a><a href="../kolob-pod-1d.html">Explore</a>
   </div>
   KOLOB · trait derivation audit
 </footer>
@@ -136,8 +138,8 @@ function renderStats129(){
   var html=
     statBox('Thrones',129,'collection size')+
     statBox('Distinct seeds',distinctSeeds+' / 129',distinctSeeds===129?'every seed unique':'!!',distinctSeeds===129?'good':'warn')+
-    statBox('Distinct trait tuples',distinctTuples+' / 129','of 2,560 possible')+
-    statBox('Tuple duplicates',dupes,'expected ~3 by birthday paradox',dupes<=8?'good':'warn');
+    statBox('Distinct trait tuples',distinctTuples+' / 129','of 640 possible (Intelligence × Affinity × Dispensation)')+
+    statBox('Tuple duplicates',dupes,'expected ~13 by birthday paradox at 640 buckets',dupes<=22?'good':'warn');
   document.getElementById('stats129').innerHTML=html;
   return tuples;
 }
@@ -160,7 +162,7 @@ function renderTable(tuples){
   var rows='';
   thrones.forEach(function(th){
     var k=th.t.i+'·'+th.t.a+'·'+th.t.d, dup=tuples[k]>1?' class="dup"':'';
-    rows+='<tr'+dup+' onclick="location.href=\'kolob-pod-1d.html#throne='+th.i+'\'">'+
+    rows+='<tr'+dup+' onclick="location.href=\'../kolob-pod-1d.html#throne='+th.i+'\'">'+
       '<td>'+("00"+th.i).slice(-3)+'</td>'+
       '<td>0x'+(th.seed>>>0).toString(16).padStart(8,'0')+'</td>'+
       '<td>'+th.t.i+'</td><td>'+th.t.a+'</td><td>'+th.t.d+'</td></tr>';
@@ -180,13 +182,15 @@ document.getElementById('runMc').addEventListener('click',function(){
     var t=trait(s); var key=t.i+'·'+t.a+'·'+t.d;
     if(seen[key]) dupes++; seen[key]=1;
   }
-  // theoretical: P(collision per pair) = 1 / 2560. Expected dupes ~ N - distinctKeys.
-  // After N draws among 2560 buckets, expected distinct = 2560 * (1 - (1 - 1/2560)^N)
-  var theoreticalDistinct = 2560*(1-Math.pow(1-1/2560,N));
+  // tuple space is the 3 hash-derived fields only: 8 × 8 × 10 = 640.
+  // After N draws among 640 buckets, expected distinct = 640 * (1 - (1 - 1/640)^N).
+  // At N=10,000 this saturates (~640), which is the well-distributed answer.
+  var B=640;
+  var theoreticalDistinct = B*(1-Math.pow(1-1/B,N));
   var observedDistinct=Object.keys(seen).length;
   document.getElementById('mcStats').innerHTML=
     statBox('Samples',N,'random uint32 seeds')+
-    statBox('Distinct tuples',observedDistinct+' / 2,560','of 2,560 possible')+
+    statBox('Distinct tuples',observedDistinct+' / '+B,'of '+B+' possible (3 hash-derived fields)')+
     statBox('Theoretical',theoreticalDistinct.toFixed(0),'expected distinct count')+
     statBox('Deviation',(Math.abs(observedDistinct-theoreticalDistinct)/theoreticalDistinct*100).toFixed(2)+'%','from prediction',
       Math.abs(observedDistinct-theoreticalDistinct)<theoreticalDistinct*0.02?'good':'warn');
