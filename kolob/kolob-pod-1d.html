@@ -1388,12 +1388,49 @@ function renderSystem(){
     var sp=project(oh[0],oh[1],oh[2],cosP,sinP,scale);
     body(sp[0],sp[1],PX*1.5,lt(PAL.comet,0.55),clock*0.06);}
 
+  // Per-tier ambient depth (only on regular thrones)
+  if(!sy.isCore && !sy._od){
+    if(sy.wealth===0)      renderAurora(sy);          // Celestial: faint aurora ribbons
+    else if(sy.wealth===2) renderDustThinning(sy);    // Telestial: cold dust at the rim
+  }
+
   if(hud){
     document.getElementById('hud').innerHTML= coreView>=0
      ? "<span class=\"throne\">"+sy.coreName+"</span>\n<span class=\"tier\">CORE</span>"
      : "<span class=\"throne\">THRONE "+("00"+curNode).slice(-3)+"</span>\n"+
        "<span class=\"tier\">"+(sy._od?"OUTER DARKNESS":TIER_NAMES[system.wealth])+"</span>";
   }
+}
+
+// Celestial: 3 thin ribbons of soft light arcing across the canvas
+function renderAurora(sy){
+  ctx.globalCompositeOperation='lighter';
+  var t=clock*0.005, mn=Math.min(W,H);
+  var palette=[[255,225,140],[255,180,200],[160,220,255]];
+  for(var r=0;r<3;r++){var ph=t+r*1.7, c=palette[r];
+    for(var i=0;i<180;i++){
+      var u=i/180-0.5;
+      var x=W*0.5+u*W*1.1;
+      var y=H*0.5+Math.sin(u*Math.PI*3+ph)*mn*0.18+(r-1)*mn*0.10;
+      var a=(1-Math.abs(u)*1.6)*0.16;
+      if(a<0.02)continue;
+      ctx.fillStyle='rgba('+c[0]+','+c[1]+','+c[2]+','+a.toFixed(2)+')';
+      ctx.fillRect(x|0,y|0,1,1);}}
+  ctx.globalCompositeOperation='source-over';
+}
+
+// Telestial: sparse cold dust biased toward the rim, hinting at the cold outer kingdom
+function renderDustThinning(sy){
+  if(!sy._tdust){var r=mk((sy.seed^0xDD7711)>>>0),n=130,p=[];
+    for(var i=0;i<n;i++){var rad=0.55+r()*0.40, ang=r()*TAU;
+      p.push({x:0.5+Math.cos(ang)*rad*0.5,y:0.5+Math.sin(ang)*rad*0.5,
+        a:0.09+r()*0.16,ph:r()*TAU});}
+    sy._tdust=p;}
+  var t=clock*0.003, D=sy._tdust;
+  for(var i=0;i<D.length;i++){var p=D[i];
+    var shim=0.7+0.3*Math.sin(t+p.ph);
+    ctx.fillStyle='rgba(150,170,200,'+(p.a*shim).toFixed(2)+')';
+    ctx.fillRect((p.x*W)|0,(p.y*H)|0,1,1);}
 }
 
 // ═══ CORE-15 DESTINATIONS ═══════════════════════════════════════════════

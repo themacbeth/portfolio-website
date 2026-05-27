@@ -11,16 +11,32 @@
   .hsHead h1{font-size:clamp(34px,5vw,56px);margin:0 0 14px}
   .hsHead p{font:12px/1.7 var(--mono);color:#9aa0ad;max-width:70ch;letter-spacing:.04em;margin:0 0 6px}
   .hsHead p code{color:#cdd0d8}
-  .hsLegend{display:flex;flex-wrap:wrap;gap:18px;margin-top:20px;font:10px/1 var(--mono);letter-spacing:.12em;color:#9aa0ad;text-transform:uppercase}
-  .hsLegend b{color:#fff}
+  .hsTools{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px;align-items:center}
+  .hsTools button{background:rgba(255,255,255,.06);color:#eaf0f7;border:1px solid rgba(255,255,255,.16);
+    border-radius:3px;padding:8px 14px;font:10px/1 ui-monospace,monospace;letter-spacing:.18em;cursor:pointer;
+    text-transform:uppercase}
+  .hsTools button:hover{background:rgba(255,255,255,.14)}
+  .hsTools .cap{font:10px/1 ui-monospace,monospace;color:#7d818f;letter-spacing:.06em;margin-left:auto}
+  .hsTools .cap b{color:#fff}
   .hsBand{padding:8px 28px 4px;max-width:1400px;margin:0 auto;font:10px/1 var(--mono);letter-spacing:.16em;color:#5a5e6b;text-transform:uppercase}
   .hsGrid{display:grid;grid-template-columns:repeat(12,1fr);gap:1px;padding:0 28px 40px;max-width:1400px;margin:0 auto;background:#0c0c10}
-  .hsCell{aspect-ratio:1;background:#000;position:relative}
-  .hsCell iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
-  .hsCell .hid{position:absolute;left:4px;bottom:3px;font:8px/1 ui-monospace,monospace;color:rgba(255,255,255,.55);z-index:2;
-    background:rgba(0,0,0,.6);padding:2px 4px;border-radius:2px;letter-spacing:.06em}
+  .hsCell{aspect-ratio:1;background:#000;position:relative;cursor:pointer;
+    transition:background .15s, outline-color .15s}
+  .hsCell:hover{background:#0a0a14}
   .hsCell.hsSun{outline:1px solid rgba(255,236,180,.35)}
   .hsCell.hsCore{outline:1px solid rgba(220,232,255,.30)}
+  .hsCell .ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font:9px/1.4 ui-monospace,monospace;letter-spacing:.10em;color:#5a5e6b;text-align:center;padding:6px}
+  .hsCell .ph b{display:block;font-size:11px;color:#cdd0d8;margin-bottom:3px;letter-spacing:.16em}
+  .hsCell .ph .hint{font-size:8px;color:#3a3e4a;margin-top:5px;letter-spacing:.18em;text-transform:uppercase}
+  .hsCell iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#000}
+  .hsCell .hid{position:absolute;left:4px;bottom:3px;font:8px/1 ui-monospace,monospace;color:rgba(255,255,255,.55);z-index:2;
+    background:rgba(0,0,0,.6);padding:2px 4px;border-radius:2px;letter-spacing:.06em;pointer-events:none}
+  .hsCell .un{position:absolute;top:4px;right:4px;z-index:3;background:rgba(0,0,0,.7);color:#9aa0ad;
+    border:1px solid rgba(255,255,255,.15);border-radius:2px;font:9px/1 ui-monospace,monospace;
+    padding:2px 4px;cursor:pointer;display:none}
+  .hsCell.live .un{display:block}
+  .hsCell.live .ph{display:none}
   @media(max-width:900px){.hsGrid{grid-template-columns:repeat(8,1fr)}}
   @media(max-width:600px){.hsGrid{grid-template-columns:repeat(4,1fr);padding:0 14px 30px}.hsHead{padding-left:14px;padding-right:14px}.hsBand{padding-left:14px}}
 </style>
@@ -40,24 +56,26 @@
 <section class="hsHead">
   <p class="eyebrow">For Art Blocks review</p>
   <h1>Hash Test Suite</h1>
-  <p>Every one of the 144 invocations rendered live by <code>token.html?inv=N</code>, the same single-token
-    renderer that Art Blocks will execute on-chain. Same script, same PRNG, same locked seeds. Loads lazily as
-    you scroll, pauses off-screen.</p>
-  <p>Invocations <code>0 – 2</code> are the three great suns (yellow outline). <code>3 – 14</code> are the twelve
-    governing systems (cool outline). <code>15 – 143</code> are the 129 thrones, seeded by <code>tokenData.hash</code>;
-    here the canonical test hash is used so every cell is deterministic and reproducible.</p>
-  <div class="hsLegend">
-    <span><b>3</b> Great Suns (inv 0-2)</span>
-    <span><b>12</b> Core Systems (inv 3-14)</span>
-    <span><b>129</b> Thrones (inv 15-143)</span>
-    <span><b>144</b> total</span>
+  <p>All 144 invocations rendered by the on-chain <code>token.html</code> renderer. Cells are placeholders by
+    default to keep the page light. <b style="color:#cdd0d8">Click any cell</b> to render that piece live;
+    <b style="color:#cdd0d8">click ✕</b> to unload it. The renderer caps live cells, oldest ones auto-unload
+    when the cap is reached.</p>
+  <p>Invocations <code>0 – 2</code> are great suns (yellow outline). <code>3 – 14</code> are core systems
+    (cool outline). <code>15 – 143</code> are thrones, seeded by <code>tokenData.hash</code> using the
+    canonical test hash so every render is reproducible.</p>
+  <div class="hsTools">
+    <button id="hsAll">Render all</button>
+    <button id="hsRow">Render visible rows</button>
+    <button id="hsCore15">Render Core 15</button>
+    <button id="hsClear">Unload all</button>
+    <span class="cap">Active <b id="hsActive">0</b> / <b>24</b></span>
   </div>
 </section>
 
-<div class="hsBand">Great Suns + Core Systems</div>
+<div class="hsBand">Great Suns + Core Systems (15)</div>
 <div class="hsGrid" id="hsCore"></div>
 
-<div class="hsBand">Thrones (Telestial default, advance via PMP)</div>
+<div class="hsBand">Thrones (129)</div>
 <div class="hsGrid" id="hsThrones"></div>
 
 <footer class="foot">
@@ -66,30 +84,104 @@
     <a href="collection.html">Collection</a><a href="how-it-works.html">How It Works</a>
     <a href="mint.html">Mint</a><a href="kolob-pod-1d.html">Explore</a>
   </div>
-  KOLOB · 144 cells · single-token renderer · vanilla JS, no library
+  KOLOB · 144 cells · single-token renderer · lazy contact sheet
 </footer>
 
 <script>
 "use strict";
 var TOKEN="token.html";
-function cell(inv){
-  var kind=inv<3?'hsSun':(inv<15?'hsCore':'');
-  var pad=("00"+inv).slice(-3);
-  return '<div class="hsCell '+kind+'"><span class="hid">inv '+pad+'</span>'+
-    '<iframe data-src="'+TOKEN+'?inv='+inv+'" title="inv '+inv+'" loading="lazy"></iframe></div>';
+var CAP=24;                 // max live cells at any moment, LRU eviction
+var liveQueue=[];            // FIFO of currently-active inv numbers
+var $active=document.getElementById('hsActive');
+
+function pad(n){return ("00"+n).slice(-3);}
+function placeholder(inv){
+  var kind=inv<3?'GREAT SUN':(inv<15?'CORE SYSTEM':'THRONE');
+  return '<div class="ph"><b>inv '+pad(inv)+'</b>'+kind+'<span class="hint">click to render</span></div>';
 }
-var core="",thr="";
-for(var i=0;i<15;i++) core+=cell(i);
-for(var j=15;j<144;j++) thr+=cell(j);
-document.getElementById('hsCore').innerHTML=core;
-document.getElementById('hsThrones').innerHTML=thr;
-// lazy-load + pause off-screen so 144 live iframes don't melt the browser
-var io=new IntersectionObserver(function(es){es.forEach(function(e){var f=e.target;
-  if(e.isIntersecting){ if(!f.src) f.src=f.dataset.src;
-    try{f.contentWindow.postMessage('kolob:play','*');}catch(_){}}
-  else { try{f.contentWindow.postMessage('kolob:pause','*');}catch(_){} }
-});},{rootMargin:'200px',threshold:0.01});
-document.querySelectorAll('.hsCell iframe').forEach(function(f){io.observe(f);});
+function cellHtml(inv){
+  var k=inv<3?'hsSun':(inv<15?'hsCore':'');
+  return '<div class="hsCell '+k+'" data-inv="'+inv+'">'+
+    '<span class="hid">inv '+pad(inv)+'</span>'+
+    '<button class="un" title="Unload">✕</button>'+
+    placeholder(inv)+
+    '</div>';
+}
+var coreH="",thrH="";
+for(var i=0;i<15;i++) coreH+=cellHtml(i);
+for(var j=15;j<144;j++) thrH+=cellHtml(j);
+document.getElementById('hsCore').innerHTML=coreH;
+document.getElementById('hsThrones').innerHTML=thrH;
+
+function updCount(){$active.textContent=liveQueue.length;}
+
+function load(cell){
+  if(cell.classList.contains('live')) return;
+  // LRU evict if at cap
+  while(liveQueue.length>=CAP){
+    var old=liveQueue.shift();
+    var oc=document.querySelector('.hsCell[data-inv="'+old+'"]');
+    if(oc) unloadCell(oc,true);
+  }
+  var inv=cell.dataset.inv;
+  var f=document.createElement('iframe');
+  f.title='inv '+inv;
+  f.src=TOKEN+'?inv='+inv;
+  cell.appendChild(f);
+  cell.classList.add('live');
+  liveQueue.push(inv);
+  updCount();
+}
+function unloadCell(cell,fromEvict){
+  var inv=cell.dataset.inv;
+  var f=cell.querySelector('iframe');
+  if(f) f.parentNode.removeChild(f);
+  cell.classList.remove('live');
+  if(!fromEvict){
+    var idx=liveQueue.indexOf(inv); if(idx>=0) liveQueue.splice(idx,1);
+  }
+  updCount();
+}
+
+document.addEventListener('click',function(e){
+  if(e.target.classList.contains('un')){
+    e.stopPropagation();
+    unloadCell(e.target.closest('.hsCell'));return;
+  }
+  var cell=e.target.closest('.hsCell');
+  if(cell && !cell.classList.contains('live')) load(cell);
+});
+
+// Pause off-screen live cells, resume on-screen, to be CPU-kind
+var io=new IntersectionObserver(function(es){es.forEach(function(e){
+  var f=e.target.querySelector('iframe'); if(!f) return;
+  try{f.contentWindow.postMessage(e.isIntersecting?'kolob:play':'kolob:pause','*');}catch(_){}
+});},{threshold:0.05});
+new MutationObserver(function(muts){
+  muts.forEach(function(m){m.addedNodes.forEach(function(n){
+    if(n.tagName==='IFRAME' && n.parentNode && n.parentNode.classList.contains('hsCell')) io.observe(n.parentNode);
+  });});
+}).observe(document.body,{childList:true,subtree:true});
+
+// Bulk actions
+function eachCell(fn){document.querySelectorAll('.hsCell').forEach(fn);}
+document.getElementById('hsCore15').addEventListener('click',function(){
+  eachCell(function(c){if(+c.dataset.inv<15) load(c);});
+});
+document.getElementById('hsRow').addEventListener('click',function(){
+  // Render whatever is currently within viewport, up to CAP
+  var loaded=0,vh=innerHeight;
+  eachCell(function(c){if(loaded>=CAP)return;
+    var r=c.getBoundingClientRect();
+    if(r.bottom>0 && r.top<vh && !c.classList.contains('live')){load(c);loaded++;}});
+});
+document.getElementById('hsAll').addEventListener('click',function(){
+  if(!confirm("Render every cell up to the "+CAP+"-cell cap? Older cells will be unloaded as you scroll past them.")) return;
+  eachCell(function(c){load(c);});
+});
+document.getElementById('hsClear').addEventListener('click',function(){
+  eachCell(function(c){if(c.classList.contains('live')) unloadCell(c);});
+});
 </script>
 </body>
 </html>
