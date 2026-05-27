@@ -47,7 +47,7 @@
   <a href="collection.html">COLLECTION</a>
   <a href="how-it-works.html">HOW IT WORKS</a>
   <a href="mint.html">MINT</a>
-  <a class="enter" href="../kolob-pod-1d.html">ENTER ▸</a>
+  <a class="enter" href="kolob-pod-1d.html">ENTER ▸</a>
 </nav>
 
 <section class="audWrap">
@@ -89,7 +89,7 @@
   <div class="links">
     <a href="index.html">Home</a><a href="core15.html">Core 15</a>
     <a href="collection.html">Collection</a><a href="how-it-works.html">How It Works</a>
-    <a href="mint.html">Mint</a><a href="../kolob-pod-1d.html">Explore</a>
+    <a href="mint.html">Mint</a><a href="kolob-pod-1d.html">Explore</a>
   </div>
   KOLOB · trait derivation audit
 </footer>
@@ -162,7 +162,7 @@ function renderTable(tuples){
   var rows='';
   thrones.forEach(function(th){
     var k=th.t.i+'·'+th.t.a+'·'+th.t.d, dup=tuples[k]>1?' class="dup"':'';
-    rows+='<tr'+dup+' onclick="location.href=\'../kolob-pod-1d.html#throne='+th.i+'\'">'+
+    rows+='<tr'+dup+' onclick="location.href=\'kolob-pod-1d.html#throne='+th.i+'\'">'+
       '<td>'+("00"+th.i).slice(-3)+'</td>'+
       '<td>0x'+(th.seed>>>0).toString(16).padStart(8,'0')+'</td>'+
       '<td>'+th.t.i+'</td><td>'+th.t.a+'</td><td>'+th.t.d+'</td></tr>';

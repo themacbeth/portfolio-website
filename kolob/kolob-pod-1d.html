@@ -986,29 +986,42 @@ var drag=false,moved=0,lx=0,ly=0;
 var ptrs=new Map(),pinchDist=0,pinchAng=0,pinching=false;
 var lastTap=0,dblTapDelay=300;
 function ptrArr(){return [].slice.call(ptrs.values());}
+// Tap-handling on lift: route a brief, untranslated lift to galaxy hover/click logic
+function tapAt(clientX,clientY){
+  if(cinematic&&mode==="galaxy"){toggleCinematicUI(!cinematicUI);return;}
+  var now=Date.now();
+  if(now-lastTap<dblTapDelay){
+    if(cinematic){toggleCinematicUI(!cinematicUI);lastTap=0;return;}
+    goGalaxy();lastTap=0;return;}
+  lastTap=now;
+  if(mode==="galaxy"){
+    var mx=clientX*dpr,my=clientY*dpr;
+    var bs=PX*30,fhit=-1;
+    for(var i2=0;i2<FIXED.length;i2++){
+      var fd=Math.abs(FIXED[i2].sx-mx)+Math.abs(FIXED[i2].sy-my);
+      if(fd<bs){bs=fd;fhit=i2;}}
+    if(fhit>=0){ if(FIXED[fhit].great) goStar(fhit); else goCore(fhit-3); return; }
+    var bd=PX*16,hit=-1;
+    for(var i=0;i<NODES.length;i++){
+      var d=Math.abs(NODES[i].sx-mx)+Math.abs(NODES[i].sy-my);
+      if(d<bd){bd=d;hit=i;}}
+    if(hit>=0){goSystem(hit);return;}
+  }
+}
+
+// ── Pointer events: handle mouse / stylus only. Touch is handled below
+//    via TouchEvent for cross-browser multi-touch reliability (esp. iOS Safari).
 cv.addEventListener('pointerdown',function(e){
-  if(cinematic){ exitCinematic(); return; }   // a click ends the cinematic (cursor move does not)
+  if(e.pointerType==='touch') return;                  // touch handler owns these
+  if(cinematic){ exitCinematic(); return; }
   ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   try{cv.setPointerCapture(e.pointerId);}catch(_){}
-  if(ptrs.size===1){
-    drag=true;moved=0;lx=e.clientX;ly=e.clientY;pinching=false;
-  }else if(ptrs.size===2){
-    drag=false;pinching=true;
-    var a=ptrArr(),dx=a[1].x-a[0].x,dy=a[1].y-a[0].y;
-    pinchDist=Math.hypot(dx,dy);pinchAng=Math.atan2(dy,dx);
-  }
+  drag=true;moved=0;lx=e.clientX;ly=e.clientY;pinching=false;
 });
 cv.addEventListener('pointermove',function(e){
+  if(e.pointerType==='touch') return;
   if(ptrs.has(e.pointerId)) ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-  if(pinching&&ptrs.size>=2){
-    var a=ptrArr(),dx=a[1].x-a[0].x,dy=a[1].y-a[0].y;
-    var nd=Math.hypot(dx,dy),na=Math.atan2(dy,dx);
-    if(nd>0&&pinchDist>0){zoom*=nd/pinchDist;zoom=Math.max(0.3,Math.min(9,zoom));}
-    var rot=(na-pinchAng);
-    if(rot>Math.PI)rot-=2*Math.PI; if(rot<-Math.PI)rot+=2*Math.PI;
-    if(Math.abs(rot)>0.001)az+=rot*0.5;
-    pinchDist=nd;pinchAng=na;moved+=20;
-  }else if(drag){
+  if(drag){
     var dx=e.clientX-lx,dy=e.clientY-ly;moved+=Math.abs(dx)+Math.abs(dy);
     az+=dx*0.006;tilt=Math.max(0.12,Math.min(1,tilt+dy*0.004));
     lx=e.clientX;ly=e.clientY;
@@ -1024,42 +1037,74 @@ cv.addEventListener('pointermove',function(e){
   }
 });
 cv.addEventListener('pointerup',function(e){
+  if(e.pointerType==='touch') return;
   ptrs.delete(e.pointerId);
   try{cv.releasePointerCapture(e.pointerId);}catch(_){}
-  if(ptrs.size===1){ // one finger lifted from a pinch, resume single-finger drag
-    var a=ptrArr()[0]; drag=true;pinching=false;lx=a.x;ly=a.y;return;
-  }
-  if(ptrs.size===0){drag=false;pinching=false;
-    if(moved<12){
-      if(cinematic&&mode==="galaxy"){toggleCinematicUI(!cinematicUI);return;}
-      var now=Date.now();
-      if(now-lastTap<dblTapDelay){
-        if(cinematic){toggleCinematicUI(!cinematicUI);lastTap=0;return;}
-        goGalaxy();lastTap=0;return;}
-      lastTap=now;
-      if(mode==="galaxy"){
-        var mx=e.clientX*dpr,my=e.clientY*dpr;
-        // core 15 first, great 3 = particle sun · core 12 = extreme system
-        var bs=PX*30,fhit=-1;
-        for(var i2=0;i2<FIXED.length;i2++){
-          var fd=Math.abs(FIXED[i2].sx-mx)+Math.abs(FIXED[i2].sy-my);
-          if(fd<bs){bs=fd;fhit=i2;}}
-        if(fhit>=0){ if(FIXED[fhit].great) goStar(fhit); else goCore(fhit-3); return; }
-        var bd=PX*16,hit=-1;
-        for(var i=0;i<NODES.length;i++){
-          var d=Math.abs(NODES[i].sx-mx)+Math.abs(NODES[i].sy-my);
-          if(d<bd){bd=d;hit=i;}}
-        if(hit>=0){goSystem(hit);return;}
-        if(!cinematic&&Math.min(innerWidth,innerHeight)<600&&Math.random()<0.4){
-          zoom=0.8+Math.random()*1.5;}
-      }
-    }}
+  drag=false;
+  if(moved<12) tapAt(e.clientX,e.clientY);
+});
+cv.addEventListener('pointercancel',function(e){
+  if(e.pointerType==='touch') return;
+  ptrs.delete(e.pointerId);drag=false;
 });
 
-cv.addEventListener('pointercancel',function(e){
-  if(e&&ptrs.has(e.pointerId))ptrs.delete(e.pointerId); else ptrs.clear();
-  if(ptrs.size<2)pinching=false;
-  if(ptrs.size===0)drag=false;
+// ── Touch events: authoritative for finger input. e.touches always reflects
+//    every finger currently on screen, which avoids the pointer-capture quirks
+//    iOS Safari has with two-finger gestures.
+function syncFromTouches(touches){
+  ptrs.clear();
+  for(var i=0;i<touches.length;i++){var t=touches[i];
+    ptrs.set(t.identifier,{x:t.clientX,y:t.clientY});}
+}
+cv.addEventListener('touchstart',function(e){
+  e.preventDefault();
+  if(cinematic){ exitCinematic(); return; }
+  syncFromTouches(e.touches);
+  if(e.touches.length===1){
+    drag=true;moved=0;pinching=false;
+    lx=e.touches[0].clientX;ly=e.touches[0].clientY;
+  }else if(e.touches.length>=2){
+    drag=false;pinching=true;
+    var t1=e.touches[0],t2=e.touches[1];
+    var dx=t2.clientX-t1.clientX,dy=t2.clientY-t1.clientY;
+    pinchDist=Math.hypot(dx,dy);pinchAng=Math.atan2(dy,dx);
+  }
+},{passive:false});
+cv.addEventListener('touchmove',function(e){
+  e.preventDefault();
+  syncFromTouches(e.touches);
+  if(pinching && e.touches.length>=2){
+    var t1=e.touches[0],t2=e.touches[1];
+    var dx=t2.clientX-t1.clientX,dy=t2.clientY-t1.clientY;
+    var nd=Math.hypot(dx,dy),na=Math.atan2(dy,dx);
+    if(nd>0 && pinchDist>0){zoom*=nd/pinchDist; zoom=Math.max(0.3,Math.min(9,zoom));}
+    var rot=na-pinchAng;
+    if(rot>Math.PI)rot-=2*Math.PI; if(rot<-Math.PI)rot+=2*Math.PI;
+    if(Math.abs(rot)>0.001) az+=rot*0.5;
+    pinchDist=nd; pinchAng=na; moved+=20;
+  }else if(drag && e.touches.length>=1){
+    var t=e.touches[0];
+    var dx=t.clientX-lx,dy=t.clientY-ly;moved+=Math.abs(dx)+Math.abs(dy);
+    az+=dx*0.006; tilt=Math.max(0.12,Math.min(1,tilt+dy*0.004));
+    lx=t.clientX;ly=t.clientY;
+  }
+},{passive:false});
+cv.addEventListener('touchend',function(e){
+  e.preventDefault();
+  syncFromTouches(e.touches);
+  if(e.touches.length===1){              // one finger lifted from a pinch, resume single-finger drag
+    var t=e.touches[0]; drag=true;pinching=false;lx=t.clientX;ly=t.clientY;return;
+  }
+  if(e.touches.length===0){drag=false;pinching=false;
+    if(moved<12 && e.changedTouches.length>0){
+      var ct=e.changedTouches[0]; tapAt(ct.clientX,ct.clientY);
+    }
+  }
+},{passive:false});
+cv.addEventListener('touchcancel',function(e){
+  syncFromTouches(e.touches);
+  if(e.touches.length<2) pinching=false;
+  if(e.touches.length===0) drag=false;
 });
 
 // Keyboard

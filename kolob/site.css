@@ -43,7 +43,11 @@ h2{font-size:clamp(24px,3.6vw,40px);letter-spacing:.04em;margin:0 0 26px;font-we
 h3{font-size:13px;letter-spacing:.24em;margin:0 0 10px;text-transform:uppercase;
   font-weight:500;color:var(--white)}
 p{max-width:54ch;font-weight:300}
-.lede{font-size:clamp(18px,2vw,22px);color:var(--ink);font-weight:300;letter-spacing:.01em}
+.lede{font-size:clamp(18px,2vw,22px);color:var(--ink);font-weight:300;letter-spacing:.01em;
+  max-width:42em;text-wrap:pretty}
+/* widow + orphan handling site-wide — last lines stay balanced, headings wrap nicely */
+h1,h2,h3,h4,.lede,p{text-wrap:pretty}
+h1,h2{text-wrap:balance}
 .dim{color:var(--dim)}
 .rule{height:0;border:0;border-top:1px solid var(--line);margin:0}
 .divider{display:flex;align-items:center;justify-content:center;gap:20px;
@@ -236,7 +240,11 @@ p{max-width:54ch;font-weight:300}
 .ptab{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}
 .ptab td,.ptab th{text-align:left;padding:13px 10px;border-bottom:1px solid var(--line)}
 .ptab th{font:10px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
-.ptab .price{font-family:var(--mono);color:#fff;text-align:right;white-space:nowrap}
+.ptab .price{font-family:var(--mono);color:#fff;text-align:right;white-space:normal;overflow-wrap:break-word;word-break:break-word}
+.ptab .price.nowrap{white-space:nowrap}
+.ptab .vals{font-family:var(--mono);color:#fff;text-align:left;font-size:12px;line-height:1.7;
+  overflow-wrap:break-word;word-break:break-word}
+.ptab-left td:first-child{vertical-align:top;padding-top:14px}
 .ptab .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:9px;vertical-align:middle}
 
 /* ── footer ──────────────────────────────────────────────────────────── */
