@@ -6,6 +6,17 @@
 <title>The Core 15, KOLOB</title>
 <link rel="stylesheet" href="site.css">
 <script defer src="site.js"></script>
+<meta property="og:type"        content="website">
+<meta property="og:site_name"   content="KOLOB">
+<meta property="og:title"       content="The Core 15 · KOLOB">
+<meta property="og:description" content="Three great suns. Twelve governing systems. Sealed forever at the core.">
+<meta property="og:image"       content="https://macbeth.gallery/kolob/share.jpg">
+<meta property="og:url"         content="https://macbeth.gallery/kolob/core15.html">
+<meta name="twitter:card"       content="summary_large_image">
+<meta name="twitter:title"      content="The Core 15 · KOLOB">
+<meta name="twitter:description" content="Three great suns. Twelve governing systems. Sealed forever at the core.">
+<meta name="twitter:image"      content="https://macbeth.gallery/kolob/share.jpg">
+
 </head>
 <body>
 
@@ -71,20 +82,27 @@ var CORES=[
  {n:"Os",            p:"Mega-Ring World",      c:"#ffe6a8"},
  {n:"Ondi",          p:"Trojan Swarms",        c:"#d9c08a"}
 ];
+// Authored badge: piece has been sealed in Creator Mode (localStorage payload exists)
+function isAuthored(kind,i){try{return !!localStorage.getItem('kolob:'+kind+':'+i);}catch(e){return false;}}
+function authoredName(kind,i){try{var v=JSON.parse(localStorage.getItem('kolob:'+kind+':'+i)||'null');
+  return (v&&v.name)?v.name:null;}catch(e){return null;}}
+function badge(kind,i){return isAuthored(kind,i)?'<span class="auth">✦ Authored</span>':'';}
 var sH="";
 SUNS.forEach(function(s,i){
+  var an=authoredName('sun',i)||s.n;
   sH+='<a class="card live" href="'+POD+'#sun='+i+'">'+
-    '<div class="swatch"><iframe class="liveframe" data-src="'+POD+'#embed=sun:'+i+'" title="'+s.n+'"></iframe></div>'+
-    '<span class="k">Great Star '+(i+1)+' / 3 · locked · 0.50 ETH</span>'+
-    '<h3>'+s.n+'</h3><p>'+s.d+'</p></a>';
+    '<div class="swatch"><iframe class="liveframe" data-src="'+POD+'#embed=sun:'+i+'" title="'+an+'"></iframe></div>'+
+    '<span class="k">Great Star '+(i+1)+' / 3 · locked · 0.50 ETH'+badge('sun',i)+'</span>'+
+    '<h3>'+an+'</h3><p>'+s.d+'</p></a>';
 });
 document.getElementById('suns').innerHTML=sH;
 var cH="";
 CORES.forEach(function(s,i){
+  var an=authoredName('core',i)||s.n;
   cH+='<a class="card live" href="'+POD+'#core='+i+'">'+
-    '<div class="swatch"><iframe class="liveframe" data-src="'+POD+'#embed=core:'+i+'" title="'+s.n+'"></iframe></div>'+
-    '<span class="k">Core '+(i+1)+' / 12 · locked · 0.20 ETH</span>'+
-    '<h3>'+s.n+'</h3><p class="dim">'+s.p+'</p></a>';
+    '<div class="swatch"><iframe class="liveframe" data-src="'+POD+'#embed=core:'+i+'" title="'+an+'"></iframe></div>'+
+    '<span class="k">Core '+(i+1)+' / 12 · locked · 0.20 ETH'+badge('core',i)+'</span>'+
+    '<h3>'+an+'</h3><p class="dim">'+s.p+'</p></a>';
 });
 document.getElementById('cores').innerHTML=cH;
 // lazy-load on approach; pause/resume so only on-screen pieces actually render

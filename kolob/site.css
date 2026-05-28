@@ -171,6 +171,25 @@ h1,h2{text-wrap:balance}
 .tcell.drifted::after{content:'⚠';position:absolute;top:6px;left:6px;font:10px/1 ui-monospace,monospace;color:#7a6248}
 .tcell.drifted:hover{filter:grayscale(1) brightness(.8)}
 
+/* ✦ Authored badge — Creator-Mode sealed pieces on /core15 */
+.card .k .auth{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:2px;
+  background:rgba(255,255,255,.10);color:#e0d6c2;border:1px solid rgba(224,214,194,.45);
+  font-size:9px;letter-spacing:.18em;font-weight:600;vertical-align:middle}
+
+/* ── Mobile touch-target audit: larger hit zones on phones / tablets ── */
+@media (max-width:760px), (pointer:coarse){
+  /* nav links: easier to tap */
+  .nav a.lnk, .nav a.brand, .nav a.enter{min-height:40px;display:inline-flex;align-items:center;padding:8px 10px}
+  /* collection / hash-suite filter chips */
+  .filters button{min-height:44px;padding:10px 14px}
+  /* mint card buttons */
+  .mbtn{min-height:44px;padding:12px 18px;font-size:11px}
+  /* compare bar input + go */
+  .cmpbar input, .cmpbar button{min-height:40px}
+  /* link buttons in the site */
+  .btn{min-height:44px;padding:14px 22px}
+}
+
 /* prefers-reduced-motion: calm everything site-wide */
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{

@@ -236,7 +236,13 @@
   body.veil #coreEditor,body.veil #ceOpen,body.hero #coreEditor,body.hero #ceOpen,
   body.idle #coreEditor,body.idle #ceOpen,body.screensaver #coreEditor,body.screensaver #ceOpen{
     display:none!important;opacity:0!important;pointer-events:none!important}
-  @media(max-width:600px){#coreEditor{width:220px;right:8px;top:48px;font-size:10px}#ceOpen{right:8px;top:8px}}
+  @media(max-width:600px){#coreEditor{width:240px;right:8px;top:48px;font-size:11px}#ceOpen{right:8px;top:8px}}
+  @media (max-width:760px), (pointer:coarse){
+    #coreEditor .seRow{margin:10px 0}
+    #coreEditor .seRow input[type=text], #coreEditor select{padding:10px 12px;font-size:13px;min-height:40px}
+    #coreEditor .seFt button{min-height:44px;padding:12px 14px;font-size:11px}
+    #ceOpen{min-height:44px;padding:12px 16px;font-size:11px}
+  }
 </style>
 <style>
   #starEditor{position:fixed;right:14px;top:54px;z-index:220;width:260px;
@@ -270,7 +276,16 @@
   body.veil #starEditor,body.veil #seOpen,body.hero #starEditor,body.hero #seOpen,
   body.idle #starEditor,body.idle #seOpen,body.screensaver #starEditor,body.screensaver #seOpen{
     display:none!important;opacity:0!important;pointer-events:none!important}
-  @media(max-width:600px){#starEditor{width:220px;right:8px;top:48px;font-size:10px}#seOpen{right:8px;top:8px}}
+  @media(max-width:600px){#starEditor{width:240px;right:8px;top:48px;font-size:11px}#seOpen{right:8px;top:8px}}
+  /* Mobile / coarse pointer: bump editor controls so sliders + buttons are tappable */
+  @media (max-width:760px), (pointer:coarse){
+    #starEditor .seRow{margin:10px 0}
+    #starEditor .seRow input[type=range]{height:28px}
+    #starEditor .seRow input[type=text]{padding:10px 12px;font-size:13px;min-height:40px}
+    #starEditor .seFt button{min-height:44px;padding:12px 14px;font-size:11px}
+    #starEditor .seHd button{font-size:18px;padding:6px 10px}
+    #seOpen{min-height:44px;padding:12px 16px;font-size:11px}
+  }
 </style>
 <style>
   #advanceBtn{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:130;
@@ -1021,12 +1036,12 @@ function tapAt(clientX,clientY){
   lastTap=now;
   if(mode==="galaxy"){
     var mx=clientX*dpr,my=clientY*dpr;
-    var bs=PX*30,fhit=-1;
+    var bs=PX*(IS_MOBILE?48:30),fhit=-1;
     for(var i2=0;i2<FIXED.length;i2++){
       var fd=Math.abs(FIXED[i2].sx-mx)+Math.abs(FIXED[i2].sy-my);
       if(fd<bs){bs=fd;fhit=i2;}}
     if(fhit>=0){ if(FIXED[fhit].great) goStar(fhit); else goCore(fhit-3); return; }
-    var bd=PX*16,hit=-1;
+    var bd=PX*(IS_MOBILE?28:16),hit=-1;
     for(var i=0;i<NODES.length;i++){
       var d=Math.abs(NODES[i].sx-mx)+Math.abs(NODES[i].sy-my);
       if(d<bd){bd=d;hit=i;}}
