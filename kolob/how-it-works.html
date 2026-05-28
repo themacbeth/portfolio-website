@@ -16,7 +16,7 @@
   <a href="collection.html">COLLECTION</a>
   <a href="how-it-works.html" class="active">HOW IT WORKS</a>
   <a href="mint.html">MINT</a>
-  <a class="enter" href="kolob-pod-1d.html">ENTER ▸</a>
+  <a class="enter" href="../kolob-pod-1d.html">ENTER ▸</a>
 </nav>
 
 <!-- ── hero ────────────────────────────────────────────────────────────── -->
@@ -31,11 +31,11 @@
 <!-- ── see it live ─────────────────────────────────────────────────────── -->
 <section class="wrap" style="padding-top:0">
   <div class="grid cols-3">
-    <a class="card live" href="kolob-pod-1d.html#sun=0"><div class="swatch"><iframe class="liveframe" data-src="kolob-pod-1d.html#embed=sun:0" title="Oleblish"></iframe></div>
+    <a class="card live" href="../kolob-pod-1d.html#sun=0"><div class="swatch"><iframe class="liveframe" data-src="../kolob-pod-1d.html#embed=sun:0" title="Oleblish"></iframe></div>
       <span class="k">Great Star · authored</span><h3>Oleblish</h3><p>one of the triangle, three suns flanking KOLOB</p></a>
-    <a class="card live" href="kolob-pod-1d.html#core=6"><div class="swatch"><iframe class="liveframe" data-src="kolob-pod-1d.html#embed=core:6" title="core"></iframe></div>
+    <a class="card live" href="../kolob-pod-1d.html#core=6"><div class="swatch"><iframe class="liveframe" data-src="../kolob-pod-1d.html#embed=core:6" title="core"></iframe></div>
       <span class="k">Core System · authored</span><h3>Binary Heart</h3><p>one of 12 governing systems</p></a>
-    <a class="card live" href="kolob-pod-1d.html#throne=7"><div class="swatch"><iframe class="liveframe" data-src="kolob-pod-1d.html#embed=throne:7:0" title="throne"></iframe></div>
+    <a class="card live" href="../kolob-pod-1d.html#throne=7"><div class="swatch"><iframe class="liveframe" data-src="../kolob-pod-1d.html#embed=throne:7:0" title="throne"></iframe></div>
       <span class="k">Throne · advanced</span><h3>Celestial</h3><p>one of 129 thrones</p></a>
   </div>
 </section>
@@ -111,7 +111,7 @@
     throne still on the rim at <b style="color:#e0d6c2">22 October 2026 UTC</b> drifts into
     <b style="color:#e0d6c2">Outer Darkness</b>. The drift is <b style="color:#e0d6c2">permanent</b>,
     the tier PMP locks at the deadline, no repentance, no return. &nbsp;
-    <a href="kolob-pod-1d.html#throne=20&od" style="color:var(--cyan);text-decoration:underline">Preview the drift ▸</a></p>
+    <a href="../kolob-pod-1d.html#throne=20&od" style="color:var(--cyan);text-decoration:underline">Preview the drift ▸</a></p>
     <details class="exp"><summary>How advancing works on-chain</summary><div class="body">
       <p>A throne's kingdom is an on-chain <b>PostParam</b> (Art Blocks PMP) set by the token owner;
       the artwork reads it and re-renders the new tier. PMP supports <b>lock dates</b> and min/max,
@@ -140,14 +140,14 @@
     but the bands do not overlap. Even if all three holders push every other slider (density, length,
     rotation, speed, curl, flares) to identical values, the three suns are guaranteed to read as
     different colours. &nbsp;
-    <a href="kolob-pod-1d.html#sun=0&own" style="color:var(--cyan);text-decoration:underline">Try Creator Mode on Oleblish ▸</a></p>
+    <a href="../kolob-pod-1d.html#sun=0&own" style="color:var(--cyan);text-decoration:underline">Try Creator Mode on Oleblish ▸</a></p>
     <p class="dim" style="margin-top:14px"><b style="color:#e0d6c2">Core Systems (12):</b> archetype
     swap is enforced <em>first-come, first-serve</em>. The twelve archetypes (Ringed Dynasty, Moon Swarm,
     Asteroid Empire, Comet Storm, Embryo Nursery, Eccentric Chaos, Binary Heart, Resonance Cathedral,
     Frozen Kuiper, Hot-Jupiter Forge, Mega-Ring World, Trojan Swarms) start one per system. When a
     holder seals a different archetype, that choice claims the slot; the editor disables that
     archetype for every other holder going forward. No two sealed cores can ever share an archetype. &nbsp;
-    <a href="kolob-pod-1d.html#core=0&own" style="color:var(--cyan);text-decoration:underline">Try Creator Mode on Lindi ▸</a></p>
+    <a href="../kolob-pod-1d.html#core=0&own" style="color:var(--cyan);text-decoration:underline">Try Creator Mode on Lindi ▸</a></p>
     <p class="dim" style="margin-top:14px"><b style="color:#e0d6c2">Outcome:</b> the Core 15 are a
     permanent, mutually-distinct ensemble. Every piece is a true 1 of 1, by hue or by archetype,
     forever.</p>
@@ -194,24 +194,48 @@
     </table>
 
     <h3 style="margin-top:34px;font-size:14px;letter-spacing:.10em;text-transform:uppercase">PostParams (PMP)</h3>
-    <p class="dim">All token-owner authorized. Read from
-      <code>externalAssetDependencies[0].data</code>. Lock dates required.</p>
-    <table class="ptab">
-      <tr><th>Key</th><th>Pieces</th><th style="text-align:right">Purpose</th></tr>
-      <tr><td><code>tier</code></td><td>thrones (inv 15–143)</td><td class="price">kingdom: 0 Celestial · 1 Terrestrial · 2 Telestial</td></tr>
-      <tr><td><code>archetype</code></td><td>core systems (inv 3–14)</td><td class="price">swap among 12 archetypes (Ringed Dynasty…Trojan Swarms)</td></tr>
-      <tr><td><code>col</code>, <code>length</code>, <code>rot</code>, <code>density</code>, <code>name</code></td><td>great suns (inv 0–2)</td><td class="price">Creator-mode sun authorship</td></tr>
+    <p class="dim">Eleven PMP fields across the 144 pieces, applied selectively per kind.
+      All token-owner authorized. Read from <code>externalAssetDependencies[0].data</code>.
+      Schema is fixed by the artist; values are collector-chosen post-mint within the
+      published bounds. No PMP value is set at mint, every piece mints at its defaults.</p>
+    <table class="ptab ptab-left">
+      <tr><th>Key</th><th>Type</th><th>Range / options</th><th>Pieces</th></tr>
+      <tr><td><code>tier</code></td><td>discrete</td><td class="vals">3 options · 0 Celestial · 1 Terrestrial · 2 Telestial</td><td>129 thrones</td></tr>
+      <tr><td><code>archetype</code></td><td>discrete</td><td class="vals">12 options · Ringed Dynasty, Moon Swarm, Asteroid Empire, Comet Storm, Embryo Nursery, Eccentric Chaos, Binary Heart, Resonance Cathedral, Frozen Kuiper, Hot-Jupiter Forge, Mega-Ring World, Trojan Swarms</td><td>12 core systems</td></tr>
+      <tr><td><code>name</code></td><td>string</td><td class="vals">≤ 24 chars</td><td>15 Core 15 pieces</td></tr>
+      <tr><td><code>col</code></td><td>colour</td><td class="vals">24-bit RGB · hue band locked per sun (gold / blue / red); saturation + lightness free</td><td>3 great suns</td></tr>
+      <tr><td><code>density</code></td><td>float</td><td class="vals">0.30 – 1.00</td><td>3 great suns</td></tr>
+      <tr><td><code>length</code></td><td>float</td><td class="vals">0.40 – 2.00</td><td>3 great suns</td></tr>
+      <tr><td><code>rot</code></td><td>float</td><td class="vals">0.00 – 2.00</td><td>3 great suns</td></tr>
+      <tr><td><code>speed</code></td><td>float</td><td class="vals">0.20 – 2.50</td><td>3 great suns</td></tr>
+      <tr><td><code>curl</code></td><td>float</td><td class="vals">1.00 – 8.00</td><td>3 great suns</td></tr>
+      <tr><td><code>big</code> (flare density)</td><td>float</td><td class="vals">0.00 – 0.40</td><td>3 great suns</td></tr>
     </table>
-    <p class="dim" style="margin-top:14px">Lock-by-date required on <code>tier</code>:
-      at <b style="color:#e0d6c2">22 October 2026 UTC</b> the <code>tier</code> PMP becomes
-      immutable for every token. Any throne still at <code>tier=2</code> at that moment is
-      <b style="color:#e0d6c2">permanently</b> sealed in Outer Darkness, a silent monochrome
-      cold-drift visual (no orbits, no sound, deterministic per hash). No repentance,
-      no later overwrite, no return.</p>
-    <p class="dim" style="margin-top:14px">For archetype uniqueness on the 12 Core Systems, the rule is
-      enforceable on-chain via a PMP validator. Reference implementation:
-      <a href="KolobArchetypeValidator.sol" style="color:var(--cyan);text-decoration:underline">KolobArchetypeValidator.sol ↗</a>
-      (first-come, first-serve claim with atomic release; rejects writes that would duplicate an existing claim).</p>
+
+    <h3 style="margin-top:30px;font-size:14px;letter-spacing:.10em;text-transform:uppercase">When values are set</h3>
+    <table class="ptab ptab-left">
+      <tr><th>Field</th><th>At mint</th><th>Post-mint</th></tr>
+      <tr><td><code>tier</code> (thrones)</td><td class="vals">locked to Telestial (2)</td><td class="vals">paid advance only, owner-authored; <b>locks permanently at 22 October 2026 UTC</b></td></tr>
+      <tr><td><code>archetype</code> / <code>name</code> (cores)</td><td class="vals">defaults to invocation index / canonical name</td><td class="vals">owner-authored, free within bounds; archetype subject to first-come uniqueness</td></tr>
+      <tr><td>Great-sun knobs</td><td class="vals">factory defaults</td><td class="vals">owner-authored, free within bounds (col bound to hue band)</td></tr>
+    </table>
+    <p class="dim" style="margin-top:14px">The render reads PMP on every load, so any owner change is reflected
+      in the artwork immediately. Lock-by-date is required only on <code>tier</code>: at
+      <b style="color:#e0d6c2">22 October 2026 UTC</b> the field becomes immutable for every token.
+      Any throne still at <code>tier=2</code> at that moment is <b style="color:#e0d6c2">permanently</b>
+      sealed in Outer Darkness, a silent monochrome cold-drift visual (no orbits, no sound,
+      deterministic per hash). No repentance, no later overwrite, no return.</p>
+    <p class="dim" style="margin-top:14px">Two project-level constraints on top of PMP, enforced by
+      validator hooks:</p>
+    <ul class="dim" style="margin-top:6px;padding-left:20px;font-size:13px;line-height:1.7">
+      <li><b style="color:#e0d6c2">Great Suns:</b> each sun's <code>col</code> hue is locked to its own band
+        (Oleblish gold, Enish-go-on-dosh blue, Kai-e-vanrash red), so the three can never converge
+        to the same colour. Saturation and lightness are free.</li>
+      <li><b style="color:#e0d6c2">Core Systems:</b> <code>archetype</code> is <em>first-come, first-serve</em> —
+        no two sealed core systems can share an archetype. Reference Solidity:
+        <a href="KolobArchetypeValidator.sol" style="color:var(--cyan);text-decoration:underline">KolobArchetypeValidator.sol ↗</a>
+        (first-come claim, atomic release, rejects writes that would duplicate).</li>
+    </ul>
 
     <h3 style="margin-top:34px;font-size:14px;letter-spacing:.10em;text-transform:uppercase">Hash Test Suite</h3>
     <p class="dim">Every one of the 144 invocations rendered live by the on-chain
@@ -236,10 +260,12 @@
       <tr><td><code>Intelligence</code></td><td class="vals">Noble · Quickening · Veiled · Encircled · Witnessing · Risen · Wrought · Foreseen</td></tr>
       <tr><td><code>Affinity</code></td><td class="vals">Resonant · Concordant · Cascading · Inverted · Eccentric · Tessellated · Linear · Bound</td></tr>
       <tr><td><code>Dispensation</code></td><td class="vals">First through Tenth</td></tr>
+      <tr><td><code>Signature</code></td><td class="vals">thrones only · Ringed Outlier · Comet Pair · Asteroid Arc · Embryo Nursery · Kuiper Ring</td></tr>
+      <tr><td><code>Authored</code></td><td class="vals">Core 15 only · yes / no (flips to yes once any Creator-mode PMP is set)</td></tr>
     </table>
 
     <p style="margin-top:64px">
-      <a class="btn primary" href="kolob-pod-1d.html">ENTER THE GALAXY ▸</a>
+      <a class="btn primary" href="../kolob-pod-1d.html">ENTER THE GALAXY ▸</a>
       <a class="btn ghost" href="mint.html">TRY THE MINT</a>
     </p>
   </div>
@@ -249,7 +275,7 @@
   <div class="links">
     <a href="index.html">Home</a><a href="core15.html">Core 15</a>
     <a href="collection.html">Collection</a><a href="how-it-works.html">How It Works</a>
-    <a href="mint.html">Mint</a><a href="kolob-pod-1d.html">Explore</a>
+    <a href="mint.html">Mint</a><a href="../kolob-pod-1d.html">Explore</a>
   </div>
   KOLOB · fully on-chain generative art · built for Art Blocks Engine Flex
 </footer>
