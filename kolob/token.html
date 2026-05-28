@@ -67,6 +67,18 @@ function ppCol(k,d){var v=PP[k];if(v==null)return d;                          //
 var INV=(function(){var u=new URLSearchParams(location.search),q=u.get('inv');
   if(q!=null)return +q;
   var tid=parseInt(String(tokenData.tokenId).split('-').pop())||0;return tid%1000000;})();
+/* For preview / capture (?inv=N), synthesize a per-piece hash so each invocation
+   exercises its own seed. In production Art Blocks supplies a real unique hash
+   for every mint, so this branch is dormant. */
+if(new URLSearchParams(location.search).has('inv') && INV>=15){
+  var _h='0x';
+  for(var _i=0;_i<32;_i++){
+    var _b=((INV*73856093+_i*19349663+0xDEADBEEF)>>>0)%256;
+    _h+=('0'+_b.toString(16)).slice(-2);
+  }
+  tokenData={hash:_h, tokenId:String(144000000+INV),
+    externalAssetDependencies:tokenData.externalAssetDependencies};
+}
 
 /* ── palette + colour helpers (locked: PURE_ICE) ── */
 var P={c0:[200,235,255],c1:[220,230,255],c2:[235,242,255],c3:[250,252,255],
@@ -236,7 +248,31 @@ function buildSystem(seed,wealth){
   for(i=0;i<nKui;i++){var ka=R.rng(1.14,1.62);sys.kuiper.push({a:ka,e:R()*0.2,peri:R()*TAU,inc:R.g()*0.12,rev:Math.max(1,Math.round(Math.pow(ka,-1.5))),M0:R()*TAU});}
   sys.comets=[];var nc=wealth===0?R.int(5,8):wealth===1?R.int(4,6):R.int(2,4);
   for(i=0;i<nc;i++) sys.comets.push({a:R.rng(1.1,2.0),e:R.rng(0.55,0.9),peri:R()*TAU,inc:R.g()*0.4,rev:R.pick([3,4,5]),M0:R()*TAU});
-  sys.wealth=wealth;return sys;}
+  sys.wealth=wealth;
+  // Telestial signature: each throne picks one distinguishing feature so the
+  // sparse outer-rim systems read as individually distinct at thumbnail scale.
+  if(wealth===2) applyTelestialSignature(sys,R);
+  return sys;}
+function applyTelestialSignature(sys,r){
+  var feat=r.int(0,4); sys._sig=feat;
+  switch(feat){
+   case 0: // a single ringed outer world
+     if(sys.planets.length){var p=sys.planets[sys.planets.length-1];p.ring=true;p.szMul*=1.35;} break;
+   case 1: // a pair of eccentric comets
+     for(var i=0;i<2;i++) sys.comets.push({a:r.rng(1.3,1.9),e:r.rng(0.78,0.94),
+       peri:r()*TAU,inc:r.g()*0.4,rev:r.pick([3,4,5]),M0:r()*TAU}); break;
+   case 2: // a tight asteroid arc inside the planet zone
+     for(var j=0;j<160;j++){var aa=r.rng(0.45,0.62);
+       sys.asteroids.push({a:aa,e:r()*0.06,peri:r()*TAU,inc:r.g()*0.04,
+         rev:Math.max(1,Math.round(Math.pow(aa,-1.5)*4)),M0:r()*TAU});} break;
+   case 3: // an embryo nursery in the middle
+     for(var k=0;k<10;k++) sys.embryos.push({a:0.25+r()*0.45,rev:r.int(4,9),M0:r()*TAU,ph:r()*TAU}); break;
+   case 4: // an extended kuiper ring (denser, narrower)
+     for(var m=0;m<220;m++){var ka2=r.rng(1.05,1.30);
+       sys.kuiper.push({a:ka2,e:r()*0.08,peri:r()*TAU,inc:r.g()*0.08,
+         rev:Math.max(1,Math.round(Math.pow(ka2,-1.5))),M0:r()*TAU});} break;
+  }
+}
 
 function applyRelics(sys,tier,r){
   if(tier===0) sys.scheme=[[255,206,120],[255,168,86]];
@@ -307,7 +343,7 @@ function renderStar(){
   ctx.globalCompositeOperation='lighter';
   if(starIntroT<1) starIntroT=Math.min(1,starIntroT+0.02);var intro=starIntroT*starIntroT*(3-2*starIntroT);
   var col=SUN.col,cr=0.45+0.55*col[0]/255,cg=0.45+0.55*col[1]/255,cb=0.45+0.55*col[2]/255;
-  var DOT=Math.max(1,Math.round(Math.min(W,H)/1000)),REF=Math.min(W,H)*0.30;
+  var DOT=Math.max(2,Math.round(Math.min(W,H)/820)),REF=Math.min(W,H)*0.30;
   sunSpin+=0.004*SUN.rot;var cosS=Math.cos(sunSpin),sinS=Math.sin(sunSpin);
   var t=clock*0.013*SUN.speed,s=REF*zoom*SUN.size,i,k,u,f,amp,na,nb,px,py,pz,pl,rr,sp,a,rx,rz;
   var NK=IS_MOBILE?26:40,INVK=1/(NK-1),aS=Math.round(sunStrands.length*SUN.density),aO=Math.round(sunOrbits.length*SUN.orbit);
@@ -318,7 +354,7 @@ function renderStar(){
       px=sd.d[0]+sd.t1[0]*na*amp+sd.t2[0]*nb*amp;py=sd.d[1]+sd.t1[1]*na*amp+sd.t2[1]*nb*amp;pz=sd.d[2]+sd.t1[2]*na*amp+sd.t2[2]*nb*amp;
       pl=Math.sqrt(px*px+py*py+pz*pz)||1;pl=rr/pl;px*=pl;py*=pl;pz*=pl;
       rx=px*cosS-pz*sinS;rz=px*sinS+pz*cosS;sp=sunProject(rx,py,rz,s);
-      a=sd.bri*(0.20-f*0.13)*intro;if(a<0.02)a=0.02;if(a>1)a=1;
+      a=sd.bri*(0.34-f*0.20)*intro;if(a<0.03)a=0.03;if(a>1)a=1;
       ctx.fillStyle='rgba('+(255*cr|0)+','+(255*cg|0)+','+(255*cb|0)+','+a.toFixed(3)+')';ctx.fillRect(sp[0],sp[1],DOT,DOT);}}
   for(i=0;i<aO;i++){var o=sunOrbits[i];for(k=0;k<3;k++){var th=o.ph+(t-k*0.045)*o.sp,cth=Math.cos(th),sth=Math.sin(th);
       px=(o.u[0]*cth+o.v[0]*sth)*o.rad;py=(o.u[1]*cth+o.v[1]*sth)*o.rad;pz=(o.u[2]*cth+o.v[2]*sth)*o.rad;sp=sunProject(px,py,pz,s);
@@ -425,8 +461,13 @@ if(INV<3){
   var tier=Math.max(0,Math.min(2,ppInt('tier',2)));            // tier from PMP (owner-advanced)
   var seed=hashSeed(tokenData.hash);
   system=buildSystem(seed,tier); applyRelics(system,tier,mk((seed^0x9E5C17)>>>0));
+  // Seeded tilt per throne so each renders at its own iconic camera angle
+  tilt=0.22+mk((seed^0x71B1A1)>>>0)()*0.55;
   mode='system';
   var tt=deriveTraits(seed,tier);
+  // Signature trait so the Telestial pieces' distinguishing feature is exposed in AB metadata
+  var SIG_NAMES=["Ringed Outlier","Comet Pair","Asteroid Arc","Embryo Nursery","Kuiper Ring"];
+  if(system._sig!=null) tt.Signature=SIG_NAMES[system._sig];
   // Outer Darkness: any Telestial throne past 22 October 2026 drifts into the void, silent
   var OD_DEADLINE=Date.UTC(2026,9,22);
   var ODoverride=new URLSearchParams(location.search).has('od');
@@ -434,6 +475,7 @@ if(INV<3){
   feat={Kind:"Throne",Kingdom:system._od?"Outer Darkness":(TIER_NAMES[tier].charAt(0)+TIER_NAMES[tier].slice(1).toLowerCase()),
         Star:STAR[system.stars[0].cls].c,Planets:system.planets.length,
         Intelligence:tt.Intelligence,Affinity:tt.Affinity,Dispensation:tt.Dispensation,Glory:tt.Glory};
+  if(tt.Signature) feat.Signature=tt.Signature;
 }
 window.$features=feat;
 
