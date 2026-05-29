@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -8,13 +8,22 @@
 </head>
 <body>
 
-<!-- ─── Nav ─── -->
+<!-- â”€â”€â”€ Nav â”€â”€â”€ -->
 <nav id="navbar">
   <a href="index.html" class="logo">MACBETH</a>
   <button class="nav-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
   <ul class="nav-links">
     <li><a href="index.html" class="active">Portfolio</a></li>
     <li><a href="about.html">About</a></li>
+    <li class="nav-experiments">
+      <a href="#" class="nav-experiments-toggle" onclick="event.preventDefault()">Experiments</a>
+      <ul class="nav-experiments-menu">
+        <li><a href="project-dither/">Agentic Dither</a></li>
+        <li><a href="project-rooms.html">Rooms</a></li>
+        <li><a href="project-cybernetics.html">Cybernetics</a></li>
+        <li><a href="project-cabal.html">Cabal</a></li>
+      </ul>
+    </li>
     <ul class="nav-projects">
       <li><a href="project-surreal-sky.html">Surreal Sky</a></li>
       <li><a href="project-hydro-void.html">Hydro Void</a></li>
@@ -26,7 +35,7 @@
   </ul>
 </nav>
 
-<!-- ─── Slideshow Background (outside all stacking contexts) ─── -->
+<!-- â”€â”€â”€ Slideshow Background (outside all stacking contexts) â”€â”€â”€ -->
 <div class="slideshow-bg">
   <div class="project-preview" data-index="0">
     <img src="assets/Project_titles/surreal_sky.jpg" alt="SURREAL SKY">
@@ -48,47 +57,47 @@
   </div>
 </div>
 
-<!-- ─── Projects ─── -->
+<!-- â”€â”€â”€ Projects â”€â”€â”€ -->
 <section class="projects-section" id="projects">
 
   <div class="project-list">
 
-    <!-- ─── PROJECT 1 ─── -->
+    <!-- â”€â”€â”€ PROJECT 1 â”€â”€â”€ -->
     <div class="project-row reveal" data-index="0">
       <a href="project-surreal-sky.html">
         <span class="project-title">SURREAL_SKY</span>
       </a>
     </div>
 
-    <!-- ─── PROJECT 2 ─── -->
+    <!-- â”€â”€â”€ PROJECT 2 â”€â”€â”€ -->
     <div class="project-row reveal" data-index="1">
       <a href="project-hydro-void.html">
         <span class="project-title">HYDRO_VOID</span>
       </a>
     </div>
 
-    <!-- ─── PROJECT 3 ─── -->
+    <!-- â”€â”€â”€ PROJECT 3 â”€â”€â”€ -->
     <div class="project-row reveal" data-index="2">
       <a href="project-in-your-dreams.html">
         <span class="project-title">IN YOUR DREAMS</span>
       </a>
     </div>
 
-    <!-- ─── PROJECT 4 ─── -->
+    <!-- â”€â”€â”€ PROJECT 4 â”€â”€â”€ -->
     <div class="project-row reveal" data-index="3">
       <a href="project-hyper.html">
         <span class="project-title">HYPER_</span>
       </a>
     </div>
 
-    <!-- ─── PROJECT 5 ─── -->
+    <!-- â”€â”€â”€ PROJECT 5 â”€â”€â”€ -->
     <div class="project-row reveal" data-index="4">
       <a href="project-purple-pixels.html">
         <span class="project-title">PURPLE_PIXELS</span>
       </a>
     </div>
 
-    <!-- ─── PROJECT 6 ─── -->
+    <!-- â”€â”€â”€ PROJECT 6 â”€â”€â”€ -->
     <div class="project-row reveal" data-index="5">
       <a href="project-digital-takeover.html">
         <span class="project-title">DIGITAL_TAKEOVER</span>
@@ -99,7 +108,7 @@
   </div>
 </section>
 
-<!-- ─── Footer ─── -->
+<!-- â”€â”€â”€ Footer â”€â”€â”€ -->
 <footer>
   <div class="social-links reveal">
     <a href="https://www.instagram.com/minimal_macbeth/" target="_blank" rel="noopener noreferrer">Instagram</a>
@@ -109,7 +118,7 @@
   <p class="footer-copy">&copy; 2026 MACBETH. All rights reserved.</p>
 </footer>
 
-<!-- ─── Scripts ─── -->
+<!-- â”€â”€â”€ Scripts â”€â”€â”€ -->
 <script>
   // Nav blur on scroll
   const nav = document.getElementById('navbar');
@@ -128,7 +137,7 @@
     });
   });
 
-  // ─── Auto-playing slideshow ───
+  // â”€â”€â”€ Auto-playing slideshow â”€â”€â”€
   (() => {
     const rows = document.querySelectorAll('.project-row');
     const previews = document.querySelectorAll('.slideshow-bg .project-preview');
@@ -177,7 +186,7 @@
     }, { passive: true });
   })();
 
-  // ─── Hamburger menu toggle ───
+  // â”€â”€â”€ Hamburger menu toggle â”€â”€â”€
   document.querySelector('.nav-toggle').addEventListener('click', () => {
     document.getElementById('navbar').classList.toggle('nav-open');
   });

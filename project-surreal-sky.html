@@ -1,15 +1,15 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>SURREAL SKY — MACBETH</title>
+<title>SURREAL SKY â€” MACBETH</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Bebas+Neue&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <style>
-/* ─── Surreal Sky: paired galleries, centered ─── */
+/* â”€â”€â”€ Surreal Sky: paired galleries, centered â”€â”€â”€ */
 .ss-gallery {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -32,7 +32,7 @@
   display: block;
 }
 
-/* ─── SAKUMO trio — stays horizontal until phones ─── */
+/* â”€â”€â”€ SAKUMO trio â€” stays horizontal until phones â”€â”€â”€ */
 .sakumo-trio {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -56,13 +56,13 @@
   display: block;
 }
 
-/* ─── crop-top: cover + pin to top edge ─── */
+/* â”€â”€â”€ crop-top: cover + pin to top edge â”€â”€â”€ */
 .ss-gallery .media-item.crop-top img {
   object-fit: cover;
   object-position: top;
 }
 
-/* ─── Responsive ─── */
+/* â”€â”€â”€ Responsive â”€â”€â”€ */
 @media (max-width: 520px) {
   .ss-gallery,
   .sakumo-trio { grid-template-columns: 1fr; }
@@ -71,13 +71,22 @@
 </head>
 <body>
 
-<!-- ─── Nav ─── -->
+<!-- â”€â”€â”€ Nav â”€â”€â”€ -->
 <nav id="navbar">
   <a href="index.html" class="logo">MACBETH</a>
   <button class="nav-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
   <ul class="nav-links">
     <li><a href="index.html#projects">Work</a></li>
     <li><a href="index.html#about-strip">About</a></li>
+    <li class="nav-experiments">
+      <a href="#" class="nav-experiments-toggle" onclick="event.preventDefault()">Experiments</a>
+      <ul class="nav-experiments-menu">
+        <li><a href="project-dither/">Agentic Dither</a></li>
+        <li><a href="project-rooms.html">Rooms</a></li>
+        <li><a href="project-cybernetics.html">Cybernetics</a></li>
+        <li><a href="project-cabal.html">Cabal</a></li>
+      </ul>
+    </li>
     <ul class="nav-projects">
       <li><a href="project-surreal-sky.html">Surreal Sky</a></li>
       <li><a href="project-hydro-void.html">Hydro Void</a></li>
@@ -89,7 +98,7 @@
   </ul>
 </nav>
 
-<!-- ─── Project Hero ─── -->
+<!-- â”€â”€â”€ Project Hero â”€â”€â”€ -->
 <section class="project-hero">
   <div class="project-hero-bg" style="background-image: url('assets/Projects/surreal_sky/ZION-IO-02.jpg'); background-size: cover; background-position: center;"></div>
   <div class="project-hero-content">
@@ -98,7 +107,7 @@
   </div>
 </section>
 
-<!-- ─── Intro ─── -->
+<!-- â”€â”€â”€ Intro â”€â”€â”€ -->
 <div class="project-body">
   <h3>SURREAL SKY</h3>
   <p>
@@ -111,7 +120,7 @@
   <a href="https://8nap.art/collection/surreal-sky" target="_blank" rel="noopener noreferrer" class="view-collection">View Collection</a>
 </div>
 
-<!-- ─── Gallery 1: Kolobian Spires ─── -->
+<!-- â”€â”€â”€ Gallery 1: Kolobian Spires â”€â”€â”€ -->
 <div class="ss-gallery" style="--item-ratio: 1.645">
   <div class="media-item">
     <img src="assets/Projects/surreal_sky/KOLOBIAN-SPIRES-01.jpg" alt="KOLOBIAN SPIRES 01">
@@ -121,7 +130,7 @@
   </div>
 </div>
 
-<!-- ─── Gallery 2: Gadianton ─── -->
+<!-- â”€â”€â”€ Gallery 2: Gadianton â”€â”€â”€ -->
 <div class="ss-gallery" style="--item-ratio: 1">
   <div class="media-item">
     <img src="assets/Projects/surreal_sky/GADIANTON-02.jpg" alt="GADIANTON 02">
@@ -131,7 +140,7 @@
   </div>
 </div>
 
-<!-- ─── Mid copy ─── -->
+<!-- â”€â”€â”€ Mid copy â”€â”€â”€ -->
 <div class="project-body">
   <p>
     The series is defined by a curated balance of <em>glitch aesthetics, cyberpunk influences, and soft dreamlike hues</em>,
@@ -143,7 +152,7 @@
   <blockquote>An alternative reality shaped by the fluid boundaries between human creativity and machine intelligence.</blockquote>
 </div>
 
-<!-- ─── Gallery 3: Amulek ─── -->
+<!-- â”€â”€â”€ Gallery 3: Amulek â”€â”€â”€ -->
 <div class="ss-gallery" style="--item-ratio: 0.807">
   <div class="media-item">
     <img src="assets/Projects/surreal_sky/AMULEK-01.jpg" alt="AMULEK 01">
@@ -153,7 +162,7 @@
   </div>
 </div>
 
-<!-- ─── Process ─── -->
+<!-- â”€â”€â”€ Process â”€â”€â”€ -->
 <div class="project-body">
   <h3>PROCESS</h3>
   <p>
@@ -168,7 +177,7 @@
   </p>
 </div>
 
-<!-- ─── SAKUMO Trio ─── -->
+<!-- â”€â”€â”€ SAKUMO Trio â”€â”€â”€ -->
 <div class="sakumo-trio">
   <div class="media-item">
     <img src="assets/Projects/surreal_sky/SAKUMO-01.jpg" alt="SAKUMO 01">
@@ -181,7 +190,7 @@
   </div>
 </div>
 
-<!-- ─── Footer ─── -->
+<!-- â”€â”€â”€ Footer â”€â”€â”€ -->
 <footer>
   <div class="social-links">
     <a href="https://www.instagram.com/minimal_macbeth/" target="_blank" rel="noopener noreferrer">Instagram</a>

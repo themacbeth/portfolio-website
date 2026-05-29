@@ -1,15 +1,15 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>MAXIMALS MARFA — MACBETH</title>
+<title>MAXIMALS MARFA â€” MACBETH</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Bebas+Neue&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <style>
-/* ─── Live Visual Embed ─── */
+/* â”€â”€â”€ Live Visual Embed â”€â”€â”€ */
 .live-visual {
   position: relative;
   width: 100%;
@@ -26,7 +26,7 @@
   background: #060608;
 }
 
-/* ─── Art Blocks Preview Grid ─── */
+/* â”€â”€â”€ Art Blocks Preview Grid â”€â”€â”€ */
 .ab-grid {
   max-width: 1200px;
   margin: 48px auto;
@@ -57,7 +57,7 @@
   pointer-events: none;
 }
 
-/* ─── Spec Table ─── */
+/* â”€â”€â”€ Spec Table â”€â”€â”€ */
 .spec-table {
   max-width: 860px;
   margin: 0 auto;
@@ -84,7 +84,7 @@
   padding-top: 14px;
 }
 
-/* ─── Space Mockup ─── */
+/* â”€â”€â”€ Space Mockup â”€â”€â”€ */
 .space-mockup {
   position: relative;
   max-width: 1200px;
@@ -146,13 +146,22 @@
 </head>
 <body>
 
-<!-- ─── Nav ─── -->
+<!-- â”€â”€â”€ Nav â”€â”€â”€ -->
 <nav id="navbar">
   <a href="index.html" class="logo">MACBETH</a>
   <button class="nav-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
   <ul class="nav-links">
     <li><a href="index.html#projects">Work</a></li>
     <li><a href="about.html">About</a></li>
+    <li class="nav-experiments">
+      <a href="#" class="nav-experiments-toggle" onclick="event.preventDefault()">Experiments</a>
+      <ul class="nav-experiments-menu">
+        <li><a href="project-dither/">Agentic Dither</a></li>
+        <li><a href="project-rooms.html">Rooms</a></li>
+        <li><a href="project-cybernetics.html">Cybernetics</a></li>
+        <li><a href="project-cabal.html">Cabal</a></li>
+      </ul>
+    </li>
     <ul class="nav-projects">
       <li><a href="project-surreal-sky.html">Surreal Sky</a></li>
       <li><a href="project-hydro-void.html">Hydro Void</a></li>
@@ -165,91 +174,91 @@
   </ul>
 </nav>
 
-<!-- ─── Project Hero ─── -->
+<!-- â”€â”€â”€ Project Hero â”€â”€â”€ -->
 <section class="project-hero">
   <div class="project-hero-bg" style="background:#060608;"></div>
   <div class="project-hero-content">
-    <p class="section-label">Generative Art · Installation · Sacred Circuit</p>
+    <p class="section-label">Generative Art Â· Installation Â· Sacred Circuit</p>
     <h1 class="project-hero-title">MAXIMALS MARFA</h1>
     <p class="project-hero-tagline">sacred iconography fused with machine consciousness</p>
   </div>
 </section>
 
-<!-- ─── Intro ─── -->
+<!-- â”€â”€â”€ Intro â”€â”€â”€ -->
 <div class="project-body">
   <h3>THE RITUAL</h3>
   <p>
-    A 5-minute generative audiovisual ceremony. Sacred geometry meets circuit-board architecture —
+    A 5-minute generative audiovisual ceremony. Sacred geometry meets circuit-board architecture â€”
     concentric ring systems, radial spokes, right-angle traces connecting nodes, and futuristic
     script inscribed between mandala layers. Every element is alive, displaced by Perlin noise,
     breathing with the drone.
   </p>
   <p>
-    The experience progresses through five phases — Genesis, Inscription, Procession, Rapture, Still —
+    The experience progresses through five phases â€” Genesis, Inscription, Procession, Rapture, Still â€”
     building from a single point to maximum complexity, then deconstructing back to silence. Three arcade
     buttons allow override, but the piece is self-sufficient. It witnesses itself.
   </p>
 </div>
 
-<!-- ─── Live Visual ─── -->
+<!-- â”€â”€â”€ Live Visual â”€â”€â”€ -->
 <div class="live-visual">
   <iframe src="assets/Projects/maximals_marfa/experience.html" allow="autoplay" loading="lazy"></iframe>
 </div>
 <p class="media-caption" style="font-style:italic;">*audio by FEVER RAY for preview purposes only</p>
 
-<!-- ─── Process ─── -->
+<!-- â”€â”€â”€ Process â”€â”€â”€ -->
 <div class="project-body">
   <blockquote>Chrome Maximals. Circuit-board faces. Holographic vestments. Belief and machinery have already fused.</blockquote>
 
   <h3>MARFA INSTALLATION</h3>
   <p>
-    Designed for a gallery space in Marfa, Texas — a 2m × 2m LED wall with a laser projector firing
+    Designed for a gallery space in Marfa, Texas â€” a 2m Ã— 2m LED wall with a laser projector firing
     over the audience. Three jumbo illuminated dome buttons on a pedestal in the center of the room.
     The constraint of three buttons makes it feel like a public instrument. Each press is a small act
     of worship in a techno-religious order.
   </p>
 </div>
 
-<!-- ─── Hardware Spec ─── -->
+<!-- â”€â”€â”€ Hardware Spec â”€â”€â”€ -->
 <div class="spec-table">
   <table>
-    <tr><td>LED Wall</td><td>Canbest RS Series P2.6 — 768×384, 7680Hz refresh</td></tr>
-    <tr><td>Laser</td><td>Diode 3000 Nova — ShowNET protocol</td></tr>
-    <tr><td>Controller</td><td>Custom arcade console — 3× jumbo dome illuminated buttons, Teensy MIDI USB</td></tr>
-    <tr><td>Signal</td><td>TouchDesigner — NDI/ShowNET output</td></tr>
-    <tr><td>Venue</td><td>Marfa gallery — plaster walls, acoustic baffles, concrete floor, ~9m × 7.5m × 4.2m</td></tr>
+    <tr><td>LED Wall</td><td>Canbest RS Series P2.6 â€” 768Ã—384, 7680Hz refresh</td></tr>
+    <tr><td>Laser</td><td>Diode 3000 Nova â€” ShowNET protocol</td></tr>
+    <tr><td>Controller</td><td>Custom arcade console â€” 3Ã— jumbo dome illuminated buttons, Teensy MIDI USB</td></tr>
+    <tr><td>Signal</td><td>TouchDesigner â€” NDI/ShowNET output</td></tr>
+    <tr><td>Venue</td><td>Marfa gallery â€” plaster walls, acoustic baffles, concrete floor, ~9m Ã— 7.5m Ã— 4.2m</td></tr>
   </table>
 </div>
 
-<!-- ─── Space Mockup ─── -->
+<!-- â”€â”€â”€ Space Mockup â”€â”€â”€ -->
 <div class="space-mockup">
-  <span class="space-mockup-label">3d mockup · drag to orbit</span>
+  <span class="space-mockup-label">3d mockup Â· drag to orbit</span>
   <div class="space-mockup-frame">
     <iframe src="assets/Projects/maximals_marfa/space-mockup.html" loading="lazy"></iframe>
   </div>
 </div>
-<p class="space-mockup-caption">Marfa gallery — dimly lit installation space with LED wall, laser projector, and arcade console</p>
+<p class="space-mockup-caption">Marfa gallery â€” dimly lit installation space with LED wall, laser projector, and arcade console</p>
 
-<!-- ─── Art Blocks Section ─── -->
+<!-- â”€â”€â”€ Art Blocks Section â”€â”€â”€ -->
 <div class="project-body">
-  <h3>ART BLOCKS — 360 SACRED SCRIPTS</h3>
+  <h3>ART BLOCKS â€” 360 SACRED SCRIPTS</h3>
   <p>
     Each mint is a unique, hash-deterministic sacred script. The same hash always produces the
-    same mandala — same symmetry order, same ring configuration, same circuit traces, same
+    same mandala â€” same symmetry order, same ring configuration, same circuit traces, same
     inscriptions. 360 pieces. Pure JavaScript, no dependencies, on-chain ready.
   </p>
   <p>
-    Traits are drawn from the lore — Station, Inscription, Rite, Vestment, Temperament, Witness,
+    Traits are drawn from the lore â€” Station, Inscription, Rite, Vestment, Temperament, Witness,
     Halo, Veil. The code is the sacred text. ~12% of mints contain a hidden inscription that
     reveals after sustained viewing.
   </p>
 </div>
 
-<!-- ─── Art Blocks Preview Grid (generated by script) ─── -->
+<!-- â”€â”€â”€ Art Blocks Preview Grid (generated by script) â”€â”€â”€ -->
 <div class="ab-grid" id="ab-grid"></div>
-<p class="media-caption">Preview — 16 of 360 unique outputs</p>
+<p class="media-caption">Preview â€” 16 of 360 unique outputs</p>
 
-<!-- ─── Footer ─── -->
+<!-- â”€â”€â”€ Footer â”€â”€â”€ -->
 <footer>
   <div class="social-links">
     <a href="https://www.instagram.com/minimal_macbeth/" target="_blank" rel="noopener noreferrer">Instagram</a>
@@ -260,16 +269,16 @@
 </footer>
 
 <script>
-// ─── Nav ───
+// â”€â”€â”€ Nav â”€â”€â”€
 const nav = document.getElementById('navbar');
 window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 60));
 document.querySelector('.nav-toggle').addEventListener('click', () => nav.classList.toggle('nav-open'));
 document.querySelectorAll('.nav-links a').forEach(a => a.addEventListener('click', () => nav.classList.remove('nav-open')));
 
-// ═══════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // ART BLOCKS PREVIEW GENERATOR
 // Renders 16 unique mandala thumbnails into the grid
-// ═══════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 const PI = Math.PI, TAU = PI * 2;
 

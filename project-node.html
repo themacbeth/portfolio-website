@@ -1,15 +1,15 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>NODE — MACBETH</title>
+<title>NODE â€” MACBETH</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Bebas+Neue&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <style>
-  /* ─── NODE: show video controls on touch devices ─── */
+  /* â”€â”€â”€ NODE: show video controls on touch devices â”€â”€â”€ */
   @media (hover: none) {
     .media-grid .media-item video::-webkit-media-controls { opacity: 1; }
   }
@@ -17,13 +17,22 @@
 </head>
 <body>
 
-<!-- ─── Nav ─── -->
+<!-- â”€â”€â”€ Nav â”€â”€â”€ -->
 <nav id="navbar">
   <a href="index.html" class="logo">MACBETH</a>
   <button class="nav-toggle" aria-label="Menu"><span></span><span></span><span></span></button>
   <ul class="nav-links">
     <li><a href="index.html#projects">Work</a></li>
     <li><a href="index.html#about-strip">About</a></li>
+    <li class="nav-experiments">
+      <a href="#" class="nav-experiments-toggle" onclick="event.preventDefault()">Experiments</a>
+      <ul class="nav-experiments-menu">
+        <li><a href="project-dither/">Agentic Dither</a></li>
+        <li><a href="project-rooms.html">Rooms</a></li>
+        <li><a href="project-cybernetics.html">Cybernetics</a></li>
+        <li><a href="project-cabal.html">Cabal</a></li>
+      </ul>
+    </li>
     <ul class="nav-projects">
       <li><a href="project-surreal-sky.html">Surreal Sky</a></li>
       <li><a href="project-hydro-void.html">Hydro Void</a></li>
@@ -36,25 +45,25 @@
   </ul>
 </nav>
 
-<!-- ─── Project Hero ─── -->
+<!-- â”€â”€â”€ Project Hero â”€â”€â”€ -->
 <section class="project-hero">
   <div class="project-hero-bg">
     <img src="assets/Projects/NODE/out2.png" alt="NODE">
   </div>
   <div class="project-hero-content">
     <h1 class="project-hero-title">NODE</h1>
-    <p class="project-hero-tagline">TouchDesigner · Audio-reactive</p>
+    <p class="project-hero-tagline">TouchDesigner Â· Audio-reactive</p>
   </div>
 </section>
 
-<!-- ─── Intro ─── -->
+<!-- â”€â”€â”€ Intro â”€â”€â”€ -->
 <div class="project-body">
   <h3>NODE</h3>
   <p>This project is an audio-reactive visual environment built in TouchDesigner that transforms ambient synth pads and subtle rhythmic pulses into evolving fields of light and motion. Designed as a meditative visual journey, the work invites viewers to slow down and get lost inside shifting particle systems that bloom, drift, and reorganize in response to sound. The piece can function as a concise one-minute loop or expand into a longer durational performance, depending on technical constraints such as file size and playback limitations. What is presented here is a sample entry point into a larger, immersive system capable of unfolding over time.</p>
 </div>
 <p class="media-caption" style="margin-top: 0">full-screen + audio</p>
 
-<!-- ─── Media ─── -->
+<!-- â”€â”€â”€ Media â”€â”€â”€ -->
 <div class="media-grid" style="grid-template-columns: 1fr">
   <div class="media-item" style="aspect-ratio: 16/9">
     <video autoplay muted loop playsinline controls src="assets/Projects/NODE/node-space-mockup.mp4"></video>
@@ -67,7 +76,7 @@
   </div>
 </div>
 
-<!-- ─── Behind-the-Scenes ─── -->
+<!-- â”€â”€â”€ Behind-the-Scenes â”€â”€â”€ -->
 <div class="media-grid" style="grid-template-columns: 1fr">
   <div class="media-item">
     <img src="assets/Projects/NODE/Behind-the-scenes.png" alt="NODE behind the scenes">
@@ -75,14 +84,14 @@
 </div>
 <p class="media-caption">TouchDesigner</p>
 
-<!-- ─── Final image ─── -->
+<!-- â”€â”€â”€ Final image â”€â”€â”€ -->
 <div class="media-grid" style="grid-template-columns: 1fr">
   <div class="media-item">
     <img src="assets/Projects/NODE/out2.png" alt="NODE">
   </div>
 </div>
 
-<!-- ─── Footer ─── -->
+<!-- â”€â”€â”€ Footer â”€â”€â”€ -->
 <footer>
   <div class="social-links">
     <a href="https://www.instagram.com/minimal_macbeth/" target="_blank" rel="noopener noreferrer">Instagram</a>
