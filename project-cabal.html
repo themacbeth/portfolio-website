@@ -54,9 +54,9 @@
   <p>Cabal is less interested in the secret than in the shape of secrecy: the gowns, the water, the long pause before the moment that changes a body's status in a community.</p>
 </div>
 
-<div class="media-grid">
-  <div class="media-item"><video autoplay muted loop playsinline src="assets/Projects/Cabal/Initiatory-Final..mp4"></video></div>
-  <div class="media-item"><video autoplay muted loop playsinline src="assets/Projects/Cabal/baptism_1.mp4"></video></div>
+<div class="media-grid media-grid--natural">
+  <div class="media-item"><video muted loop playsinline preload="metadata" src="assets/Projects/Cabal/Initiatory-Final..mp4"></video></div>
+  <div class="media-item"><video muted loop playsinline preload="metadata" src="assets/Projects/Cabal/baptism_1.mp4"></video></div>
   <div class="media-item tall"><img src="assets/Projects/Cabal/_2bsth857p9ecr91vgcco_0.jpg" alt="Cabal still"></div>
   <div class="media-item tall"><img src="assets/Projects/Cabal/_jivm0vp4sottdg6hxhk3_0.jpg" alt="Cabal still"></div>
   <div class="media-item"><img src="assets/Projects/Cabal/_jl4z5m8lrspd5ob1475d_0.jpg" alt="Cabal still"></div>
@@ -64,24 +64,13 @@
   <div class="media-item"><img src="assets/Projects/Cabal/omni-99918107-3667-42e8-8c18-304aab6fdd5b.jpg" alt="Cabal still"></div>
   <div class="media-item"><img src="assets/Projects/Cabal/omni-cfe84039-4093-43d4-9903-a3894416b5d5.jpg" alt="Cabal still"></div>
 </div>
-<p class="media-caption">Generative video & stills · 2026</p>
+<p class="media-caption">Generative video &amp; stills · 2026</p>
 
 <div class="project-body">
   <blockquote>Every threshold is policed by costume.</blockquote>
   <h3>PROCESS</h3>
   <p>The pieces were generated and re-composed to feel like archival fragments from ceremonies that never happened — or that happened so often the memory of them stopped belonging to any one tradition. Texture, garment, and water are the recurring vocabulary.</p>
 </div>
-
-<nav class="project-nav">
-  <a href="project-cybernetics.html">
-    <span class="nav-dir">← Previous</span>
-    <span class="nav-title">CYBERNETICS</span>
-  </a>
-  <a href="project-dither/">
-    <span class="nav-dir">Next →</span>
-    <span class="nav-title">AGENTIC DITHER</span>
-  </a>
-</nav>
 
 <footer>
   <div class="social-links">
@@ -97,6 +86,13 @@
   window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 60));
   document.querySelector('.nav-toggle').addEventListener('click', () => nav.classList.toggle('nav-open'));
   document.querySelectorAll('.nav-links a').forEach(a => a.addEventListener('click', () => nav.classList.remove('nav-open')));
+
+  // Hover-play: gallery videos play on hover, pause on leave
+  document.querySelectorAll('.media-item video').forEach(v => {
+    const parent = v.closest('.media-item');
+    parent.addEventListener('mouseenter', () => { v.play().catch(()=>{}); });
+    parent.addEventListener('mouseleave', () => { v.pause(); v.currentTime = 0; });
+  });
 </script>
 </body>
 </html>

@@ -54,17 +54,17 @@
   <p>The pieces move between the macro and the micro: an eye that reboots, a chip in montage, color flowing across nodes that have learned to anticipate each other.</p>
 </div>
 
-<div class="media-grid">
-  <div class="media-item"><video autoplay muted loop playsinline src="assets/Projects/cybernetics/kling-eye-loop0.mp4"></video></div>
-  <div class="media-item"><video autoplay muted loop playsinline src="assets/Projects/cybernetics/eyes.mp4"></video></div>
-  <div class="media-item"><video autoplay muted loop playsinline src="assets/Projects/cybernetics/reboot.mp4"></video></div>
-  <div class="media-item"><video autoplay muted loop playsinline src="assets/Projects/cybernetics/aged-tech.mp4"></video></div>
-  <div class="media-item"><video autoplay muted loop playsinline src="assets/Projects/cybernetics/micro-chip-montage).mp4"></video></div>
-  <div class="media-item"><video autoplay muted loop playsinline src="assets/Projects/cybernetics/digital-loooks.mp4"></video></div>
-  <div class="media-item"><video autoplay muted loop playsinline src="assets/Projects/cybernetics/peer2peer.mp4"></video></div>
-  <div class="media-item"><video autoplay muted loop playsinline src="assets/Projects/cybernetics/connected.mp4"></video></div>
-  <div class="media-item"><video autoplay muted loop playsinline src="assets/Projects/cybernetics/colors-connecting.mp4"></video></div>
-  <div class="media-item"><video autoplay muted loop playsinline src="assets/Projects/cybernetics/together.mp4"></video></div>
+<div class="media-grid media-grid--natural">
+  <div class="media-item"><video muted loop playsinline preload="metadata" src="assets/Projects/cybernetics/kling-eye-loop0.mp4"></video></div>
+  <div class="media-item"><video muted loop playsinline preload="metadata" src="assets/Projects/cybernetics/eyes.mp4"></video></div>
+  <div class="media-item"><video muted loop playsinline preload="metadata" src="assets/Projects/cybernetics/reboot.mp4"></video></div>
+  <div class="media-item"><video muted loop playsinline preload="metadata" src="assets/Projects/cybernetics/aged-tech.mp4"></video></div>
+  <div class="media-item"><video muted loop playsinline preload="metadata" src="assets/Projects/cybernetics/micro-chip-montage).mp4"></video></div>
+  <div class="media-item"><video muted loop playsinline preload="metadata" src="assets/Projects/cybernetics/digital-loooks.mp4"></video></div>
+  <div class="media-item"><video muted loop playsinline preload="metadata" src="assets/Projects/cybernetics/peer2peer.mp4"></video></div>
+  <div class="media-item"><video muted loop playsinline preload="metadata" src="assets/Projects/cybernetics/connected.mp4"></video></div>
+  <div class="media-item"><video muted loop playsinline preload="metadata" src="assets/Projects/cybernetics/colors-connecting.mp4"></video></div>
+  <div class="media-item"><video muted loop playsinline preload="metadata" src="assets/Projects/cybernetics/together.mp4"></video></div>
 </div>
 <p class="media-caption">Generative video loops · 2026</p>
 
@@ -73,17 +73,6 @@
   <h3>PROCESS</h3>
   <p>Each loop was generated and tuned to read as a self-contained system — short enough to feel like a heartbeat, long enough to make the feedback legible. Sequenced together they suggest a single machine remembering itself.</p>
 </div>
-
-<nav class="project-nav">
-  <a href="project-rooms.html">
-    <span class="nav-dir">← Previous</span>
-    <span class="nav-title">ROOMS</span>
-  </a>
-  <a href="project-cabal.html">
-    <span class="nav-dir">Next →</span>
-    <span class="nav-title">CABAL</span>
-  </a>
-</nav>
 
 <footer>
   <div class="social-links">
@@ -99,6 +88,13 @@
   window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 60));
   document.querySelector('.nav-toggle').addEventListener('click', () => nav.classList.toggle('nav-open'));
   document.querySelectorAll('.nav-links a').forEach(a => a.addEventListener('click', () => nav.classList.remove('nav-open')));
+
+  // Hover-play: gallery videos play on hover, pause on leave
+  document.querySelectorAll('.media-item video').forEach(v => {
+    const parent = v.closest('.media-item');
+    parent.addEventListener('mouseenter', () => { v.play().catch(()=>{}); });
+    parent.addEventListener('mouseleave', () => { v.pause(); v.currentTime = 0; });
+  });
 </script>
 </body>
 </html>

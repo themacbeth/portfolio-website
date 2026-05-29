@@ -465,6 +465,26 @@ footer {
 }
 .media-grid .media-item .media-placeholder svg { width: 44px; height: 44px; opacity: 0.15; }
 
+/* ─── Natural-aspect gallery: tile evenly, never crop ─── */
+.media-grid.media-grid--natural {
+  display: block;
+  column-count: 2;
+  column-gap: 16px;
+}
+.media-grid.media-grid--natural .media-item {
+  aspect-ratio: auto;
+  break-inside: avoid;
+  margin: 0 0 16px;
+  overflow: visible;
+}
+.media-grid.media-grid--natural .media-item img,
+.media-grid.media-grid--natural .media-item video {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
 /* caption under a media block */
 .media-caption {
   max-width: 1100px; margin: -44px auto 60px;
@@ -673,6 +693,7 @@ footer {
 
   /* ─── Force media grids to stack (override inline styles) ─── */
   .media-grid { grid-template-columns: 1fr !important; }
+  .media-grid.media-grid--natural { column-count: 1; }
 
   /* ─── Typography ─── */
   .logo { font-size: 20px; }
