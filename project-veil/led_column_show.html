@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+*{margin:0;padding:0;background:#000;box-sizing:border-box}
+canvas{display:block}
+body{font:11px/1.5 ui-monospace,monospace;color:#888;overflow:hidden}
+#info{position:fixed;top:14px;left:18px;z-index:10;pointer-events:none;max-width:340px}
+#info .ttl{color:#ffd58a;letter-spacing:.22em;font-weight:600;margin-bottom:4px}
+#info .sub{color:#555;font-size:10px;letter-spacing:.1em}
+#views{position:fixed;top:14px;right:18px;z-index:10;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:260px}
+#views span{color:#777;cursor:pointer;padding:4px 9px;border:1px solid #222;font-size:10px;letter-spacing:.1em}
+#views span:hover,#views span.active{color:#ffd58a;border-color:#ffd58a}
+#timeline{position:fixed;bottom:14px;left:18px;right:18px;z-index:10;
+  background:rgba(0,0,0,.7);border:1px solid #1f1f1f;padding:10px 14px;border-radius:3px}
+#tl-row{display:flex;align-items:baseline;gap:18px;font-size:10px;letter-spacing:.12em;color:#666;margin-bottom:8px}
+#tl-row .now{color:#ffd58a;font-size:11px;letter-spacing:.18em;flex:1}
+#tl-row .clock{color:#888;font-variant-numeric:tabular-nums}
+#tl-row .next{color:#444}
+#tl-track{height:24px;background:#0a0a0a;border:1px solid #181818;border-radius:2px;position:relative;overflow:hidden}
+.tl-seg{position:absolute;top:0;bottom:0;border-right:1px solid rgba(255,255,255,.06);
+  display:flex;align-items:center;justify-content:center;color:#444;font-size:9px;letter-spacing:.06em;
+  cursor:pointer;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;padding:0 4px;transition:color .1s}
+.tl-seg:hover{color:#ffd58a}
+.tl-seg.active{color:#ffd58a;background:rgba(255,213,138,.08)}
+#tl-head{position:absolute;top:-2px;bottom:-2px;width:2px;background:#ffd58a;box-shadow:0 0 8px #ffd58a;pointer-events:none;transition:left .05s linear}
+#hud{position:fixed;bottom:62px;right:18px;z-index:10;font-size:10px;color:#555;text-align:right;letter-spacing:.1em}
+#hud b{color:#ffd58a;font-weight:normal}
+#beat{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);z-index:10;
+  display:flex;gap:10px;pointer-events:none}
+#beat span{display:block;width:14px;height:14px;border:1px solid #2a2a2a;border-radius:50%;
+  background:#0a0a0a;transition:background .08s,box-shadow .08s,border-color .08s}
+#beat span.on{background:#ffd58a;border-color:#ffd58a;box-shadow:0 0 12px #ffd58a}
+#beat span.bar{border-color:#7fffaa}
+#beat span.bar.on{background:#7fffaa;box-shadow:0 0 14px #7fffaa}
+#tempo{position:fixed;bottom:88px;right:18px;z-index:10;font-size:10px;color:#555;letter-spacing:.15em;text-align:right}
+#tempo b{color:#ffd58a;font-weight:normal}
+#tempo .swell{margin-top:4px;width:140px;height:3px;background:#1a1a1a;border-radius:1px;overflow:hidden}
+#tempo .swell i{display:block;height:100%;background:linear-gradient(90deg,#5a4220,#ffd58a);width:0;transition:width .04s}
+#sndBtn{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:30;
+  background:rgba(0,0,0,.92);border:1px solid #ffd58a;color:#ffd58a;
+  font:12px/1 ui-monospace,monospace;padding:12px 28px;letter-spacing:.22em;
+  cursor:pointer;border-radius:2px;box-shadow:0 0 18px rgba(255,213,138,.25)}
+#sndBtn:hover{box-shadow:0 0 24px rgba(255,213,138,.45)}
+#sndBtn.on{color:#7fffaa;border-color:#7fffaa;box-shadow:0 0 18px rgba(127,255,170,.25)}
+#sndBtn.err{color:#ff7777;border-color:#ff7777}
+#sndMsg{position:fixed;top:100px;left:50%;transform:translateX(-50%);z-index:30;
+  color:#888;font:10px/1.4 ui-monospace,monospace;letter-spacing:.1em;text-align:center;
+  background:rgba(0,0,0,.6);padding:4px 10px;border-radius:2px;display:none;max-width:480px}
+#xport{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:11;
+  display:flex;gap:8px;background:rgba(0,0,0,.0);padding:0;pointer-events:none}
+#xport button{pointer-events:auto;background:rgba(0,0,0,.8);border:1px solid #2a2a2a;
+  color:#ffd58a;font:10px/1 ui-monospace,monospace;padding:6px 14px;letter-spacing:.18em;
+  cursor:pointer;border-radius:2px;margin-bottom:48px}
+#xport button:hover{border-color:#ffd58a}
+</style>
+</head>
+<body>
+<div id="info">
+  <div class="ttl">CELESTIAL COLUMN · 4:00 PROGRAM</div>
+  <div class="sub">IBW-P-62.5 · 8 × 48 × 8 voxels · 3m tall</div>
+  <div class="sub">drag to orbit · scroll to zoom · click timeline to scrub</div>
+</div>
+<div id="views">
+  <span class="active" data-v="orbit">Auto Orbit</span>
+  <span data-v="front">Front</span>
+  <span data-v="34">3/4</span>
+  <span data-v="side">Side</span>
+  <span data-v="top">Top</span>
+</div>
+<div id="hud">
+  <div>scene <b id="hScene">—</b></div>
+  <div>energy <b id="hEnergy">—</b></div>
+  <div>FPS <b id="hFps">—</b></div>
+</div>
+<div id="beat"><span></span><span></span><span></span><span class="bar"></span></div>
+<div id="tempo">66 BPM · drone hymnal · <b id="tBar">bar —</b><div class="swell"><i id="tSwell"></i></div></div>
+<button id="sndBtn" onclick="toggleSound()">♪ START SCORE</button>
+<div id="sndMsg"></div>
+<div id="xport">
+  <button id="bRestart">⟲ RESTART</button>
+  <button id="bPause">⏸ PAUSE</button>
+  <button id="bLoop">↻ LOOP</button>
+</div>
+<div id="timeline">
+  <div id="tl-row">
+    <div class="now" id="tlNow">—</div>
+    <div class="clock" id="tlClock">0:00 / 4:00</div>
+    <div class="next" id="tlNext">next: —</div>
+  </div>
+  <div id="tl-track"><div id="tl-head" style="left:0"></div></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ───────────────────────────────────────────────────────────
+// SCENE GRAPH
+// ───────────────────────────────────────────────────────────
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x040408,0.025);
+const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.05,80);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.5;
+document.body.appendChild(renderer.domElement);
+
+// Floor disc (just a hint of ground for spill)
+const disc=new THREE.Mesh(new THREE.CircleGeometry(8,48),
+  new THREE.MeshStandardMaterial({color:0x0a0a0c,roughness:.9,metalness:.05}));
+disc.rotation.x=-Math.PI/2; disc.position.y=0; scene.add(disc);
+
+// ───────────────────────────────────────────────────────────
+// COLUMN  (IBW-P-62.5: 8 × 48 × 8 voxels, 0.5m × 3m × 0.5m)
+// Units: meters
+// ───────────────────────────────────────────────────────────
+const NX=8, NY=48, NZ=8;
+const W=0.5, H=3.0, D=0.5;
+const X0=-W/2, X1=W/2, Y0=0.15, Y1=Y0+H, Z0=-D/2, Z1=D/2;
+const CX=0, CY=(Y0+Y1)/2, CZ=0;
+
+// Strand wires (vertical) + top mount plate
+const wireMat=new THREE.LineBasicMaterial({color:0x1f1f1f,transparent:true,opacity:.55});
+for(let ix=0;ix<NX;ix++) for(let iz=0;iz<NZ;iz++){
+  const x=X0+(ix/(NX-1))*W, z=Z0+(iz/(NZ-1))*D;
+  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(x,Y1+.15,z), new THREE.Vector3(x,Y0-.05,z)
+  ]),wireMat));
+}
+const plate=new THREE.Mesh(new THREE.BoxGeometry(W+.1,.04,D+.1),
+  new THREE.MeshStandardMaterial({color:0x222222,roughness:.6}));
+plate.position.set(0,Y1+.15,0); scene.add(plate);
+// Suspension cables up into the dark
+for(let dx=-1;dx<=1;dx+=2) for(let dz=-1;dz<=1;dz+=2){
+  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(dx*(W/2+.03),Y1+.18,dz*(D/2+.03)),
+    new THREE.Vector3(dx*(W/2+.03),Y1+1.6,dz*(D/2+.03))
+  ]),new THREE.LineBasicMaterial({color:0x333333,transparent:true,opacity:.6})));
+}
+
+// Voxels
+const TOTAL=NX*NY*NZ;
+const positions=new Float32Array(TOTAL*3);
+const colors=new Float32Array(TOTAL*3);
+const vox=[]; let k=0;
+for(let ix=0;ix<NX;ix++) for(let iy=0;iy<NY;iy++) for(let iz=0;iz<NZ;iz++){
+  const x=X0+(ix/(NX-1))*W, y=Y0+(iy/(NY-1))*H, z=Z0+(iz/(NZ-1))*D;
+  positions[k*3]=x; positions[k*3+1]=y; positions[k*3+2]=z;
+  vox.push({x,y,z,
+    nx:(x-CX)/(W/2),
+    ny:(y-CY)/(H/2),
+    nz:(z-CZ)/(D/2)
+  });
+  k++;
+}
+const vGeo=new THREE.BufferGeometry();
+vGeo.setAttribute('position',new THREE.BufferAttribute(positions,3));
+vGeo.setAttribute('color',new THREE.BufferAttribute(colors,3));
+const vPts=new THREE.Points(vGeo,new THREE.PointsMaterial({
+  size:.045,vertexColors:true,transparent:true,opacity:1,
+  blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true
+}));
+scene.add(vPts);
+
+// Atmospheric haze
+const haze=new THREE.BufferGeometry();
+const hazeN=800;
+const hazeP=new Float32Array(hazeN*3);
+for(let i=0;i<hazeN;i++){
+  const a=Math.random()*Math.PI*2, r=2+Math.random()*4;
+  hazeP[i*3]=Math.cos(a)*r; hazeP[i*3+1]=Math.random()*4.5; hazeP[i*3+2]=Math.sin(a)*r;
+}
+haze.setAttribute('position',new THREE.BufferAttribute(hazeP,3));
+scene.add(new THREE.Points(haze,new THREE.PointsMaterial({
+  color:0x445566,size:.025,transparent:true,opacity:.35,blending:THREE.AdditiveBlending,depthWrite:false
+})));
+
+scene.add(new THREE.AmbientLight(0x222233,.4));
+const spill=new THREE.PointLight(0xffcc88,1.2,6);
+spill.position.set(0,CY,0); scene.add(spill);
+
+// ───────────────────────────────────────────────────────────
+// SCENES — each returns [r,g,b] in [0..~2]
+// v has {x,y,z, nx,ny,nz} (n* normalised to -1..1 within column)
+// localT is seconds since this scene began
+// ───────────────────────────────────────────────────────────
+
+function clamp01(x){return x<0?0:(x>1?1:x)}
+function expBell(x,s){return Math.exp(-(x*x)/(s*s))}
+
+// ───────────────────────────────────────────────────────────
+// VIRTUAL BEAT CLOCK — 66 BPM drone hymnal
+//   beat   = 60/66 = 0.9091 sec  (the kick / bass drone hit)
+//   bar    = 4 beats = 3.6364 sec
+//   phrase = 4 bars  = 14.5454 sec
+//   swell  = 8 bars  = 29.09 sec (long synth pad rise/fall)
+// Each call to beatClock(playhead) returns one BEAT object reused everywhere.
+// ───────────────────────────────────────────────────────────
+const BPM=66;
+const BEAT_SEC = 60/BPM;
+const BAR_SEC  = BEAT_SEC*4;
+const PHRASE_SEC = BAR_SEC*4;
+const SWELL_SEC  = BAR_SEC*8;
+
+const BEAT={beatIdx:0,beatPhase:0,beatPulse:0,barIdx:0,barPhase:0,barPulse:0,
+            phraseIdx:0,phrasePhase:0,swellPhase:0,swell:0,droneA:0,droneB:0,
+            beatNum:0 /* 0..3 within bar */, barNum:0, phrasePulse:0, halfBarPulse:0};
+
+function beatClock(ph){
+  BEAT.beatIdx   = Math.floor(ph/BEAT_SEC);
+  BEAT.beatPhase = (ph % BEAT_SEC) / BEAT_SEC;          // 0..1 inside beat
+  // sharp attack, fast decay — like a kick
+  BEAT.beatPulse = Math.exp(-BEAT.beatPhase*7);
+  BEAT.barIdx    = Math.floor(ph/BAR_SEC);
+  BEAT.barPhase  = (ph % BAR_SEC) / BAR_SEC;
+  BEAT.barPulse  = Math.exp(-BEAT.barPhase*3.2);        // wider envelope per bar
+  BEAT.beatNum   = BEAT.beatIdx % 4;
+  BEAT.barNum    = BEAT.barIdx % 4;        // 0..3 within phrase
+  BEAT.phraseIdx = Math.floor(ph/PHRASE_SEC);
+  BEAT.phrasePhase = (ph % PHRASE_SEC) / PHRASE_SEC;
+  BEAT.phrasePulse = Math.exp(-BEAT.phrasePhase*1.4); // big swell every 4 bars
+  // off-beat (and-of-2/3) accent
+  const halfBarPh = (ph % (BAR_SEC*.5)) / (BAR_SEC*.5);
+  BEAT.halfBarPulse = Math.exp(-halfBarPh*5);
+  // Swell: slow attack/decay over 8 bars
+  BEAT.swellPhase = (ph % SWELL_SEC) / SWELL_SEC;
+  BEAT.swell = .5 - .5*Math.cos(BEAT.swellPhase*Math.PI*2);  // 0..1..0
+  // Two slow drones, beat-locked, slightly detuned
+  BEAT.droneA = .5 + .5*Math.sin(ph*Math.PI*2/BAR_SEC*.25);  // ~one cycle per 4 bars
+  BEAT.droneB = .5 + .5*Math.sin(ph*Math.PI*2/BAR_SEC*.41 + .7);
+}
+
+// ───────────────────────────────────────────────────────────
+// LIVE SYNTH SCORE — drone hymnal, generated in WebAudio
+// Sub-bass kick on every beat, sustained pad with chord per scene,
+// bell on bar 1, reverb tail. No external files.
+// ───────────────────────────────────────────────────────────
+const Note={D2:73.42, A2:110.0, D3:146.83, F3:174.61, G3:196.0, A3:220.0,
+            Bb3:233.08, B3:246.94, C4:261.63, Db4:277.18, D4:293.66,
+            E4:329.63, F4:349.23, G4:392.0, A4:440.0, D5:587.33};
+const SCENE_CHORDS = {
+  cloud:    {root: Note.D2, pad:[Note.D3, Note.A3, Note.D4], drive:.6, kick:.4},
+  kolob:    {root: Note.D2, pad:[Note.D3, Note.A3, Note.F4, Note.D5], drive:.95, kick:1.0},
+  worlds:   {root: Note.A2, pad:[Note.A2, Note.E4, Note.A3], drive:.7, kick:.7},
+  threeSuns:{root: Note.D2, pad:[Note.D3, Note.F3, Note.A3, Note.D4], drive:.85, kick:.85},
+  twelve:   {root: Note.F3, pad:[Note.F3, Note.A3, Note.C4, Note.F4], drive:.75, kick:.7},
+  collapse: {root: Note.D2, pad:[Note.D3, Note.F3, Note.G3, Note.Db4], drive:.8, kick:.6},
+  ladder:   {root: Note.G3, pad:[Note.G3, Note.B3, Note.D4], drive:.8, kick:.9},
+  figure:   {root: Note.G3, pad:[Note.G3, Note.B3, Note.D4, Note.G4], drive:.75, kick:.7},
+  fire:     {root: Note.D2, pad:[Note.D3, Note.F3, Note.A3, Note.Db4], drive:1.0, kick:1.3},
+  holdKolob:{root: Note.D2, pad:[Note.D3, Note.A3], drive:.55, kick:.3}
+};
+
+// Playback state — hoisted so toggleSound() never hits a TDZ on click
+let playhead=0;
+let paused=false;
+let loopProgram=true;
+
+let audioCtx=null, audioActive=false, audioStartT=0;
+let masterOut=null, reverbIn=null, padOut=null, padNodes=[];
+let lastBeatScheduled=-1;
+let currentPadKey=null;
+
+function ensureAudioGraph(){
+  if(audioCtx) return;
+  audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  // Master out + simple convolver reverb
+  masterOut=audioCtx.createGain(); masterOut.gain.value=0.55;
+  const compr=audioCtx.createDynamicsCompressor();
+  compr.threshold.value=-14; compr.ratio.value=3; compr.attack.value=.005; compr.release.value=.18;
+  masterOut.connect(compr); compr.connect(audioCtx.destination);
+  // Reverb send
+  reverbIn=audioCtx.createGain(); reverbIn.gain.value=.35;
+  const conv=audioCtx.createConvolver();
+  const len=audioCtx.sampleRate*2.6, ir=audioCtx.createBuffer(2,len,audioCtx.sampleRate);
+  for(let ch=0;ch<2;ch++){
+    const d=ir.getChannelData(ch); let prev=0;
+    for(let i=0;i<len;i++){
+      const n=Math.random()*2-1;
+      const a=.3+.69*(i/len); prev=prev*a+n*(1-a);
+      d[i]=prev*Math.pow(1-i/len,2.3);
+    }
+  }
+  // normalize
+  let mx=0; for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch); for(let i=0;i<len;i++) if(Math.abs(d[i])>mx) mx=Math.abs(d[i])}
+  if(mx>0) for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch); for(let i=0;i<len;i++) d[i]/=mx}
+  conv.buffer=ir;
+  const verbWet=audioCtx.createGain(); verbWet.gain.value=1.0;
+  reverbIn.connect(conv); conv.connect(verbWet); verbWet.connect(masterOut);
+}
+
+function scheduleKick(T, gain){
+  const osc=audioCtx.createOscillator(), env=audioCtx.createGain();
+  const click=audioCtx.createOscillator(), clickEnv=audioCtx.createGain();
+  osc.type='sine';
+  osc.frequency.setValueAtTime(95, T);
+  osc.frequency.exponentialRampToValueAtTime(38, T+.18);
+  env.gain.setValueAtTime(0,T);
+  env.gain.linearRampToValueAtTime(.85*gain, T+.004);
+  env.gain.exponentialRampToValueAtTime(.0001, T+.55);
+  osc.connect(env); env.connect(masterOut);
+  // click transient (noise burst)
+  click.type='triangle';
+  click.frequency.setValueAtTime(180,T);
+  click.frequency.exponentialRampToValueAtTime(60,T+.04);
+  clickEnv.gain.setValueAtTime(.3*gain,T);
+  clickEnv.gain.exponentialRampToValueAtTime(.001,T+.06);
+  click.connect(clickEnv); clickEnv.connect(masterOut);
+  osc.start(T); osc.stop(T+.6);
+  click.start(T); click.stop(T+.1);
+}
+function scheduleBell(T, freq, gain){
+  const tones=[1, 2.01, 3.02, 4.21];   // inharmonic for bell character
+  tones.forEach((m,i)=>{
+    const o=audioCtx.createOscillator(), e=audioCtx.createGain();
+    o.type='sine'; o.frequency.value=freq*m;
+    const g=gain*Math.pow(.45,i);
+    e.gain.setValueAtTime(0,T);
+    e.gain.linearRampToValueAtTime(g, T+.005);
+    e.gain.exponentialRampToValueAtTime(.0001, T+3.0+i*.4);
+    o.connect(e); e.connect(reverbIn); e.connect(masterOut);
+    o.start(T); o.stop(T+3.5);
+  });
+}
+function killPad(){
+  if(!padOut) return;
+  const now=audioCtx.currentTime;
+  padOut.gain.cancelScheduledValues(now);
+  padOut.gain.setValueAtTime(padOut.gain.value, now);
+  padOut.gain.linearRampToValueAtTime(0, now+.6);
+  const old=padOut, oldNodes=padNodes;
+  setTimeout(()=>{oldNodes.forEach(n=>{try{n.stop()}catch(e){}})}, 700);
+  padOut=null; padNodes=[];
+}
+function startPad(freqs, drive){
+  killPad();
+  const now=audioCtx.currentTime;
+  padOut=audioCtx.createGain(); padOut.gain.value=0;
+  padOut.gain.linearRampToValueAtTime(.15*drive, now+1.2);
+  const filt=audioCtx.createBiquadFilter();
+  filt.type='lowpass'; filt.frequency.value=380; filt.Q.value=1.2;
+  // LFO on filter cutoff — slow swell
+  const lfo=audioCtx.createOscillator(), lfoGain=audioCtx.createGain();
+  lfo.frequency.value=1/29.09; // 8-bar swell
+  lfoGain.gain.value=420;
+  lfo.connect(lfoGain); lfoGain.connect(filt.frequency);
+  lfo.start();
+  freqs.forEach(f=>{
+    const o1=audioCtx.createOscillator(); o1.type='sawtooth'; o1.frequency.value=f;
+    const o2=audioCtx.createOscillator(); o2.type='sawtooth'; o2.frequency.value=f*1.006;
+    const o3=audioCtx.createOscillator(); o3.type='sine';     o3.frequency.value=f*.5; // sub
+    const sub=audioCtx.createGain(); sub.gain.value=.45;
+    o1.connect(filt); o2.connect(filt); o3.connect(sub); sub.connect(filt);
+    o1.start(); o2.start(); o3.start();
+    padNodes.push(o1,o2,o3);
+  });
+  padNodes.push(lfo);
+  const padSend=audioCtx.createGain(); padSend.gain.value=.55;
+  filt.connect(padOut); padOut.connect(masterOut);
+  filt.connect(padSend); padSend.connect(reverbIn);
+}
+function setSceneChord(sceneKey){
+  if(!audioActive) return;
+  if(sceneKey===currentPadKey) return;
+  const ch=SCENE_CHORDS[sceneKey];
+  if(!ch) return;
+  startPad(ch.pad, ch.drive);
+  currentPadKey=sceneKey;
+}
+function audioPlayheadTime(){
+  return audioActive ? (audioCtx.currentTime - audioStartT) : null;
+}
+function showMsg(txt,err){
+  const m=document.getElementById('sndMsg');
+  m.textContent=txt; m.style.display='block';
+  m.style.color = err ? '#ff7777' : '#7fffaa';
+  if(!err) setTimeout(()=>{if(m.textContent===txt)m.style.display='none'},3500);
+}
+function toggleSound(){
+  const btn=document.getElementById('sndBtn');
+  try {
+    ensureAudioGraph();
+    if(audioCtx.state==='suspended'){
+      audioCtx.resume().then(()=>showMsg('audio context resumed · '+audioCtx.state));
+    }
+    if(audioActive){
+      audioActive=false; killPad(); currentPadKey=null;
+      btn.classList.remove('on'); btn.textContent='♪ START SCORE';
+      showMsg('score stopped');
+    } else {
+      audioActive=true;
+      audioStartT = audioCtx.currentTime - (loopProgram ? (playhead%TOTAL_DUR) : playhead);
+      lastBeatScheduled=-1;
+      // Force-trigger immediate scene chord so we get sound right away
+      const phMod = loopProgram ? (playhead%TOTAL_DUR) : Math.min(playhead, TOTAL_DUR-.01);
+      const sc = PROGRAM[findScene(phMod)];
+      setSceneChord(sc.scene);
+      // Schedule a confirmation kick RIGHT NOW so user hears something within ~50ms
+      scheduleKick(audioCtx.currentTime + .03, .9);
+      btn.classList.add('on'); btn.textContent='■ STOP SCORE';
+      showMsg('score running · ctx '+audioCtx.state+' · ch '+sc.scene);
+    }
+  } catch(err){
+    btn.classList.add('err'); btn.textContent='✕ ERROR';
+    showMsg('audio error: '+(err.message||err), true);
+    console.error('toggleSound failed:', err);
+  }
+}
+window.toggleSound=toggleSound;
+function tickAudioScheduler(){
+  if(!audioActive || !audioCtx) return;
+  const lookahead=.20; // schedule 200ms ahead
+  const now=audioCtx.currentTime;
+  // Determine current beat index from audio clock
+  const ph = now - audioStartT;
+  // Schedule any beats whose scheduled time falls between now and now+lookahead
+  // beatIdx N occurs at audioStartT + N*BEAT_SEC
+  let nextBeatIdx = Math.max(lastBeatScheduled+1, Math.floor(ph/BEAT_SEC));
+  while(true){
+    const beatTime = audioStartT + nextBeatIdx*BEAT_SEC;
+    if(beatTime > now + lookahead) break;
+    if(beatTime < now - .05){ nextBeatIdx++; continue; }
+    const beatNum = nextBeatIdx % 4;
+    // Find scene at this beat time
+    const sceneIdx = findScene((beatTime - audioStartT) % TOTAL_DUR);
+    const sc = PROGRAM[sceneIdx];
+    const ch = SCENE_CHORDS[sc.scene] || SCENE_CHORDS.cloud;
+    // Kick on every beat, accent on beat 1
+    const kg = (beatNum===0 ? 1.0 : .6) * ch.kick;
+    scheduleKick(beatTime, kg);
+    // Bell on bar 1 (beat 0) every 2 bars during dramatic scenes
+    const barIdx = Math.floor(nextBeatIdx/4);
+    if(beatNum===0 && barIdx%2===0 && (sc.scene==='kolob'||sc.scene==='fire'||sc.scene==='figure'||sc.scene==='holdKolob')){
+      scheduleBell(beatTime, ch.root*4, .25);
+    }
+    lastBeatScheduled = nextBeatIdx;
+    nextBeatIdx++;
+  }
+}
+
+// Scenes registry (functions assigned below; consumed by evalProgram)
+const Scenes = {};
+
+// 1) Pillar of Cloud — drone bass breathing field, brightens on every bar
+Scenes.cloud = (v,t,localT)=>{
+  // turbulence advected by the drone LFO + bar position
+  const flow = BEAT.barPhase*.6;
+  const f1 = Math.sin(v.ny*2.4 + flow*3 + BEAT.droneA*1.4) *
+             Math.cos(v.nx*1.8 - flow*2 + v.nz*1.6 + BEAT.droneB*1.1);
+  const radial = expBell(Math.sqrt(v.nx*v.nx+v.nz*v.nz)*.7, .95);
+  // Per-bar swell pulls density up; beats add gentle ripple
+  const bar = .45 + BEAT.barPulse*.7;
+  const beatRipple = .05*Math.sin((v.ny - BEAT.beatPhase)*8);
+  const val = radial*(.55 + .4*f1 + beatRipple) * bar * (.7 + BEAT.swell*.5);
+  if(val<.10) return [0,0,0];
+  return [val*.92, val*.96, val*1.0];
+};
+
+// 2) Kolob — core throbs per beat; SHOCKWAVE rings expand per bar;
+//    phrase resets blow the corona out to the column edges.
+Scenes.kolob = (v,t,localT)=>{
+  const r = Math.sqrt(v.nx*v.nx + v.ny*v.ny + v.nz*v.nz);
+  const coreSize = .14 + BEAT.beatPulse*.10;
+  const core = expBell(r/coreSize, 1.0) * (1.2 + BEAT.beatPulse*1.1);
+  // Two stacked corona rings expanding at different speeds (bar + phrase)
+  const r1 = .30 + BEAT.barPhase*.60;        // travels outward across a bar
+  const r2 = .25 + BEAT.phrasePhase*1.20;    // travels outward across a phrase (4 bars)
+  const ring1 = expBell((r-r1)/.08, 1.0) * (1 - BEAT.barPhase) * 1.1;
+  const ring2 = expBell((r-r2)/.06, 1.0) * (1 - BEAT.phrasePhase) * .7;
+  // Phrase whiteout: brief radial flare on bar 0 of each phrase
+  const flare = (BEAT.barNum===0 ? BEAT.phrasePulse : 0) * expBell(r/.5, 1.0) * .55;
+  const val = core + ring1 + ring2 + flare;
+  if(val<.08) return [0,0,0];
+  const hot = BEAT.beatPulse*.25 + flare*.6;
+  return [val*1.0, val*(.80+hot), val*(.40+hot*.7)];
+};
+
+// 3) 144 Worlds · 15 Sealed — particle field
+Scenes._worldsPts = null;
+function ensureWorldsPts(){
+  if(Scenes._worldsPts) return;
+  const pts=[];
+  let rng=12345;
+  const R=()=>(rng=(rng*1103515245+12345)&0x7fffffff)/0x7fffffff;
+  for(let i=0;i<144;i++){
+    const sealed=i<15;
+    const r = sealed?(.05+R()*.25):(.3+R()*.85);
+    const a=R()*Math.PI*2;
+    pts.push({x:Math.cos(a)*r, y:(R()*2-1)*.92, z:Math.sin(a)*r, sealed, ph:R()*Math.PI*2});
+  }
+  Scenes._worldsPts=pts;
+}
+Scenes.worlds = (v,t,localT)=>{
+  ensureWorldsPts();
+  // Sealed-15 hard kick. Off-beat (and-of-2) adds shimmer for outer worlds.
+  // On bar-1-of-phrase, ALL 144 simultaneously flash (the sealing event).
+  const sealedKick = .55 + BEAT.beatPulse*1.1 + BEAT.halfBarPulse*.3;
+  const outerJit   = .015 + BEAT.barPulse*.04;
+  const sealEvent  = (BEAT.barNum===0 ? BEAT.phrasePulse : 0);  // big phrase event
+  let val=0, sVal=0;
+  for(const p of Scenes._worldsPts){
+    const amp = p.sealed?outerJit*.4:outerJit;
+    const px=p.x+Math.sin(t*1.1+p.ph)*amp;
+    const py=p.y+Math.cos(t*.95+p.ph)*amp;
+    const pz=p.z+Math.cos(t*1.05+p.ph)*amp;
+    const d=Math.sqrt((v.nx-px)*(v.nx-px)+(v.ny-py)*(v.ny-py)+(v.nz-pz)*(v.nz-pz));
+    let weight;
+    if(p.sealed) weight = sealedKick + sealEvent*1.2;
+    else weight = .35 + BEAT.halfBarPulse*.35 + sealEvent*.9;
+    const w=Math.exp(-(d*d)/.0035)*weight;
+    val+=w; if(p.sealed) sVal+=w;
+  }
+  if(val<.08) return [0,0,0];
+  return [val*.7+sVal*.6, val*.85+sVal*.35 + sealEvent*.4, val*.95-sVal*.2];
+};
+
+// 4) Three Great Suns — beat-quantized orbit advance; orbs flare per beat
+Scenes.threeSuns = (v,t,localT)=>{
+  // Discrete orbital steps: 3 orbs share 12 positions, advance 1 per beat
+  const stepPhase = BEAT.beatIdx*(Math.PI*2/12) + BEAT.beatPulse*(Math.PI*2/12)*.4;
+  // Each orb flashes on a different beat (polyrhythm)
+  let r=0,g=0,b=0;
+  for(let k=0;k<3;k++){
+    const yk=-.65+k*.65;
+    const a=stepPhase + k*Math.PI*2/3;
+    const orbR = .45 + BEAT.barPulse*.06;
+    const xk=Math.cos(a)*orbR, zk=Math.sin(a)*orbR;
+    const d=Math.sqrt((v.nx-xk)*(v.nx-xk)+(v.ny-yk)*(v.ny-yk)+(v.nz-zk)*(v.nz-zk));
+    // This orb flashes when (beatNum % 3) == k
+    const isMine = (BEAT.beatNum%3)===k;
+    const flare = isMine ? (1 + BEAT.beatPulse*1.6) : (.7 + BEAT.barPulse*.3);
+    const w=Math.exp(-(d*d)/.018)*flare;
+    r+=w; g+=w*.78; b+=w*.35;
+  }
+  if(Math.max(r,g,b)<.1) return [0,0,0];
+  return [Math.min(2.0,r), Math.min(1.6,g), Math.min(1.0,b)];
+};
+
+// 5) Twelve Governing Systems — sequence walks the helix; bar 1 flashes ALL;
+//    phrase reset reverses the walk direction.
+Scenes.twelve = (v,t,localT)=>{
+  const phraseReverse = (BEAT.phraseIdx % 2 === 1);
+  const stepIdx = phraseReverse ? (11 - BEAT.beatIdx%12) : (BEAT.beatIdx % 12);
+  const litK = stepIdx;
+  const allFlash = (BEAT.beatNum===0) ? BEAT.beatPulse*.8 : 0;
+  const stepAngle = BEAT.beatIdx*(Math.PI*2/12) * (phraseReverse?-1:1);
+  let val=0, hot=0;
+  for(let k=0;k<12;k++){
+    const yk=-.92+k*1.84/11;
+    const a=k*Math.PI*2/12 + stepAngle*.4;
+    const orbR=.62 + BEAT.barPulse*.04;
+    const xk=Math.cos(a)*orbR, zk=Math.sin(a)*orbR;
+    const d=Math.sqrt((v.nx-xk)*(v.nx-xk)+(v.ny-yk)*(v.ny-yk)+(v.nz-zk)*(v.nz-zk));
+    const lit = (k===litK) ? (1 + BEAT.beatPulse*1.6) : (.5 + allFlash);
+    const w=Math.exp(-(d*d)/.011)*lit;
+    val+=w; if(k===litK) hot+=w;
+  }
+  if(val<.1) return [0,0,0];
+  return [val*.42+hot*.4, val*.95+allFlash*.2, val*.92];
+};
+
+// 6) Time Collapse — particles converge to single point (one Kolob day)
+Scenes._collapsePts=null;
+function ensureCollapsePts(){
+  if(Scenes._collapsePts) return;
+  const pts=[];
+  let rng=99887;
+  const R=()=>(rng=(rng*1103515245+12345)&0x7fffffff)/0x7fffffff;
+  for(let i=0;i<90;i++){
+    const a=R()*Math.PI*2;
+    const r=.4+R()*.65;
+    pts.push({sx:Math.cos(a)*r, sy:(R()*2-1)*.95, sz:Math.sin(a)*r});
+  }
+  Scenes._collapsePts=pts;
+}
+Scenes.collapse = (v,t,localT,dur)=>{
+  ensureCollapsePts();
+  // Stepped collapse: each BAR pulls particles one notch inward
+  const totalBars = Math.max(1, Math.floor(dur/BAR_SEC));
+  const barInScene = Math.min(totalBars, Math.floor(localT/BAR_SEC));
+  const barProg = clamp01((localT - barInScene*BAR_SEC)/BAR_SEC);
+  // step from barInScene/totalBars to (barInScene+1)/totalBars
+  const stepA = barInScene/totalBars;
+  const stepB = Math.min(1,(barInScene+1)/totalBars);
+  // ease within bar — beats inside provide small inward kicks
+  const ease = stepA + (stepB-stepA) * (1 - Math.pow(1-barProg, 3));
+  const collapse = Math.pow(ease, 1.4);
+  // Beat kicks pull a tiny bit extra
+  const kickPull = BEAT.beatPulse*.04;
+  let val=0;
+  for(const p of Scenes._collapsePts){
+    const radius=(1 - collapse - kickPull);
+    const px=p.sx*radius, py=p.sy*radius, pz=p.sz*radius;
+    const d=Math.sqrt((v.nx-px)*(v.nx-px)+(v.ny-py)*(v.ny-py)+(v.nz-pz)*(v.nz-pz));
+    val+=Math.exp(-(d*d)/.005)*(.5+ease*.9 + BEAT.beatPulse*.3);
+  }
+  if(val<.1) return [0,0,0];
+  // Color cools as it collapses (heat death → singular point)
+  return [val*(.85-ease*.15), val*.95, val*(.78+ease*.15)];
+};
+
+// 7) Jacob's Ladder — rungs climb ONE STEP per beat (snap up, hold)
+Scenes.ladder = (v,t,localT)=>{
+  // Rails pulse with bar
+  const railLit = .45 + BEAT.barPulse*.4;
+  const rail = (Math.abs(Math.abs(v.nx)-.55)<.10 && Math.abs(v.nz)<.4) ? railLit : 0;
+  // 8 rungs total. New rung emerges at bottom each beat; older rungs climb.
+  let rung=0;
+  const NUM_RUNGS=8;
+  for(let r=0;r<NUM_RUNGS;r++){
+    // birth beat for this rung = current beat - r
+    const ageBeats = r; // index 0 = newest
+    // y-position: newest at -.95, each older +.24 up
+    const yPos = -.95 + ageBeats*(1.9/NUM_RUNGS);
+    // Slight ease-in during beatPhase for newest rung's brightness
+    const isNew = (r===0);
+    const rungWidth=.10 + (isNew?BEAT.beatPulse*.04:0);
+    const inRung = (Math.abs(v.ny-yPos)<rungWidth && Math.abs(v.nx)<.6 && Math.abs(v.nz)<.4);
+    if(inRung){
+      const fade = 1 - r/(NUM_RUNGS+1);
+      const flash = isNew ? (.7+BEAT.beatPulse*.7) : fade*.85;
+      rung = Math.max(rung, flash);
+    }
+  }
+  const val=Math.max(rail,rung);
+  if(val<.1) return [0,0,0];
+  if(rung>.4) return [val*.85, val*.95, val*1.0];
+  return [val*.45, val*.55, val*.7];
+};
+
+// 8) Standing Figure of Light — chest swells on beat (heartbeat), bar = breath
+Scenes.figure = (v,t,localT)=>{
+  // Heart pulse swells the chest region with the beat (kick = heartbeat)
+  const chestPulse = BEAT.beatPulse;
+  const headPulse = BEAT.barPulse*.4;
+  const head=expBell(v.nx/.18,1)*expBell((v.ny-.75)/(.13+headPulse*.04),1)*expBell(v.nz/.55,1)*(1.0+headPulse*.4);
+  // torso — heartbeat originates from chest (ny~.2)
+  const heartRing = expBell((v.ny-.2)/(.10+chestPulse*.06), 1.0);
+  const torsoMask=(Math.abs(v.nx)<.30 && v.ny>-.45 && v.ny<.55 && Math.abs(v.nz)<.32);
+  const torsoFall=expBell((v.ny+.05)/.55,1);
+  const torso = torsoMask ? (.75 + heartRing*chestPulse*.9) * torsoFall : 0;
+  // legs — flicker slightly with each beat
+  const legs=(Math.abs(Math.abs(v.nx)-.12)<.10 && v.ny<-.4 && v.ny>-.95 && Math.abs(v.nz)<.25) ?
+    (.65 + BEAT.beatPulse*.25) : 0;
+  // arms
+  const arms=(Math.abs(Math.abs(v.nx)-.38)<.08 && v.ny<.4 && v.ny>-.15 && Math.abs(v.nz)<.20) ?
+    (.55 + BEAT.barPulse*.25) : 0;
+  // Halo around head pulses with bar
+  const halo = expBell(Math.sqrt(v.nx*v.nx + (v.ny-.75)*(v.ny-.75) + v.nz*v.nz)/(.30+BEAT.barPulse*.10), 1.0) * BEAT.barPulse*.5;
+  const val=Math.max(head,torso,legs,arms,halo) * (.85 + BEAT.swell*.2);
+  if(val<.13) return [0,0,0];
+  return [val*.95, val*1.0, val*.88];
+};
+
+// 9) Pillar of Fire — bass kicks shove flames upward; off-beat sparks;
+//    phrase resets blast white-hot from base. 4 active plumes.
+Scenes.fire = (v,t,localT)=>{
+  const advect = BEAT.beatIdx*.5 + BEAT.beatPulse*.4;
+  const f1 = Math.sin(v.ny*5 + advect*3 + Math.cos(v.nx*3-t*2.2)*1.4);
+  const f2 = Math.sin(v.ny*8 - advect*4 + Math.sin(v.nz*4+t*1.6)*1.2);
+  const f = (f1+f2)*.25 + .5;
+  const radial = (1 - Math.sqrt(v.nx*v.nx+v.nz*v.nz)*(.55 - BEAT.beatPulse*.10));
+  // Four overlapping plumes
+  let plume=0;
+  for(let p=0;p<4;p++){
+    const plumeAge = (BEAT.beatIdx-p) + BEAT.beatPhase;
+    if(plumeAge<0||plumeAge>4) continue;
+    const yPos = -1 + (plumeAge/4)*2.2;
+    plume = Math.max(plume, Math.exp(-Math.pow((v.ny-yPos)/(.22+plumeAge*.05),2)*4) * (1-plumeAge/4));
+  }
+  // Off-beat sparks — small bright voxels off-axis on the "and"
+  const spark = BEAT.halfBarPulse * .35 * (Math.abs(v.nx)>.4||Math.abs(v.nz)>.4?1:0) * Math.random();
+  const barFlare = (BEAT.beatNum===0 ? BEAT.beatPulse : 0) * .8;
+  // Phrase reset: white-hot blast from base, climbs in .5 sec
+  const phraseBlast = (BEAT.barNum===0 ? BEAT.phrasePulse : 0);
+  const blastY = -1 + BEAT.phrasePhase*4; // shoots up fast
+  const blastShape = Math.exp(-Math.pow((v.ny-blastY)/.30,2)*3) * phraseBlast * 1.2;
+  const val = Math.max(0, radial) * (.45 + .55*f + barFlare + spark) * (.45 + plume*1.1) + blastShape;
+  if(val<.10) return [0,0,0];
+  const whiteHot = blastShape + spark*.5;
+  return [val*1.3, val*(.45+.3*f+barFlare*.4+whiteHot*.7), val*(.08+.12*f+whiteHot*.8)];
+};
+
+// 10) HOLD on Kolob — single voxel, breathing locked to the bar
+Scenes.holdKolob = (v,t,localT)=>{
+  const r = Math.sqrt(v.nx*v.nx + v.ny*v.ny + v.nz*v.nz);
+  // Breath = one inhale/exhale per bar
+  const breath = .70 + .30*(.5 - .5*Math.cos(BEAT.barPhase*Math.PI*2));
+  const core = expBell(r/.10, 1.0) * 1.5 * breath;
+  if(core<.10) return [0,0,0];
+  return [core*1.0, core*.88, core*.55];
+};
+
+// ───────────────────────────────────────────────────────────
+// TIMELINE  (total 240 sec = 4:00)
+// ───────────────────────────────────────────────────────────
+const PROGRAM=[
+  {name:'CREATION — Pillar of Cloud',  scene:'cloud',     dur:30, color:'#aeb8c2', spillR:.55, spillG:.55, spillB:.65},
+  {name:'KOLOB — the governing star',  scene:'kolob',     dur:25, color:'#ffd58a', spillR:1.0, spillG:.85, spillB:.50},
+  {name:'144 WORLDS · 15 SEALED',      scene:'worlds',    dur:30, color:'#a8d8e0', spillR:.55, spillG:.85, spillB:.95},
+  {name:'THREE GREAT SUNS',            scene:'threeSuns', dur:28, color:'#ffb368', spillR:1.0, spillG:.70, spillB:.35},
+  {name:'TWELVE GOVERNING SYSTEMS',    scene:'twelve',    dur:28, color:'#7fffd4', spillR:.45, spillG:.95, spillB:.85},
+  {name:'TIME COLLAPSE — one Kolob day', scene:'collapse', dur:24, color:'#dde6c0', spillR:.80, spillG:.85, spillB:.70},
+  {name:'JACOB\'S LADDER',             scene:'ladder',    dur:22, color:'#cfe4ff', spillR:.55, spillG:.70, spillB:.95},
+  {name:'STANDING FIGURE OF LIGHT',    scene:'figure',    dur:24, color:'#f4ffe9', spillR:.92, spillG:1.0, spillB:.80},
+  {name:'PILLAR OF FIRE — climax',     scene:'fire',      dur:22, color:'#ff7733', spillR:1.0, spillG:.55, spillB:.18},
+  {name:'HOLD — Kolob alone',          scene:'holdKolob', dur:7,  color:'#ffd58a', spillR:1.0, spillG:.85, spillB:.50}
+];
+const TOTAL_DUR = PROGRAM.reduce((s,p)=>s+p.dur,0);
+const TRANS_LEN = 2.6; // seconds cross-fade between scenes
+
+// Compute start times
+let acc=0;
+PROGRAM.forEach(p=>{ p.start=acc; acc+=p.dur; });
+
+// ───────────────────────────────────────────────────────────
+// TIMELINE UI
+// ───────────────────────────────────────────────────────────
+const tlTrack=document.getElementById('tl-track');
+const tlHead=document.getElementById('tl-head');
+const tlNow=document.getElementById('tlNow');
+const tlNext=document.getElementById('tlNext');
+const tlClock=document.getElementById('tlClock');
+PROGRAM.forEach((p,i)=>{
+  const s=document.createElement('div');
+  s.className='tl-seg';
+  s.dataset.i=i;
+  s.style.left=(p.start/TOTAL_DUR*100)+'%';
+  s.style.width=(p.dur/TOTAL_DUR*100)+'%';
+  s.title=p.name;
+  s.textContent=p.name.split(' — ')[0].split(' · ')[0];
+  s.addEventListener('click',()=>{playhead=p.start; paused=false; bPause.textContent='⏸ PAUSE'});
+  tlTrack.appendChild(s);
+});
+
+function fmt(sec){const m=Math.floor(sec/60), s=Math.floor(sec%60); return `${m}:${s<10?'0':''}${s}`}
+
+// ───────────────────────────────────────────────────────────
+// CAMERA — orbit with presets
+// ───────────────────────────────────────────────────────────
+let camTheta=.7, camPhi=.18, camDist=4.5;
+let tTheta=camTheta, tPhi=camPhi, tDist=camDist;
+let lookAt=new THREE.Vector3(0,CY,0), tLookAt=lookAt.clone();
+let autoOrbit=true;
+let isDragging=false, prevX=0, prevY=0;
+
+renderer.domElement.addEventListener('mousedown',e=>{isDragging=true; autoOrbit=false; prevX=e.clientX; prevY=e.clientY});
+renderer.domElement.addEventListener('mousemove',e=>{
+  if(!isDragging) return;
+  tTheta+=(e.clientX-prevX)*.006;
+  tPhi=Math.max(-.4,Math.min(Math.PI/2-.05,tPhi-(e.clientY-prevY)*.006));
+  prevX=e.clientX; prevY=e.clientY;
+});
+renderer.domElement.addEventListener('mouseup',()=>isDragging=false);
+renderer.domElement.addEventListener('wheel',e=>{tDist=Math.max(1.6,Math.min(20,tDist+e.deltaY*.005))});
+
+let touchD=0;
+renderer.domElement.addEventListener('touchstart',e=>{
+  if(e.touches.length===1){isDragging=true; autoOrbit=false; prevX=e.touches[0].clientX; prevY=e.touches[0].clientY}
+  if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX, dy=e.touches[0].clientY-e.touches[1].clientY; touchD=Math.sqrt(dx*dx+dy*dy)}
+});
+renderer.domElement.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(e.touches.length===1&&isDragging){
+    tTheta+=(e.touches[0].clientX-prevX)*.006;
+    tPhi=Math.max(-.4,Math.min(Math.PI/2-.05,tPhi-(e.touches[0].clientY-prevY)*.006));
+    prevX=e.touches[0].clientX; prevY=e.touches[0].clientY;
+  }
+  if(e.touches.length===2){
+    const dx=e.touches[0].clientX-e.touches[1].clientX, dy=e.touches[0].clientY-e.touches[1].clientY;
+    const d=Math.sqrt(dx*dx+dy*dy); tDist=Math.max(1.6,Math.min(20,tDist-(d-touchD)*.01)); touchD=d;
+  }
+},{passive:false});
+renderer.domElement.addEventListener('touchend',()=>isDragging=false);
+
+document.querySelectorAll('#views span').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('#views span').forEach(s=>s.classList.remove('active'));
+    b.classList.add('active');
+    const v=b.dataset.v;
+    autoOrbit=(v==='orbit');
+    if(v==='front'){tTheta=Math.PI/2; tPhi=.05; tDist=4}
+    else if(v==='34'){tTheta=.7; tPhi=.15; tDist=4.5}
+    else if(v==='side'){tTheta=0; tPhi=.05; tDist=4}
+    else if(v==='top'){tTheta=0; tPhi=1.2; tDist=5}
+  });
+});
+
+// ───────────────────────────────────────────────────────────
+// TRANSPORT
+// ───────────────────────────────────────────────────────────
+// (playhead / paused / loopProgram declared at top of script)
+const bRestart=document.getElementById('bRestart');
+const bPause=document.getElementById('bPause');
+const bLoop=document.getElementById('bLoop');
+bRestart.addEventListener('click',()=>{playhead=0});
+bPause.addEventListener('click',()=>{paused=!paused; bPause.textContent=paused?'▶ PLAY':'⏸ PAUSE'});
+bLoop.addEventListener('click',()=>{loopProgram=!loopProgram; bLoop.textContent=loopProgram?'↻ LOOP':'→ ONCE'});
+
+// Hot-keys
+addEventListener('keydown',e=>{
+  if(e.key===' '){paused=!paused; bPause.textContent=paused?'▶ PLAY':'⏸ PAUSE'; e.preventDefault()}
+  else if(e.key==='r'){playhead=0}
+  else if(e.key==='ArrowRight'){playhead=Math.min(TOTAL_DUR-.5, playhead+5)}
+  else if(e.key==='ArrowLeft'){playhead=Math.max(0, playhead-5)}
+});
+
+// ───────────────────────────────────────────────────────────
+// SCENE EVALUATION  (with cross-fade)
+// ───────────────────────────────────────────────────────────
+function findScene(ph){
+  for(let i=0;i<PROGRAM.length;i++){
+    if(ph < PROGRAM[i].start+PROGRAM[i].dur) return i;
+  }
+  return PROGRAM.length-1;
+}
+function evalProgram(arr, t){
+  const phMod = loopProgram ? (playhead%TOTAL_DUR) : Math.min(playhead, TOTAL_DUR-.01);
+  beatClock(phMod);                              // <-- update BEAT for all scenes
+  const idx=findScene(phMod);
+  const cur=PROGRAM[idx];
+  const localT = phMod - cur.start;
+  const fadeIn  = clamp01(localT/TRANS_LEN);
+  const tailFrom= cur.dur - TRANS_LEN;
+  const fadeOut = (localT>tailFrom && idx<PROGRAM.length-1) ? clamp01((cur.dur-localT)/TRANS_LEN) : 1;
+  // next scene if we're in fade-out
+  let nextIdx = idx;
+  let blend = 0;
+  if(localT > tailFrom && idx<PROGRAM.length-1){
+    nextIdx=idx+1;
+    blend = clamp01((localT - tailFrom)/TRANS_LEN);
+  }
+  const curFn = Scenes[cur.scene];
+  const nxtFn = nextIdx!==idx ? Scenes[PROGRAM[nextIdx].scene] : null;
+  let energy=0;
+  for(let i=0;i<vox.length;i++){
+    const v=vox[i];
+    let c = curFn(v,t,localT,cur.dur);
+    if(nxtFn){
+      const cn = nxtFn(v,t, localT - tailFrom, PROGRAM[nextIdx].dur);
+      c = [c[0]*(1-blend)+cn[0]*blend, c[1]*(1-blend)+cn[1]*blend, c[2]*(1-blend)+cn[2]*blend];
+    }
+    // entry fade-in for first scene + global breath
+    const open = (idx===0) ? fadeIn : 1;
+    arr[i*3  ] = c[0]*open;
+    arr[i*3+1] = c[1]*open;
+    arr[i*3+2] = c[2]*open;
+    energy += (c[0]+c[1]+c[2]);
+  }
+  // Spill light interpolation
+  let sR=cur.spillR, sG=cur.spillG, sB=cur.spillB;
+  if(nxtFn){
+    const n=PROGRAM[nextIdx];
+    sR=sR*(1-blend)+n.spillR*blend;
+    sG=sG*(1-blend)+n.spillG*blend;
+    sB=sB*(1-blend)+n.spillB*blend;
+  }
+  spill.color.setRGB(sR,sG,sB);
+  // HUD
+  document.getElementById('hScene').textContent=cur.name;
+  document.getElementById('hEnergy').textContent=(energy/vox.length).toFixed(2);
+  tlNow.textContent=cur.name;
+  tlClock.textContent=`${fmt(phMod)} / ${fmt(TOTAL_DUR)}`;
+  const nIdx = idx<PROGRAM.length-1 ? idx+1 : (loopProgram?0:-1);
+  tlNext.textContent = nIdx>=0 ? `next: ${PROGRAM[nIdx].name}` : 'end';
+  tlHead.style.left = (phMod/TOTAL_DUR*100)+'%';
+  document.querySelectorAll('.tl-seg').forEach((s,i)=>{
+    s.classList.toggle('active', i===idx);
+  });
+}
+
+// ───────────────────────────────────────────────────────────
+// RENDER LOOP (voxel updates @ 24Hz, render every frame)
+// ───────────────────────────────────────────────────────────
+const colorAttr=vGeo.getAttribute('color');
+let lastVox=0;
+const VOX_HZ=30;
+let lastFrame=performance.now();
+let fpsAvg=60;
+let lastWall=performance.now();
+
+function animate(time){
+  requestAnimationFrame(animate);
+  const t=time*.001;
+  const dtMs=time-lastWall; lastWall=time;
+  if(!paused){
+    if(audioActive){
+      // Lock playhead to audio clock so visuals stay perfectly synced
+      let ap = audioCtx.currentTime - audioStartT;
+      if(loopProgram){
+        if(ap >= TOTAL_DUR){
+          audioStartT += TOTAL_DUR;
+          ap -= TOTAL_DUR;
+        }
+        playhead = ap;
+      } else {
+        playhead = Math.min(ap, TOTAL_DUR-.01);
+        if(playhead >= TOTAL_DUR-.01){ paused=true; bPause.textContent='▶ PLAY' }
+      }
+    } else {
+      playhead += dtMs*.001;
+      if(playhead >= TOTAL_DUR){
+        if(loopProgram) playhead = playhead % TOTAL_DUR;
+        else { playhead = TOTAL_DUR-.01; paused=true; bPause.textContent='▶ PLAY' }
+      }
+    }
+  }
+  // Tick beat clock at full render rate so the kick reads tight
+  beatClock(loopProgram ? (playhead%TOTAL_DUR) : Math.min(playhead, TOTAL_DUR-.01));
+  // Schedule audio events just-ahead-of-time
+  tickAudioScheduler();
+  // Update pad chord when scene changes
+  {
+    const phMod = loopProgram ? (playhead%TOTAL_DUR) : Math.min(playhead, TOTAL_DUR-.01);
+    const sc = PROGRAM[findScene(phMod)];
+    if(audioActive && currentPadKey!==sc.scene) setSceneChord(sc.scene);
+  }
+
+  // Auto orbit
+  if(autoOrbit){
+    tTheta += .0015;
+    tPhi = .15 + Math.sin(t*.18)*.05;
+    tDist = 4.5 + Math.sin(t*.12)*.4;
+  }
+  camTheta += (tTheta-camTheta)*.06;
+  camPhi   += (tPhi-camPhi)*.06;
+  camDist  += (tDist-camDist)*.06;
+  lookAt.lerp(tLookAt,.04);
+  camera.position.set(
+    lookAt.x+Math.sin(camTheta)*Math.cos(camPhi)*camDist,
+    lookAt.y+Math.sin(camPhi)*camDist,
+    lookAt.z+Math.cos(camTheta)*Math.cos(camPhi)*camDist);
+  camera.lookAt(lookAt);
+
+  // Voxel update
+  if(time-lastVox > 1000/VOX_HZ){
+    lastVox=time;
+    evalProgram(colorAttr.array, t);
+    colorAttr.needsUpdate=true;
+  }
+  // Spill intensity now beat-driven — kick on every beat, big swell each bar
+  const cur=PROGRAM[findScene(loopProgram ? playhead%TOTAL_DUR : Math.min(playhead,TOTAL_DUR-.01))];
+  const baseInt = (cur.scene==='fire') ? 2.6 : (cur.scene==='holdKolob') ? 1.6 :
+                  (cur.scene==='cloud') ? .95 : 1.3;
+  spill.intensity = baseInt * (.65 + BEAT.beatPulse*.55 + BEAT.swell*.25);
+
+  // Subtle camera kick on the downbeat of FIRE & KOLOB (climactic scenes)
+  if(cur.scene==='fire' || cur.scene==='kolob'){
+    const shake = BEAT.beatPulse * (cur.scene==='fire' ? .035 : .015);
+    camera.position.x += (Math.random()-.5)*shake;
+    camera.position.y += (Math.random()-.5)*shake;
+  }
+
+  // Beat indicators (4 dots — one lights per beat in the bar)
+  const beatDots=document.querySelectorAll('#beat span');
+  beatDots.forEach((d,i)=>{
+    const lit = (i===BEAT.beatNum) && BEAT.beatPulse>.15;
+    d.classList.toggle('on', lit);
+  });
+  document.getElementById('tBar').textContent='bar '+(BEAT.barIdx%999);
+  document.getElementById('tSwell').style.width=(BEAT.swell*100).toFixed(0)+'%';
+
+  // FPS
+  const dt=time-lastFrame; lastFrame=time;
+  fpsAvg = fpsAvg*.95 + (1000/Math.max(1,dt))*.05;
+  document.getElementById('hFps').textContent=fpsAvg.toFixed(0);
+
+  renderer.render(scene,camera);
+}
+
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+
+animate(0);
+</script>
+</body>
+</html>

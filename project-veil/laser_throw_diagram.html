@@ -21,7 +21,7 @@ canvas{display:block;margin:0 auto 20px}
 </style>
 </head>
 <body>
-<h1>LASER THROW / BEAM SPREAD — Nova Diode 3000</h1>
+<h1>LASER THROW / BEAM SPREAD Nova Diode 3000</h1>
 <div class="sub">ILDA scan angle vs distance → usable projection area for mesh frame sizing</div>
 
 <div class="controls">
@@ -108,7 +108,7 @@ function draw(angleDeg,maxDist){
     ctx.strokeStyle='rgba(255,255,255,.06)';ctx.lineWidth=.5;
     ctx.beginPath();ctx.moveTo(x,margin.t);ctx.lineTo(x,H-margin.b);ctx.stroke();
 
-    // Spread indicator — horizontal line showing width
+    // Spread indicator horizontal line showing width
     ctx.strokeStyle='rgba(100,180,255,.3)';ctx.lineWidth=1;
     ctx.beginPath();
     ctx.moveTo(x,srcY-halfSpreadPx);ctx.lineTo(x,srcY+halfSpreadPx);
@@ -157,7 +157,7 @@ function draw(angleDeg,maxDist){
 
   // Legend
   ctx.fillStyle='rgba(100,180,255,.4)';ctx.font='9px monospace';ctx.textAlign='right';
-  ctx.fillText('— beam spread',W-margin.r,margin.t+12);
+  ctx.fillText(', beam spread',W-margin.r,margin.t+12);
   ctx.fillStyle='rgba(80,255,120,.3)';
   ctx.fillText('□ 80% safe frame',W-margin.r,margin.t+24);
 }
@@ -179,11 +179,11 @@ function buildTable(angleDeg,maxDist){
     const universes=Math.ceil(pixels/170);
 
     let note='';
-    if(frameFt<3)note='<span class="dim">Very small — tight patterns only</span>';
-    else if(frameFt<5)note='Compact — portable, suitcase-friendly';
-    else if(frameFt<7)note='<span class="highlight">Sweet spot — visible, buildable</span>';
-    else if(frameFt<10)note='Large — strong presence, needs rigging';
-    else note='<span class="dim">Huge — multi-section build</span>';
+    if(frameFt<3)note='<span class="dim">Very small tight patterns only</span>';
+    else if(frameFt<5)note='Compact portable, suitcase-friendly';
+    else if(frameFt<7)note='<span class="highlight">Sweet spot visible, buildable</span>';
+    else if(frameFt<10)note='Large strong presence, needs rigging';
+    else note='<span class="dim">Huge multi-section build</span>';
 
     const isSweet=frameFt>=5&&frameFt<8;
     const rowStyle=isSweet?' style="background:#111"':'';
@@ -211,23 +211,23 @@ function buildNotes(angleDeg,maxDist){
     <p><strong style="color:#666">ASSUMPTIONS</strong></p>
     <p>• Nova Diode 3000 (Laserworld DS-3000RGB MK4) confirmed specs: <strong style="color:#aaa">3,000mW RGB</strong> (650mW red 638nm / 900mW green 520nm / 1,600mW blue 450nm)</p>
     <p>• Beam: <strong style="color:#aaa">4mm diameter, 0.9 mrad divergence</strong>. Scanner: <strong style="color:#aaa">40 kpps @ 8° ILDA</strong></p>
-    <p>• <strong style="color:#ff3d00">Max scan angle: 50°</strong> (MK4 spec). At maximum scan angle, pattern detail decreases — sweet spot for graphics is ~40°. Use full 50° for beam effects.</p>
+    <p>• <strong style="color:#ff3d00">Max scan angle: 50°</strong> (MK4 spec). At maximum scan angle, pattern detail decreases sweet spot for graphics is ~40°. Use full 50° for beam effects.</p>
     <p>• <strong style="color:#aaa">80% rule</strong>: frame should be ≤80% of beam spread to avoid edge distortion and keep full coverage. The outer 10% each side gets weak and distorted.</p>
     <p>• <strong style="color:#aaa">Pixel count</strong>: based on SK6812 RGBW @ 60 LEDs/m around the full perimeter of a square frame.</p>
     <p>• <strong style="color:#aaa">Universes</strong>: Art-Net, 170 pixels per universe (510 channels / 3 channels per pixel).</p>
     <p style="margin-top:10px"><strong style="color:#666">AT YOUR DISTANCE (${maxDist} ft)</strong></p>
     <p>• Beam spread: <strong style="color:#ff3d00">${spread20.toFixed(1)} ft</strong> (${(spread20*12).toFixed(0)}")</p>
     <p>• Max recommended frame: <strong style="color:#ff3d00">${frame20.toFixed(1)} ft</strong> (${(frame20*12).toFixed(0)}") square</p>
-    <p>• At Glitch Marfa (~25ft wide × 30ft deep × 14ft ceiling), a <strong style="color:#aaa">6-7ft</strong> square frame centered on the back wall gives you clean coverage with margin. At 20ft throw with 50° scan angle, beam spread is ${spread20.toFixed(1)}ft — your frame sits well within that.</p>
+    <p>• At Glitch Marfa (~25ft wide × 30ft deep × 14ft ceiling), a <strong style="color:#aaa">6-7ft</strong> square frame centered on the back wall gives you clean coverage with margin. At 20ft throw with 50° scan angle, beam spread is ${spread20.toFixed(1)}ft your frame sits well within that.</p>
     <p style="margin-top:10px"><strong style="color:#666">MESH MATERIAL OPTIONS</strong></p>
-    <p>• Bridal tulle — cheapest (~$2/yd), good diffusion, very transparent. Fragile.</p>
-    <p>• Theatrical scrim (sharkstooth) — pro-grade, durable, best beam-through. ~$15/yd.</p>
-    <p>• Frosted shower curtain — cheap, heavier diffusion, less beam passthrough.</p>
-    <p>• Rear-projection film — adhesive, attach to acrylic sheet. Sharpest image but blocks beams.</p>
+    <p>• Bridal tulle cheapest (~$2/yd), good diffusion, very transparent. Fragile.</p>
+    <p>• Theatrical scrim (sharkstooth) pro-grade, durable, best beam-through. ~$15/yd.</p>
+    <p>• Frosted shower curtain cheap, heavier diffusion, less beam passthrough.</p>
+    <p>• Rear-projection film adhesive, attach to acrylic sheet. Sharpest image but blocks beams.</p>
     <p style="margin-top:10px"><strong style="color:#666">YOUR CONTROL PIPELINE</strong></p>
-    <p>• ShowNET interface at <strong style="color:#aaa">169.254.24.55</strong> — direct ILDA streaming from TouchDesigner via Script SOP → ShowNET</p>
+    <p>• ShowNET interface at <strong style="color:#aaa">169.254.24.55</strong> direct ILDA streaming from TouchDesigner via Script SOP → ShowNET</p>
     <p>• 40 kpps is enough for smooth curves (sine waves, Lissajous, helixes). For detailed graphics, stay under ~30% of scan area.</p>
-    <p>• At 50° full angle, the usable "graphics zone" for clean shapes is roughly 40° — the outer 5° each side gets wobbly at speed.</p>
+    <p>• At 50° full angle, the usable "graphics zone" for clean shapes is roughly 40° the outer 5° each side gets wobbly at speed.</p>
   `;
 }
 

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Laser Traces · Veil Overlay</title>
+<style>
+  html,body{margin:0;padding:0;background:#000;color:#666;font:11px/1.4 monospace;overflow:hidden}
+  #wrap{display:grid;grid-template-columns:1fr 1fr 1fr;width:100vw;height:100vh}
+  .panel{position:relative;border-right:1px solid #111;overflow:hidden}
+  .panel:last-child{border-right:none}
+  .bg{position:absolute;inset:0;border:none;width:100%;height:100%;pointer-events:none}
+  .overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .lbl{position:absolute;top:10px;left:12px;color:#bbb;letter-spacing:.15em;
+       text-shadow:0 0 6px #000,0 0 12px #000;z-index:5}
+  .lbl b{color:#7fffaa}
+  .sub{position:absolute;bottom:10px;left:12px;color:#888;
+       text-shadow:0 0 6px #000,0 0 12px #000;z-index:5}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div class="panel">
+    <iframe class="bg" src="../kolob/kolob-pod-1d.html#hero" loading="lazy"></iframe>
+    <canvas id="c0" class="overlay"></canvas>
+    <div class="lbl"><b>GALAXY</b> · veil 1 · telestial</div>
+    <div class="sub">Laser flashes: disc + core + 4 thrones</div>
+  </div>
+  <div class="panel">
+    <iframe class="bg" src="../kolob/kolob-pod-1d.html#sun=1" loading="lazy"></iframe>
+    <canvas id="c1" class="overlay"></canvas>
+    <div class="lbl"><b>SUN</b> · veil 2 · terrestrial</div>
+    <div class="sub">Laser flashes: disc anchors + ray tips</div>
+  </div>
+  <div class="panel">
+    <iframe class="bg" src="../kolob/kolob-pod-1d.html#core=2" loading="lazy"></iframe>
+    <canvas id="c2" class="overlay"></canvas>
+    <div class="lbl"><b>CORE</b> · veil 3 · celestial</div>
+    <div class="sub">Laser flashes: triad + 12 systems</div>
+  </div>
+</div>
+
+<script>
+const LASER='#7fffaa';
+
+// ─── Key anchor points only — units: fraction of min(W,H) from center ───
+function galaxyPoints(){
+  const pts=[];
+  const ring=(R,n,phase=0)=>{for(let k=0;k<n;k++){const t=k/n*Math.PI*2+phase; pts.push({x:R*Math.cos(t),y:R*Math.sin(t)})}};
+  ring(.42,16);                       // outer disc anchors
+  ring(.10,6);                        // inner core anchors
+  ring(.42,4,Math.PI/4);              // 4 throne emphasis points (overlap ring, brighter)
+  ring(.26,8,Math.PI/8);              // arm intermediate
+  pts.push({x:0,y:0});                // center
+  return pts;
+}
+function sunPoints(){
+  const pts=[];
+  const ring=(R,n,phase=0)=>{for(let k=0;k<n;k++){const t=k/n*Math.PI*2+phase; pts.push({x:R*Math.cos(t),y:R*Math.sin(t)})}};
+  ring(.18,8);                        // disc anchors
+  ring(.30,8,Math.PI/8);              // corona ring anchors
+  ring(.40,8);                        // ray tips
+  pts.push({x:0,y:0});                // sun center
+  return pts;
+}
+function corePoints(){
+  const pts=[];
+  const ring=(R,n,phase=0)=>{for(let k=0;k<n;k++){const t=k/n*Math.PI*2+phase; pts.push({x:R*Math.cos(t),y:R*Math.sin(t)})}};
+  // triad of great suns
+  for(let k=0;k<3;k++){
+    const th=k/3*Math.PI*2-Math.PI/2;
+    pts.push({x:.18*Math.cos(th),y:.18*Math.sin(th)});
+  }
+  ring(.38,12);                       // twelve governing systems
+  pts.push({x:0,y:0});                // sealed center
+  return pts;
+}
+
+function setup(id){
+  const c=document.getElementById(id);
+  const ctx=c.getContext('2d');
+  function resize(){
+    const dpr=devicePixelRatio||1;
+    c.width=c.clientWidth*dpr; c.height=c.clientHeight*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  resize(); addEventListener('resize',resize);
+  return {c,ctx,w:()=>c.clientWidth,h:()=>c.clientHeight};
+}
+
+// Per-point state: phase offset + decay so dots flash on/off independently.
+function makeRenderer(panel,pointsFn,opts={}){
+  const {c,ctx,w,h}=panel;
+  const pts=pointsFn();
+  // Stagger flash timing across points
+  const state=pts.map((p,i)=>({
+    next: Math.random()*opts.cycle,
+    intensity: 0,
+    seed: Math.random()
+  }));
+  const cycle=opts.cycle||1800;   // ms between flashes per point
+  const flashMs=opts.flashMs||140;
+  const dotR=opts.dotR||1.8;      // tiny dot radius (px)
+  const glowR=opts.glowR||5;      // tight glow halo
+  let t0=performance.now();
+
+  function draw(now){
+    const W=w(),H=h(), cx=W/2, cy=H/2, S=Math.min(W,H);
+    // Clear fully — flashes are instantaneous, no persistence trail
+    ctx.clearRect(0,0,W,H);
+    ctx.globalCompositeOperation='lighter';
+
+    pts.forEach((p,i)=>{
+      const s=state[i];
+      if(now>=s.next){
+        s.intensity=1;
+        s.next=now + cycle*(.55 + Math.random()*.9);
+      }
+      // decay
+      s.intensity *= Math.pow(.001, (1/60)*(1000/flashMs)); // ~flashMs to near-zero @60fps
+      if(s.intensity<.02) return;
+
+      const px=cx+p.x*S, py=cy+p.y*S;
+      const a=s.intensity;
+
+      // Tight glow halo
+      const g=ctx.createRadialGradient(px,py,0,px,py,glowR);
+      g.addColorStop(0,'rgba(127,255,170,'+(0.55*a).toFixed(3)+')');
+      g.addColorStop(1,'rgba(127,255,170,0)');
+      ctx.fillStyle=g;
+      ctx.beginPath(); ctx.arc(px,py,glowR,0,Math.PI*2); ctx.fill();
+
+      // Hard bright pixel
+      ctx.fillStyle=LASER;
+      ctx.globalAlpha=Math.min(1,a*1.2);
+      ctx.beginPath(); ctx.arc(px,py,dotR,0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha=1;
+    });
+
+    ctx.globalCompositeOperation='source-over';
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+}
+
+makeRenderer(setup('c0'), galaxyPoints, {cycle:1400, flashMs:120, dotR:1.6, glowR:5});
+makeRenderer(setup('c1'), sunPoints,    {cycle:1100, flashMs:140, dotR:1.8, glowR:6});
+makeRenderer(setup('c2'), corePoints,   {cycle:1300, flashMs:130, dotR:1.6, glowR:5});
+</script>
+</body>
+</html>

@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+*{margin:0;padding:0;background:#000}
+canvas{display:block}
+#info{position:fixed;top:12px;left:16px;font:11px/1.6 monospace;color:#666;pointer-events:none;z-index:10;max-width:380px}
+#info strong{color:#ffd58a}
+#info .dim{color:#444}
+#controls{position:fixed;bottom:16px;left:16px;font:10px monospace;color:#444;z-index:10}
+#controls span{color:#666;cursor:pointer;margin-right:10px;padding:4px 8px;border:1px solid #222;display:inline-block}
+#controls span:hover{color:#ffd58a;border-color:#ffd58a}
+#controls span.active{color:#ffd58a;border-color:#ffd58a}
+#hud{position:fixed;bottom:16px;right:16px;font:10px/1.6 monospace;color:#888;z-index:10;text-align:right;background:rgba(0,0,0,.5);padding:8px 12px;border:1px solid #2a2a2a;border-radius:3px}
+#hud b{color:#ffd58a;font-weight:normal}
+</style>
+</head>
+<body>
+<div id="info">
+  <strong>THE VEIL · PROCESSION</strong><br>
+  3 fabric veils (3m × 4m) in sequence,<br>
+  IBW-P-62.5 LED column behind veil 3 (celestial)<br>
+  <span class="dim">~18ft × 40ft × 16ft · drag to orbit · scroll to zoom</span>
+</div>
+<div id="controls">
+  <span class="active" onclick="setView('overview',this)">Overview</span>
+  <span onclick="setView('entry',this)">Entry POV</span>
+  <span onclick="setView('aisle',this)">Aisle</span>
+  <span onclick="setView('top',this)">Top Down</span>
+  <span onclick="setView('side',this)">Side</span>
+  <span onclick="setView('celestial',this)">Behind Celestial</span>
+</div>
+<div id="hud">
+  <div>front: <b>fabric veils · laser projection</b></div>
+  <div>back: <b>IBW-P-62.5 · 8×48×8 voxels · 3m tall</b></div>
+  <div>arrangement: <b>telestial → terrestrial → celestial → LED core</b></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x050508,.0035);
+const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,200);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.7;
+document.body.appendChild(renderer.domElement);
+
+// Units: 1 unit = 1 foot
+// GLITCH-like long narrow space, vaulted
+const RW=18, RD=40, RH=16;          // walls
+const RH_APEX=21;                   // ridge height
+const RH_RIDGE_Z=RD/2;
+
+// ─── Floor ───
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),
+  new THREE.MeshStandardMaterial({color:0x2a2a2a,roughness:.9}));
+floor.rotation.x=-Math.PI/2; floor.position.set(RW/2,0,RD/2);
+scene.add(floor);
+
+// Center aisle rug
+const rug=new THREE.Mesh(new THREE.PlaneGeometry(5,RD-4),
+  new THREE.MeshStandardMaterial({color:0x3a1212,roughness:.95}));
+rug.rotation.x=-Math.PI/2; rug.position.set(RW/2,.01,RD/2);
+scene.add(rug);
+
+// Floor outline
+const ro=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(RW,RD)),
+  new THREE.LineBasicMaterial({color:0x555555,transparent:true,opacity:.4}));
+ro.rotation.x=-Math.PI/2; ro.position.set(RW/2,.02,RD/2); scene.add(ro);
+
+// Corner posts (eave height)
+[[0,0],[RW,0],[0,RD],[RW,RD]].forEach(([cx,cz])=>{
+  const post=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,RH,4),
+    new THREE.MeshBasicMaterial({color:0x444444,transparent:true,opacity:.3}));
+  post.position.set(cx,RH/2,cz); scene.add(post);
+});
+
+// Pitched-roof rafters (suggest GLITCH vaulting)
+const raftMat=new THREE.LineBasicMaterial({color:0x553322,transparent:true,opacity:.55});
+for(let i=0;i<14;i++){
+  const z=2+i*(RD-4)/13;
+  // Two slopes meeting at apex
+  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0,RH,z), new THREE.Vector3(RW/2,RH_APEX,z), new THREE.Vector3(RW,RH,z)
+  ]),raftMat));
+}
+// Ridge beam
+scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+  new THREE.Vector3(RW/2,RH_APEX,1), new THREE.Vector3(RW/2,RH_APEX,RD-1)
+]),new THREE.LineBasicMaterial({color:0x664433,transparent:true,opacity:.7})));
+
+// ─── Veils ───
+// Z positions: telestial closest to laser, celestial deepest. All 10ft wide × 13ft tall (~3m × 4m)
+const veilData=[
+  {z:11,name:'TELESTIAL',opacity:.55, color:0xccddff},
+  {z:22,name:'TERRESTRIAL',opacity:.38,color:0xddeeff},
+  {z:31,name:'CELESTIAL',  opacity:.20,color:0xfff2cc}  // sheerest, warm tint
+];
+const VEIL_W=10, VEIL_H=13, VEIL_Y_BASE=1;
+const veilMeshes=[];
+veilData.forEach((v,i)=>{
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(VEIL_W,VEIL_H),
+    new THREE.MeshStandardMaterial({
+      color:0xffffff,transparent:true,opacity:v.opacity,
+      side:THREE.DoubleSide,roughness:.6,depthWrite:false
+    }));
+  m.position.set(RW/2, VEIL_Y_BASE+VEIL_H/2, v.z); scene.add(m);
+  veilMeshes.push(m);
+
+  // Top rod
+  const rod=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,VEIL_W+.5,8),
+    new THREE.MeshStandardMaterial({color:0x444444}));
+  rod.rotation.z=Math.PI/2; rod.position.set(RW/2,VEIL_Y_BASE+VEIL_H+.1,v.z);
+  scene.add(rod);
+  // Suspension cables from rafters to rod
+  for(let s=-1;s<=1;s+=2){
+    const yTop=Math.max(RH, RH_APEX-Math.abs(s*VEIL_W/2)*(RH_APEX-RH)/(RW/2));
+    const ln=new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(RW/2+s*VEIL_W/2,VEIL_Y_BASE+VEIL_H,v.z),
+      new THREE.Vector3(RW/2+s*VEIL_W/2,RH_APEX-2,v.z)
+    ]),new THREE.LineBasicMaterial({color:0x333333,transparent:true,opacity:.5}));
+    scene.add(ln);
+  }
+});
+
+// ─── LED COLUMN (IBW-P-62.5) behind veil 3 ───
+// Spec: 0.5m × 0.5m × 3m → ~1.65 × 1.65 × 9.84 ft; 8 × 48 × 8 voxels
+const LED_Z = 35;                    // ~4ft behind celestial veil
+const LED_X = RW/2;
+const LED_W = 1.65, LED_D = 1.65, LED_H = 9.84;
+const NX=8, NY=48, NZ=8;
+const LX0 = LED_X-LED_W/2, LX1 = LED_X+LED_W/2;
+const LZ0 = LED_Z-LED_D/2, LZ1 = LED_Z+LED_D/2;
+const LY0 = 1.5, LY1 = LY0+LED_H;
+
+// Strand wires (vertical) — visible structure
+for(let ix=0;ix<NX;ix++) for(let iz=0;iz<NZ;iz++){
+  const x=LX0+ix/(NX-1)*LED_W, z=LZ0+iz/(NZ-1)*LED_D;
+  scene.add(new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(x,LY1+.4,z), new THREE.Vector3(x,LY0-.1,z)]),
+    new THREE.LineBasicMaterial({color:0x2a2a2a,transparent:true,opacity:.45})
+  ));
+}
+// Top mounting plate
+const plate=new THREE.Mesh(new THREE.BoxGeometry(LED_W+.4,.12,LED_D+.4),
+  new THREE.MeshStandardMaterial({color:0x222222,roughness:.7}));
+plate.position.set(LED_X, LY1+.5, LED_Z); scene.add(plate);
+// Suspension cables
+for(let dx=-1;dx<=1;dx+=2) for(let dz=-1;dz<=1;dz+=2){
+  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(LED_X+dx*(LED_W/2+.1), LY1+.5, LED_Z+dz*(LED_D/2+.1)),
+    new THREE.Vector3(LED_X+dx*(LED_W/2+.1), RH_APEX-2, LED_Z+dz*(LED_D/2+.1))
+  ]),new THREE.LineBasicMaterial({color:0x333333,transparent:true,opacity:.5})));
+}
+
+// Voxels
+const TOTAL=NX*NY*NZ;
+const positions=new Float32Array(TOTAL*3);
+const colors=new Float32Array(TOTAL*3);
+const vox=[]; let k=0;
+for(let ix=0;ix<NX;ix++) for(let iy=0;iy<NY;iy++) for(let iz=0;iz<NZ;iz++){
+  const x=LX0+ix/(NX-1)*LED_W;
+  const y=LY0+iy/(NY-1)*LED_H;
+  const z=LZ0+iz/(NZ-1)*LED_D;
+  positions[k*3]=x; positions[k*3+1]=y; positions[k*3+2]=z;
+  vox.push({x,y,z}); k++;
+}
+const voxGeo=new THREE.BufferGeometry();
+voxGeo.setAttribute('position',new THREE.BufferAttribute(positions,3));
+voxGeo.setAttribute('color',new THREE.BufferAttribute(colors,3));
+const voxPoints=new THREE.Points(voxGeo,new THREE.PointsMaterial({
+  size:.22,vertexColors:true,transparent:true,opacity:.95,
+  blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true
+}));
+scene.add(voxPoints);
+
+const LCX=(LX0+LX1)/2, LCY=(LY0+LY1)/2, LCZ=(LZ0+LZ1)/2;
+const LHX=LED_W/2, LHY=LED_H/2, LHZ=LED_D/2;
+
+// Celestial-core scene content: sealed luminous core + triad + corona
+function celestialField(v,t){
+  const dx=(v.x-LCX)/LHX, dy=(v.y-LCY)/LHY, dz=(v.z-LCZ)/LHZ;
+  const r=Math.sqrt(dx*dx+dy*dy+dz*dz);
+  const center=Math.exp(-Math.pow(r/.22,2))*1.4;
+  let triad=0;
+  for(let k=0;k<3;k++){
+    const a=k/3*Math.PI*2 + t*.28;
+    const tx=.55*Math.cos(a)*.3, ty=.55*Math.sin(a)*.3, tz=.55*Math.cos(a+1.2)*.3;
+    const d=Math.sqrt((dx-tx)*(dx-tx)+(dy-ty)*(dy-ty)+(dz-tz)*(dz-tz));
+    triad+=Math.exp(-Math.pow(d/.18,2))*.9;
+  }
+  const corona=Math.exp(-Math.pow((r-.75)/.18,2))*(.45+.4*Math.sin(t*1.4+r*6));
+  const v_=center+triad+corona;
+  if(v_<.05) return [0,0,0];
+  // Gold-warm
+  return [v_*1.0, v_*(.78+.18*Math.sin(t*.6)), v_*(.35+.25*Math.sin(t*.5))];
+}
+
+// ─── Laser ───
+// Centered on veil mid-height (VEIL_Y_BASE + VEIL_H/2 = 7.5ft)
+const LASER_POS=new THREE.Vector3(RW/2, VEIL_Y_BASE+VEIL_H/2, 2);
+const laserBody=new THREE.Mesh(new THREE.BoxGeometry(.8,.5,1),
+  new THREE.MeshStandardMaterial({color:0x111111,metalness:.5,roughness:.3}));
+laserBody.position.copy(LASER_POS); scene.add(laserBody);
+const lens=new THREE.Mesh(new THREE.CircleGeometry(.13,16),
+  new THREE.MeshStandardMaterial({color:0x7fffaa,emissive:0x33ff77,emissiveIntensity:2}));
+lens.position.set(LASER_POS.x,LASER_POS.y,LASER_POS.z+.51); scene.add(lens);
+
+const beamGroup=new THREE.Group(); scene.add(beamGroup);
+const palette=[0x66ddff,0x88ccff,0x55bbee,0x77ccff,0x44aadd,0xaaddff];
+function buildBeams(){
+  while(beamGroup.children.length) beamGroup.remove(beamGroup.children[0]);
+  // Beams targeting each veil (stops at veil so it reads as projection)
+  for(let i=0;i<22;i++){
+    const angle=(i/21-.5)*0.32;
+    const vAngle=(Math.random()-.5)*.20;
+    const endZ = LED_Z + 2;     // through last veil to LED column
+    const endX=RW/2+Math.tan(angle)*(endZ-LASER_POS.z);
+    const endY=LASER_POS.y+Math.tan(vAngle)*(endZ-LASER_POS.z);
+    const geo=new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(LASER_POS.x,LASER_POS.y,LASER_POS.z+.5),
+      new THREE.Vector3(endX,endY,endZ)
+    ]);
+    beamGroup.add(new THREE.Line(geo,new THREE.LineBasicMaterial({
+      color:palette[i%palette.length],transparent:true,
+      opacity:.15+Math.random()*.08,blending:THREE.AdditiveBlending
+    })));
+  }
+  // Brighter center bundle
+  for(let i=0;i<8;i++){
+    const a=(i/7-.5)*.10, va=(i/7-.5)*.06;
+    const endZ=LED_Z+1.5;
+    const geo=new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(LASER_POS.x,LASER_POS.y,LASER_POS.z+.5),
+      new THREE.Vector3(RW/2+Math.tan(a)*(endZ-LASER_POS.z),
+                        LASER_POS.y+Math.tan(va)*(endZ-LASER_POS.z), endZ)
+    ]);
+    beamGroup.add(new THREE.Line(geo,new THREE.LineBasicMaterial({
+      color:0xaaeeff,transparent:true,opacity:.35,blending:THREE.AdditiveBlending
+    })));
+  }
+}
+buildBeams();
+
+// Veil illumination spots & lights
+veilData.forEach((v,i)=>{
+  const light=new THREE.PointLight(v.color, 1.4-i*.25, 14);
+  light.position.set(RW/2,VEIL_Y_BASE+VEIL_H/2,v.z); scene.add(light);
+  const spot=new THREE.Mesh(new THREE.PlaneGeometry(VEIL_W-1-i,VEIL_H-2-i*.5),
+    new THREE.MeshBasicMaterial({color:v.color,transparent:true,opacity:.18-i*.04,
+      side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false}));
+  spot.position.set(RW/2,VEIL_Y_BASE+VEIL_H/2, v.z + (i===0?-.01:.01));
+  scene.add(spot);
+});
+
+// Volumetric glow from LED column (warm spill)
+const ledGlow=new THREE.PointLight(0xffcc88, 1.8, 18);
+ledGlow.position.set(LED_X, LCY, LED_Z); scene.add(ledGlow);
+
+// Haze
+const hazeGeo=new THREE.BufferGeometry();
+const hazeCount=2200;
+const hazePos=new Float32Array(hazeCount*3);
+for(let i=0;i<hazeCount;i++){
+  hazePos[i*3]=Math.random()*RW;
+  hazePos[i*3+1]=Math.random()*RH_APEX;
+  hazePos[i*3+2]=Math.random()*RD;
+}
+hazeGeo.setAttribute('position',new THREE.BufferAttribute(hazePos,3));
+scene.add(new THREE.Points(hazeGeo,new THREE.PointsMaterial({
+  color:0x556677,size:.08,transparent:true,opacity:.28,
+  blending:THREE.AdditiveBlending,depthWrite:false
+})));
+
+scene.add(new THREE.AmbientLight(0x222244,.7));
+
+// Speakers — four corners, flown at ~10ft, angled toward room center
+const SPK_Y=10;
+const speakerPositions=[
+  [1.2, SPK_Y, 1.5],
+  [RW-1.2, SPK_Y, 1.5],
+  [1.2, SPK_Y, RD-1.5],
+  [RW-1.2, SPK_Y, RD-1.5]
+];
+speakerPositions.forEach(([sx,sy,sz])=>{
+  const sp=new THREE.Mesh(new THREE.BoxGeometry(.9,1.3,.7),
+    new THREE.MeshStandardMaterial({color:0x1a1a1a,roughness:.85}));
+  sp.position.set(sx,sy,sz);
+  // Tilt down toward room center
+  const lookV=new THREE.Vector3(RW/2, 5, RD/2);
+  sp.lookAt(lookV);
+  scene.add(sp);
+  // Suspension cable
+  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(sx, sy+.65, sz),
+    new THREE.Vector3(sx, RH_APEX-2, sz)
+  ]),new THREE.LineBasicMaterial({color:0x333333,transparent:true,opacity:.5})));
+  // Driver cone hint
+  const cone=new THREE.Mesh(new THREE.CircleGeometry(.18,16),
+    new THREE.MeshStandardMaterial({color:0x111111,emissive:0x331100,emissiveIntensity:.15}));
+  cone.position.copy(sp.position);
+  cone.lookAt(lookV);
+  cone.translateZ(.36);
+  scene.add(cone);
+});
+
+// Floor labels
+function makeLabel(text,x,y,z,color,scale){
+  const c=document.createElement('canvas'); c.width=512;c.height=64;
+  const ctx=c.getContext('2d');
+  ctx.font='24px monospace'; ctx.fillStyle=color||'#444'; ctx.textAlign='center';
+  ctx.fillText(text,256,40);
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),
+    transparent:true,opacity:.75,depthTest:false}));
+  s.position.set(x,y,z); s.scale.set(scale||5,(scale||5)/8,1); scene.add(s);
+}
+makeLabel('LASER',         RW/2,.3, 2,           '#7fffaa');
+makeLabel('VEIL 1 · TELESTIAL',    RW/2,.3, 11, '#ccddff');
+makeLabel('VEIL 2 · TERRESTRIAL',  RW/2,.3, 22, '#ddeeff');
+makeLabel('VEIL 3 · CELESTIAL',    RW/2,.3, 31, '#fff2cc');
+makeLabel('IBW-P-62.5 · LED CORE', RW/2,.3, 36, '#ffcc88');
+makeLabel('SPEAKERS · 4 CORNERS @ 10FT', RW/2,.3, RD-2,'#666');
+makeLabel('VIEWER AISLE',  RW/2,.3, 6,          '#44aa44');
+
+// ─── Human cutout for scale (5'10" = 5.83 ft) ───
+function makeHuman(x,z,faceZ){
+  const HUMAN_H=5.83;
+  const c=document.createElement('canvas');
+  c.width=120; c.height=400;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#000'; // transparent bg, draw dark silhouette
+  // Head
+  ctx.beginPath(); ctx.arc(60, 38, 22, 0, Math.PI*2); ctx.fill();
+  // Neck
+  ctx.fillRect(52, 56, 16, 12);
+  // Torso (tapered)
+  ctx.beginPath();
+  ctx.moveTo(30, 68); ctx.lineTo(90, 68);
+  ctx.lineTo(82, 200); ctx.lineTo(38, 200); ctx.closePath(); ctx.fill();
+  // Arms
+  ctx.fillRect(18, 72, 14, 130);
+  ctx.fillRect(88, 72, 14, 130);
+  // Legs
+  ctx.fillRect(40, 200, 18, 195);
+  ctx.fillRect(62, 200, 18, 195);
+  const tex=new THREE.CanvasTexture(c);
+  tex.magFilter=THREE.LinearFilter;
+  const HUMAN_W=HUMAN_H*(120/400);
+  const mat=new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity:.78,side:THREE.DoubleSide,depthWrite:false});
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(HUMAN_W,HUMAN_H),mat);
+  m.position.set(x, HUMAN_H/2, z);
+  // Face the laser / front
+  if(typeof faceZ==='number') m.lookAt(new THREE.Vector3(x, HUMAN_H/2, faceZ));
+  scene.add(m);
+  // Tiny shadow disc on floor
+  const shadow=new THREE.Mesh(new THREE.CircleGeometry(.7,16),
+    new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.35}));
+  shadow.rotation.x=-Math.PI/2; shadow.position.set(x,.03,z); scene.add(shadow);
+}
+// Two figures for scale: one at entry, one back by the LED pillar
+makeHuman(RW/2-1.2, 4, RD);          // entry, facing toward LED core
+makeHuman(RW/2+1.9, LED_Z+1.2, 0);   // beside pillar, facing back toward entry
+
+// Aisle zone
+const aisle=new THREE.Mesh(new THREE.PlaneGeometry(5,5),
+  new THREE.MeshBasicMaterial({color:0x004400,transparent:true,opacity:.10,side:THREE.DoubleSide}));
+aisle.rotation.x=-Math.PI/2; aisle.position.set(RW/2,.02,6); scene.add(aisle);
+
+// ─── Camera ───
+let isDragging=false,prevX=0,prevY=0;
+let camTheta=.55,camPhi=.32,camDist=36;
+let targetTheta=camTheta,targetPhi=camPhi,targetDist=camDist;
+let lookAt=new THREE.Vector3(RW/2,6,RD/2), targetLookAt=lookAt.clone();
+
+renderer.domElement.addEventListener('mousedown',e=>{isDragging=true;prevX=e.clientX;prevY=e.clientY});
+renderer.domElement.addEventListener('mousemove',e=>{
+  if(!isDragging)return;
+  targetTheta+=(e.clientX-prevX)*.005;
+  targetPhi=Math.max(.1,Math.min(Math.PI/2-.05,targetPhi-(e.clientY-prevY)*.005));
+  prevX=e.clientX;prevY=e.clientY;
+});
+renderer.domElement.addEventListener('mouseup',()=>isDragging=false);
+renderer.domElement.addEventListener('wheel',e=>{targetDist=Math.max(6,Math.min(120,targetDist+e.deltaY*.04))});
+
+let touchDist=0;
+renderer.domElement.addEventListener('touchstart',e=>{
+  if(e.touches.length===1){isDragging=true;prevX=e.touches[0].clientX;prevY=e.touches[0].clientY}
+  if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX;const dy=e.touches[0].clientY-e.touches[1].clientY;touchDist=Math.sqrt(dx*dx+dy*dy)}
+});
+renderer.domElement.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(e.touches.length===1&&isDragging){
+    targetTheta+=(e.touches[0].clientX-prevX)*.005;
+    targetPhi=Math.max(.1,Math.min(Math.PI/2-.05,targetPhi-(e.touches[0].clientY-prevY)*.005));
+    prevX=e.touches[0].clientX;prevY=e.touches[0].clientY;
+  }
+  if(e.touches.length===2){
+    const dx=e.touches[0].clientX-e.touches[1].clientX, dy=e.touches[0].clientY-e.touches[1].clientY;
+    const d=Math.sqrt(dx*dx+dy*dy); targetDist=Math.max(6,Math.min(120,targetDist-(d-touchDist)*.05));touchDist=d;
+  }
+},{passive:false});
+renderer.domElement.addEventListener('touchend',()=>isDragging=false);
+
+function setView(name,el){
+  document.querySelectorAll('#controls span').forEach(s=>s.classList.remove('active'));
+  if(el)el.classList.add('active');
+  if(name==='overview'){targetTheta=.55;targetPhi=.32;targetDist=36;targetLookAt.set(RW/2,6,RD/2)}
+  else if(name==='entry'){targetTheta=-.05;targetPhi=.12;targetDist=14;targetLookAt.set(RW/2,6,20)}
+  else if(name==='aisle'){targetTheta=0;targetPhi=.05;targetDist=8;targetLookAt.set(RW/2,6,22)}
+  else if(name==='top'){targetTheta=0;targetPhi=1.5;targetDist=42;targetLookAt.set(RW/2,0,RD/2)}
+  else if(name==='side'){targetTheta=Math.PI/2;targetPhi=.18;targetDist=28;targetLookAt.set(RW/2,7,RD/2)}
+  else if(name==='celestial'){targetTheta=Math.PI;targetPhi=.10;targetDist=12;targetLookAt.set(RW/2,6,LED_Z)}
+}
+camera.position.set(22,12,30);
+
+// ─── Animate ───
+const colorAttr=voxGeo.getAttribute('color');
+let lastVox=0; const VOX_HZ=20;
+
+function animate(time){
+  requestAnimationFrame(animate);
+  const t=time*.001;
+
+  camTheta+=(targetTheta-camTheta)*.06;
+  camPhi+=(targetPhi-camPhi)*.06;
+  camDist+=(targetDist-camDist)*.06;
+  lookAt.lerp(targetLookAt,.05);
+  camera.position.set(
+    lookAt.x+Math.sin(camTheta)*Math.cos(camPhi)*camDist,
+    lookAt.y+Math.sin(camPhi)*camDist,
+    lookAt.z+Math.cos(camTheta)*Math.cos(camPhi)*camDist);
+  camera.lookAt(lookAt);
+
+  // Beam shimmer
+  beamGroup.children.forEach((b,i)=>{
+    b.material.opacity = (.15 + Math.sin(t*1.4+i*.3)*.06) * (1+Math.sin(t*.3)*.18);
+  });
+  lens.material.emissiveIntensity = 2 + Math.sin(t*3)*.5;
+
+  // Veil breathing
+  veilMeshes.forEach((m,i)=>{
+    m.material.opacity = veilData[i].opacity + Math.sin(t*1.1+i*1.7)*.02;
+  });
+
+  // LED column animation — celestial core
+  if(time-lastVox>1000/VOX_HZ){
+    lastVox=time;
+    const arr=colorAttr.array;
+    for(let i=0;i<vox.length;i++){
+      const c=celestialField(vox[i],t);
+      arr[i*3  ]=c[0];
+      arr[i*3+1]=c[1];
+      arr[i*3+2]=c[2];
+    }
+    colorAttr.needsUpdate=true;
+  }
+  ledGlow.intensity = 1.5 + Math.sin(t*.8)*.5;
+
+  renderer.render(scene,camera);
+}
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+animate(0);
+</script>
+</body>
+</html>

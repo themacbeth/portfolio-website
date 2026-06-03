@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>THE VEIL · Visual Gallery</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#0a0a0a;color:#bbb;font:13px/1.5 ui-monospace,monospace}
+  header{padding:32px 24px 8px;border-bottom:1px solid #1a1a1a}
+  h1{margin:0 0 6px;font:600 14px/1.2 ui-monospace,monospace;letter-spacing:.18em;color:#fff}
+  header p{margin:0;color:#666;font-size:11px;letter-spacing:.05em;max-width:760px}
+  section{padding:24px}
+  h2{margin:0 0 16px;font:600 12px/1 ui-monospace,monospace;letter-spacing:.22em;color:#7fffaa;border-left:2px solid #2a5a3a;padding-left:10px}
+  h2.led{color:#ffd58a;border-left-color:#5a4220}
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+  .grid.led{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+  .tile{background:#000;border:1px solid #1a1a1a;border-radius:3px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .15s}
+  .tile:hover{border-color:#2a2a2a}
+  .tile canvas{display:block;width:100%;background:#000}
+  .tile .meta{padding:8px 10px 10px;border-top:1px solid #111}
+  .tile .name{color:#ddd;font-size:11px;letter-spacing:.08em;margin:0 0 3px}
+  .tile.led .name{color:#ffd58a}
+  .tile .desc{color:#666;font-size:10px;line-height:1.4;margin:0}
+  .tile .tag{color:#444;font-size:9px;letter-spacing:.1em;text-transform:uppercase;margin-top:4px}
+  footer{padding:24px;color:#444;font-size:10px;text-align:center;border-top:1px solid #1a1a1a}
+  footer a{color:#888;text-decoration:none}
+  footer a:hover{color:#7fffaa}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>THE VEIL · VISUAL GALLERY</h1>
+  <p>Laser glyphs (single-color line art, drawn through fabric) and LED column states (IBW-P-62.5, 8×48 front face shown).  Each tile loops live.</p>
+</header>
+
+<section>
+  <h2>LASER GLYPHS · KOLOB COSMOLOGY</h2>
+  <div class="grid" id="grid-laser-kolob"></div>
+</section>
+
+<section>
+  <h2>LASER GLYPHS · ENDOWMENT GRAMMAR</h2>
+  <div class="grid" id="grid-laser-endow"></div>
+</section>
+
+<section>
+  <h2>LASER GLYPHS · THE VEIL ITSELF</h2>
+  <div class="grid" id="grid-laser-veil"></div>
+</section>
+
+<section>
+  <h2 class="led">LED COLUMN · DIRECT FROM SCRIPTURE</h2>
+  <div class="grid led" id="grid-led-script"></div>
+</section>
+
+<section>
+  <h2 class="led">LED COLUMN · KOLOB THEOREM</h2>
+  <div class="grid led" id="grid-led-kolob"></div>
+</section>
+
+<section>
+  <h2 class="led">LED COLUMN · ANTHROPOMORPHIC</h2>
+  <div class="grid led" id="grid-led-anthro"></div>
+</section>
+
+<footer>
+  <a href="index.html">← back to THE VEIL</a>
+</footer>
+
+<script>
+const LASER = '#7fffaa';
+
+// ─── Tile factory ──────────────────────────────────────────
+function tileLaser(parent, name, desc, drawFn){
+  const T=document.createElement('div'); T.className='tile';
+  const c=document.createElement('canvas'); c.width=380; c.height=380;
+  const m=document.createElement('div'); m.className='meta';
+  m.innerHTML=`<p class="name">${name}</p><p class="desc">${desc}</p>`;
+  T.appendChild(c); T.appendChild(m); parent.appendChild(T);
+  registry.push({c,ctx:c.getContext('2d'),drawFn,type:'laser',state:{}});
+}
+function tileLED(parent, name, desc, fieldFn){
+  const T=document.createElement('div'); T.className='tile led';
+  const c=document.createElement('canvas'); c.width=320; c.height=520;
+  const m=document.createElement('div'); m.className='meta';
+  m.innerHTML=`<p class="name">${name}</p><p class="desc">${desc}</p><p class="tag">8 × 48 voxels · 3m tall</p>`;
+  T.appendChild(c); T.appendChild(m); parent.appendChild(T);
+  registry.push({c,ctx:c.getContext('2d'),fieldFn,type:'led',state:{}});
+}
+
+const registry=[];
+
+// ─── Render loop ───────────────────────────────────────────
+function renderLaserTile(r,t){
+  const {c,ctx,drawFn,state}=r;
+  const W=c.width, H=c.height;
+  // POV fade
+  ctx.fillStyle='rgba(0,0,0,0.22)';
+  ctx.fillRect(0,0,W,H);
+  ctx.save();
+  ctx.translate(W/2,H/2);
+  const S=Math.min(W,H)*.4;
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.strokeStyle=LASER; ctx.fillStyle=LASER;
+  drawFn(ctx,S,t,state);
+  ctx.restore();
+}
+function renderLEDTile(r,t){
+  const {c,ctx,fieldFn,state}=r;
+  const W=c.width, H=c.height;
+  // Hard clear for crisp voxels
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
+  // Column footprint inside tile
+  const NX=8, NY=48;
+  const colW = W*0.38;
+  const colH = H*0.92;
+  const x0 = W/2 - colW/2, y0 = H*0.04;
+  const dx = colW/(NX-1), dy = colH/(NY-1);
+  // Faint strand wires
+  ctx.strokeStyle='rgba(60,60,60,0.4)'; ctx.lineWidth=.6;
+  for(let ix=0;ix<NX;ix++){
+    ctx.beginPath();
+    ctx.moveTo(x0+ix*dx, y0-4);
+    ctx.lineTo(x0+ix*dx, y0+colH+4);
+    ctx.stroke();
+  }
+  // Voxels
+  for(let ix=0;ix<NX;ix++){
+    for(let iy=0;iy<NY;iy++){
+      const nx=(ix/(NX-1))*2-1;
+      const ny=1-(iy/(NY-1))*2; // y up
+      const col=fieldFn(nx,ny,t,state);
+      if(!col) continue;
+      const [r_,g_,b_]=col;
+      const intensity=Math.min(1,Math.max(r_,Math.max(g_,b_)));
+      if(intensity<.04) continue;
+      const px=x0+ix*dx, py=y0+iy*dy;
+      // glow
+      const grd=ctx.createRadialGradient(px,py,0,px,py,4.5);
+      grd.addColorStop(0,`rgba(${(r_*255)|0},${(g_*255)|0},${(b_*255)|0},${0.55*intensity})`);
+      grd.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=grd;
+      ctx.beginPath(); ctx.arc(px,py,4.5,0,Math.PI*2); ctx.fill();
+      // hard pixel
+      ctx.fillStyle=`rgba(${(r_*255)|0},${(g_*255)|0},${(b_*255)|0},${Math.min(1,intensity*1.2)})`;
+      ctx.beginPath(); ctx.arc(px,py,1.2,0,Math.PI*2); ctx.fill();
+    }
+  }
+}
+function frame(time){
+  const t=time*.001;
+  registry.forEach(r=>{
+    if(r.type==='laser') renderLaserTile(r,t);
+    else renderLEDTile(r,t);
+  });
+  requestAnimationFrame(frame);
+}
+
+// ─── LASER GLYPH DRAW FUNCTIONS ────────────────────────────
+// Each takes (ctx, S, t, state) — origin at canvas center, S = ~half-extent
+
+const gK = document.getElementById('grid-laser-kolob');
+
+tileLaser(gK,'Pulsing Dot','Kolob itself. Returns between every other figure as the tonic.',(ctx,S,t)=>{
+  const r=S*.08*(1+Math.sin(t*1.4)*.3);
+  const g=ctx.createRadialGradient(0,0,0,0,0,r*3);
+  g.addColorStop(0,LASER); g.addColorStop(.4,'rgba(127,255,170,0.4)'); g.addColorStop(1,'rgba(127,255,170,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,r*3,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=LASER; ctx.beginPath(); ctx.arc(0,0,r*.55,0,Math.PI*2); ctx.fill();
+});
+
+tileLaser(gK,'Concentric Rings','Hierarchy of governing stars rippling outward from Kolob.',(ctx,S,t)=>{
+  ctx.lineWidth=1.6;
+  for(let i=0;i<5;i++){
+    const phase=(t*.4+i*.2)%1;
+    const r=S*.15+phase*S*1.1;
+    ctx.strokeStyle=`rgba(127,255,170,${0.9*(1-phase)})`;
+    ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.stroke();
+  }
+});
+
+tileLaser(gK,'Twelve Governing Systems','Twelve dots in a circle, flashing in sequence.',(ctx,S,t)=>{
+  const N=12, R=S*1.05;
+  for(let k=0;k<N;k++){
+    const a=k/N*Math.PI*2-Math.PI/2;
+    const phase=((t*1.4 - k/N)%1+1)%1;
+    const bright=Math.exp(-phase*4);
+    const x=R*Math.cos(a), y=R*Math.sin(a);
+    ctx.fillStyle=`rgba(127,255,170,${.25+bright*.75})`;
+    ctx.beginPath(); ctx.arc(x,y,3+bright*4,0,Math.PI*2); ctx.fill();
+  }
+});
+
+tileLaser(gK,'Three Great Suns','Three triangles rotating; align into a hexagram at the climax.',(ctx,S,t)=>{
+  ctx.lineWidth=1.5; ctx.strokeStyle=LASER;
+  const R=S*1.0;
+  for(let k=0;k<2;k++){
+    const phase=t*.3+k*Math.PI;
+    ctx.beginPath();
+    for(let i=0;i<=3;i++){
+      const a=i/3*Math.PI*2-Math.PI/2+phase+(k?Math.PI/3:0);
+      ctx.lineTo(R*Math.cos(a),R*Math.sin(a));
+    }
+    ctx.globalAlpha=.55+.45*Math.sin(t*.6+k);
+    ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+});
+
+tileLaser(gK,'Spiral Unwinding','Kolob time. One revolution = one millennium of earth time.',(ctx,S,t)=>{
+  ctx.lineWidth=1.4; ctx.strokeStyle=LASER;
+  ctx.beginPath();
+  const turns=3, samples=180;
+  const grow=(Math.sin(t*.4)*.5+.5);
+  for(let i=0;i<samples;i++){
+    const ti=i/samples;
+    const r=S*.05+ti*S*1.0*grow;
+    const a=ti*turns*Math.PI*2+t*.3;
+    if(i===0)ctx.moveTo(r*Math.cos(a),r*Math.sin(a));
+    else ctx.lineTo(r*Math.cos(a),r*Math.sin(a));
+  }
+  ctx.stroke();
+});
+
+tileLaser(gK,'Sundial Tick Marks','Counting Kolob hours. Fills in over the show.',(ctx,S,t)=>{
+  ctx.lineWidth=1.5; ctx.strokeStyle=LASER;
+  ctx.beginPath(); ctx.arc(0,0,S*1.05,0,Math.PI*2); ctx.stroke();
+  const N=24, hand=(t*.5)%1;
+  for(let k=0;k<N;k++){
+    const a=k/N*Math.PI*2-Math.PI/2;
+    const inner=S*.92, outer=S*1.05;
+    const filled=(k/N)<=hand;
+    ctx.globalAlpha=filled?1:.25;
+    ctx.beginPath();
+    ctx.moveTo(inner*Math.cos(a),inner*Math.sin(a));
+    ctx.lineTo(outer*Math.cos(a),outer*Math.sin(a));
+    ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+  // hand
+  const ha=hand*Math.PI*2-Math.PI/2;
+  ctx.beginPath();
+  ctx.moveTo(0,0); ctx.lineTo(S*.85*Math.cos(ha),S*.85*Math.sin(ha));
+  ctx.stroke();
+});
+
+// ─── ENDOWMENT GRAMMAR ────────────────────────────
+const gE = document.getElementById('grid-laser-endow');
+
+tileLaser(gE,'Compass Mark Λ','Drawn slowly, held, fades. (Sacred compass mark from temple garments.)',(ctx,S,t)=>{
+  ctx.lineWidth=2; ctx.strokeStyle=LASER;
+  const w=S*.9, h=S*.7;
+  const p=(Math.sin(t*.6)*.5+.5);
+  ctx.beginPath();
+  ctx.moveTo(-w,h*.4);
+  ctx.lineTo(-w+(w)*p, h*.4 - h*p);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(w,h*.4);
+  ctx.lineTo(w-(w)*p, h*.4 - h*p);
+  ctx.stroke();
+});
+
+tileLaser(gE,'Square Mark L','Right angle. Pairs with the compass mark.',(ctx,S,t)=>{
+  ctx.lineWidth=2; ctx.strokeStyle=LASER;
+  const w=S*.85;
+  const p=(Math.sin(t*.6)*.5+.5);
+  ctx.beginPath();
+  ctx.moveTo(-w*.7,-w*.6);
+  ctx.lineTo(-w*.7, -w*.6 + w*1.2*p);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-w*.7, w*.6);
+  ctx.lineTo(-w*.7 + w*1.3*p, w*.6);
+  ctx.stroke();
+});
+
+tileLaser(gE,'Compass + Square','Joined to form an interlocking figure. Held as the central mark.',(ctx,S,t)=>{
+  ctx.lineWidth=1.8; ctx.strokeStyle=LASER;
+  const w=S*.85, h=S*.7;
+  ctx.beginPath(); ctx.moveTo(-w,h*.3); ctx.lineTo(0,-h); ctx.lineTo(w,h*.3); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-w*.85,-h*.25); ctx.lineTo(-w*.85,h*.55); ctx.lineTo(w*.4,h*.55); ctx.stroke();
+  // breathing center dot
+  const r=S*.05+Math.sin(t*1.6)*S*.02;
+  ctx.fillStyle=LASER; ctx.beginPath(); ctx.arc(0,h*.15,r,0,Math.PI*2); ctx.fill();
+});
+
+tileLaser(gE,'Navel + Knee Marks','Minimal punctuation flashes between movements.',(ctx,S,t)=>{
+  ctx.fillStyle=LASER; ctx.strokeStyle=LASER; ctx.lineWidth=2.2;
+  const flash1=Math.exp(-((t*.8)%2)*3);
+  const flash2=Math.exp(-(((t*.8)+1)%2)*3);
+  ctx.globalAlpha=.2+flash1*.8;
+  ctx.beginPath(); ctx.arc(0,-S*.3,S*.07,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=.2+flash2*.8;
+  ctx.beginPath(); ctx.moveTo(-S*.25,S*.4); ctx.lineTo(S*.25,S*.4); ctx.stroke();
+  ctx.globalAlpha=1;
+});
+
+tileLaser(gE,'All-Seeing Eye','Horizontal almond with a bright pupil. Once per veil.',(ctx,S,t)=>{
+  ctx.lineWidth=2; ctx.strokeStyle=LASER; ctx.fillStyle=LASER;
+  const w=S*1.0, h=S*.45;
+  ctx.beginPath();
+  ctx.moveTo(-w,0);
+  ctx.quadraticCurveTo(0,-h,w,0);
+  ctx.quadraticCurveTo(0,h,-w,0);
+  ctx.stroke();
+  const r=S*.12*(1+Math.sin(t*1.2)*.15);
+  const g=ctx.createRadialGradient(0,0,0,0,0,r*2);
+  g.addColorStop(0,LASER); g.addColorStop(1,'rgba(127,255,170,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,r*2,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=LASER; ctx.beginPath(); ctx.arc(0,0,r*.55,0,Math.PI*2); ctx.fill();
+});
+
+tileLaser(gE,'Cupped Hand','Outline of a hand offering / receiving the token.',(ctx,S,t)=>{
+  ctx.lineWidth=2; ctx.strokeStyle=LASER;
+  // stylized palm + 5 fingers
+  ctx.beginPath();
+  ctx.moveTo(-S*.5,S*.4);
+  ctx.bezierCurveTo(-S*.7,-S*.2, -S*.4,-S*.5, -S*.1,-S*.5);
+  // fingers
+  for(let i=0;i<4;i++){
+    const fx=-S*.25+i*S*.18;
+    ctx.lineTo(fx-S*.05,-S*.55);
+    ctx.lineTo(fx+S*.05,-S*.55);
+  }
+  ctx.bezierCurveTo(S*.4,-S*.5, S*.7,-S*.2, S*.5,S*.4);
+  ctx.closePath();
+  ctx.stroke();
+  // thumb
+  ctx.beginPath();
+  ctx.moveTo(S*.5,0);
+  ctx.bezierCurveTo(S*.85,S*.05, S*.8,S*.3, S*.5,S*.35);
+  ctx.stroke();
+});
+
+tileLaser(gE,'Five Points of Fellowship','Foot, knee, breast, hand, ear — flash in sequence, then connect.',(ctx,S,t)=>{
+  const pts=[[0,S*.95],[0,S*.45],[0,-S*.05],[0,-S*.5],[0,-S*.9]];
+  const cycle=(t*.35)%1.6;
+  ctx.fillStyle=LASER; ctx.strokeStyle=LASER; ctx.lineWidth=1.4;
+  pts.forEach((p,i)=>{
+    let b;
+    if(cycle<1){
+      const phase=((cycle-i*.18)%1+1)%1;
+      b=Math.exp(-phase*5);
+    } else {
+      b=1; // hold + line
+    }
+    ctx.globalAlpha=.2+b*.8;
+    ctx.beginPath(); ctx.arc(p[0],p[1],S*.07,0,Math.PI*2); ctx.fill();
+  });
+  if(cycle>1){
+    ctx.globalAlpha=.7;
+    ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+    pts.forEach(p=>ctx.lineTo(p[0],p[1]));
+    ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+});
+
+tileLaser(gE,'New Name Glyph','Invented sealed character. Held bright. Never explained.',(ctx,S,t)=>{
+  ctx.lineWidth=2.2; ctx.strokeStyle=LASER;
+  const a=Math.sin(t*.4)*.08;
+  ctx.save(); ctx.rotate(a);
+  // an invented seal — three intersecting strokes
+  ctx.beginPath(); ctx.moveTo(-S*.7,-S*.6); ctx.lineTo(S*.7,S*.6); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-S*.7,S*.6); ctx.lineTo(0,-S*.7); ctx.lineTo(S*.7,S*.6); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0,S*.1,S*.32,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle=LASER; ctx.beginPath(); ctx.arc(0,-S*.7,S*.06,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+});
+
+tileLaser(gE,'Veil Rending','Horizontal line splits at center, halves pull apart. Final movement cue.',(ctx,S,t)=>{
+  ctx.lineWidth=2.4; ctx.strokeStyle=LASER;
+  const gap=(Math.sin(t*.7)*.5+.5)*S*.95;
+  ctx.beginPath(); ctx.moveTo(-S*1.1,0); ctx.lineTo(-gap,0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(gap,0); ctx.lineTo(S*1.1,0); ctx.stroke();
+  // sparks at ends
+  ctx.fillStyle=LASER;
+  ctx.beginPath(); ctx.arc(-gap,0,2.5,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(gap,0,2.5,0,Math.PI*2); ctx.fill();
+});
+
+// ─── VEIL ITSELF ────────────────────────────
+const gV = document.getElementById('grid-laser-veil');
+
+tileLaser(gV,'Vertical Seam','Centerline of the veil with temple marks placed along it.',(ctx,S,t)=>{
+  ctx.lineWidth=1.6; ctx.strokeStyle=LASER;
+  ctx.beginPath(); ctx.moveTo(0,-S*1.1); ctx.lineTo(0,S*1.1); ctx.stroke();
+  const marks=[-S*.55,-S*.15,S*.2,S*.7];
+  ctx.fillStyle=LASER;
+  marks.forEach((y,i)=>{
+    const b=.4+.6*Math.abs(Math.sin(t*.8+i));
+    ctx.globalAlpha=b;
+    // alternate compass / square mini-mark
+    if(i%2===0){
+      ctx.beginPath(); ctx.arc(0,y,S*.06,0,Math.PI*2); ctx.fill();
+    } else {
+      ctx.fillRect(-S*.07,y-S*.012,S*.14,S*.024);
+    }
+  });
+  ctx.globalAlpha=1;
+});
+
+tileLaser(gV,'Handprints','Stencil of five fingertip dots, one at a time.',(ctx,S,t)=>{
+  const tips=[
+    [-S*.55,-S*.05],[-S*.3,-S*.55],[0,-S*.7],[S*.3,-S*.55],[S*.55,-S*.05]
+  ];
+  const palm=[0,S*.35];
+  ctx.fillStyle=LASER;
+  tips.forEach((p,i)=>{
+    const phase=((t*.6-i*.18)%1.5+1.5)%1.5;
+    const b=phase<1?Math.exp(-phase*4):0;
+    if(b>.05){
+      const g=ctx.createRadialGradient(p[0],p[1],0,p[0],p[1],S*.18);
+      g.addColorStop(0,`rgba(127,255,170,${.6*b})`); g.addColorStop(1,'rgba(127,255,170,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p[0],p[1],S*.18,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle=LASER; ctx.beginPath(); ctx.arc(p[0],p[1],S*.06,0,Math.PI*2); ctx.fill();
+    }
+  });
+  // palm dim
+  ctx.fillStyle=`rgba(127,255,170,${.15+.15*Math.sin(t*.8)})`;
+  ctx.beginPath(); ctx.arc(palm[0],palm[1],S*.18,0,Math.PI*2); ctx.fill();
+});
+
+tileLaser(gV,'True Order of Prayer','A ring of dots converging inward to a single point.',(ctx,S,t)=>{
+  ctx.fillStyle=LASER;
+  const N=10;
+  const phase=(t*.4)%1;
+  const R=S*(1-phase*.92);
+  for(let k=0;k<N;k++){
+    const a=k/N*Math.PI*2;
+    ctx.globalAlpha=.4+.6*(1-phase);
+    ctx.beginPath(); ctx.arc(R*Math.cos(a),R*Math.sin(a),3,0,Math.PI*2); ctx.fill();
+  }
+  // center hold
+  if(phase>.85){
+    ctx.globalAlpha=1;
+    ctx.beginPath(); ctx.arc(0,0,S*.07,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+});
+
+// ─── LED COLUMN — FIELD FUNCTIONS ──────────────────────────
+// (nx, ny, t, state) ∈ [-1,1] x [-1,1] → [r,g,b] or null
+// nx = horizontal across the 8 strands; ny = vertical, +1 at top
+
+const gLS = document.getElementById('grid-led-script');
+
+tileLED(gLS,'Pillar of Fire','Turbulent warm flame field. Most obvious choice for the climax.',(nx,ny,t)=>{
+  // noise-ish flame
+  const f = Math.sin((ny*4+t*2)+Math.cos(nx*3-t*1.5)*1.4)*.5+.5;
+  const rise = Math.exp(-Math.pow(((ny+1)*.5 - ((t*.4)%1)),2)*8);
+  const base = (1-Math.abs(nx)*.7) * (.6 + .4*f);
+  const v = base * (.55 + rise*.7);
+  if(v<.1) return null;
+  return [v*1.0, v*(.45+.25*f), v*(.08+.1*f)];
+});
+
+tileLED(gLS,'Pillar of Cloud','Slow white volumetric noise. The daytime pillar. Opens the show.',(nx,ny,t)=>{
+  const f = Math.sin(ny*2.5+t*.4) * Math.cos(nx*1.8-t*.3);
+  const base = (1-Math.abs(nx)*.6) * (.5+f*.35);
+  const v = base * .85;
+  if(v<.12) return null;
+  return [v*.95, v*.95, v*1.0];
+});
+
+tileLED(gLS,'Tree of Life','Trunk + branches + fruit pulses. From Lehi\'s vision.',(nx,ny,t)=>{
+  // trunk
+  const trunk = (Math.abs(nx)<.18 && ny<.4) ? .8 : 0;
+  // branches in upper portion
+  const branchY = ny - .45;
+  const branch = Math.abs(branchY)<.08 ? Math.exp(-Math.pow(nx,2)*.6) * .75 : 0;
+  // fruit at branch tips, pulsing
+  const fruit = (Math.abs(branchY)<.18 && Math.abs(Math.abs(nx)-.7)<.18) ?
+    .9*(Math.sin(t*2+nx*5)*.5+.5) : 0;
+  const v = Math.max(trunk, branch, fruit);
+  if(v<.1) return null;
+  if(fruit>.3) return [v, v*.95, v*.6];
+  return [v*.5, v*.85, v*.55];
+});
+
+tileLED(gLS,'Jacob\'s Ladder','Rising rungs of light climbing from base to apex.',(nx,ny,t)=>{
+  // rails
+  const rail = (Math.abs(Math.abs(nx)-.55)<.08) ? .55 : 0;
+  // rungs that climb
+  const rungPhase = ((t*.5 + ny*.5)%1);
+  const rung = (rungPhase<.12 && Math.abs(nx)<.6) ? .95 : 0;
+  const v = Math.max(rail, rung);
+  if(v<.1) return null;
+  if(rung>.5) return [v*.85, v*.95, v*1.0];
+  return [v*.5, v*.6, v*.7];
+});
+
+// ─── KOLOB THEOREM ────────────────────────────
+const gLK = document.getElementById('grid-led-kolob');
+
+tileLED(gLK,'Kolob','Single bright gold core mid-column with slow corona breathing.',(nx,ny,t)=>{
+  const r = Math.sqrt(nx*nx+ny*ny);
+  const core = Math.exp(-Math.pow(r/.15,2))*1.4;
+  const corona = Math.exp(-Math.pow((r-.55)/.20,2))*(.4+.3*Math.sin(t*.8));
+  const v = core+corona;
+  if(v<.1) return null;
+  return [v*1.0, v*.85, v*.45];
+});
+
+tileLED(gLK,'Three Great Suns','Three orbs at three heights orbiting the central axis.',(nx,ny,t)=>{
+  let v=0,red=0,grn=0,blu=0;
+  for(let k=0;k<3;k++){
+    const yk=-.65+k*.65;
+    const a=t*.6+k*Math.PI*2/3;
+    const xk=Math.cos(a)*.45;
+    const d=Math.sqrt((nx-xk)*(nx-xk)+(ny-yk)*(ny-yk));
+    const w=Math.exp(-Math.pow(d/.18,2));
+    v+=w; red+=w; grn+=w*.85; blu+=w*.4;
+  }
+  if(v<.1) return null;
+  return [Math.min(1,red), Math.min(1,grn), Math.min(1,blu)];
+});
+
+tileLED(gLK,'Twelve Governing Systems','Twelve voxel clusters in vertical helix, slowly precessing.',(nx,ny,t)=>{
+  let v=0;
+  for(let k=0;k<12;k++){
+    const yk=-.9+k*1.8/11;
+    const a=k*.6+t*.4;
+    const xk=Math.cos(a)*.65;
+    const d=Math.sqrt((nx-xk)*(nx-xk)+(ny-yk)*(ny-yk));
+    v+=Math.exp(-Math.pow(d/.10,2));
+  }
+  if(v<.15) return null;
+  return [v*.6, v*.95, v*.9];
+});
+
+tileLED(gLK,'144 Worlds · 15 Sealed','Fine particle field, 15 brighter ones clustered tight at center.',(nx,ny,t,state)=>{
+  if(!state.pts){
+    state.pts=[];
+    for(let i=0;i<144;i++){
+      // sealed 15 near center, rest spread
+      const sealed=i<15;
+      const r=sealed?Math.random()*.25:.25+Math.random()*.85;
+      const a=Math.random()*Math.PI*2;
+      state.pts.push({x:Math.cos(a)*r, y:(Math.random()*2-1)*.95, sealed, phase:Math.random()*Math.PI*2});
+    }
+  }
+  let v=0, sealedV=0;
+  state.pts.forEach(p=>{
+    const px=p.x+Math.sin(t*.3+p.phase)*.02;
+    const py=p.y+Math.cos(t*.25+p.phase)*.02;
+    const d=Math.sqrt((nx-px)*(nx-px)+(ny-py)*(ny-py));
+    const w=Math.exp(-Math.pow(d/.05,2))*(p.sealed?1.0:.45);
+    v+=w; if(p.sealed) sealedV+=w;
+  });
+  if(v<.1) return null;
+  return [v*.8 + sealedV*.4, v*.9 + sealedV*.3, v*.9 - sealedV*.2];
+});
+
+tileLED(gLK,'Time Collapse','1000 dim particles converge to a single point. One Kolob day.',(nx,ny,t,state)=>{
+  const cycle=(t*.18)%1; // 0..1 collapse
+  if(!state.pts){
+    state.pts=[];
+    for(let i=0;i<60;i++){
+      const a=Math.random()*Math.PI*2;
+      const r=.4+Math.random()*.6;
+      state.pts.push({sx:Math.cos(a)*r, sy:(Math.random()*2-1)*.95});
+    }
+  }
+  let v=0;
+  state.pts.forEach(p=>{
+    const px=p.sx*(1-cycle), py=p.sy*(1-cycle);
+    const d=Math.sqrt((nx-px)*(nx-px)+(ny-py)*(ny-py));
+    v+=Math.exp(-Math.pow(d/.06,2))*(0.4+cycle*.5);
+  });
+  if(v<.1) return null;
+  return [v*.85, v*.95, v*.75];
+});
+
+// ─── ANTHROPOMORPHIC ────────────────────────────
+const gLA = document.getElementById('grid-led-anthro');
+
+tileLED(gLA,'Standing Figure of Light','Barely-resolved humanoid silhouette. Never a face.',(nx,ny,t)=>{
+  // head
+  const head=Math.exp(-Math.pow((nx)/.18,2)-Math.pow((ny-.75)/.13,2))*1.0;
+  // torso (tapered)
+  const torsoY=(ny+.05)*1.6;
+  const torsoW=.32-Math.abs(ny+.05)*.15;
+  const torso=(Math.abs(nx)<torsoW && ny>-.45 && ny<.55) ? .8 : 0;
+  // legs
+  const legs=(Math.abs(Math.abs(nx)-.1)<.08 && ny<-.4 && ny>-.95) ? .7 : 0;
+  // arms (subtle)
+  const arms=(Math.abs(Math.abs(nx)-.35)<.06 && ny<.4 && ny>-.15) ? .55 : 0;
+  const v=Math.max(head,torso,legs,arms) * (.7+.15*Math.sin(t*.5));
+  if(v<.15) return null;
+  return [v*.95, v*1.0, v*.85];
+});
+
+tileLED(gLA,'Cherub','Humanoid with wings extending sideways via X-axis voxels.',(nx,ny,t)=>{
+  const head=Math.exp(-Math.pow((nx)/.18,2)-Math.pow((ny-.55)/.13,2))*.9;
+  const torso=(Math.abs(nx)<.22 && ny>-.55 && ny<.4) ? .7 : 0;
+  // wings — horizontal sweep at shoulder height
+  const wingY=.18;
+  const wingShape=Math.exp(-Math.pow((ny-wingY)/.18,2));
+  const wing=(Math.abs(nx)>.25 && Math.abs(nx)<.95) ? wingShape*.8 : 0;
+  const v=Math.max(head,torso,wing) * (.75+.15*Math.sin(t*.4));
+  if(v<.12) return null;
+  return [v*.95, v*.92, v*1.0];
+});
+
+tileLED(gLA,'Urim and Thummim','Two glowing orbs paired at upper-chest height. Don\'t move.',(nx,ny,t)=>{
+  const o1=Math.exp(-(Math.pow((nx+.3)/.12,2)+Math.pow((ny-.2)/.14,2)))*1.0;
+  const o2=Math.exp(-(Math.pow((nx-.3)/.12,2)+Math.pow((ny-.2)/.14,2)))*1.0;
+  const v=(o1+o2) * (.8+.2*Math.sin(t*.6));
+  if(v<.1) return null;
+  return [v*1.0, v*.92, v*.6];
+});
+
+tileLED(gLA,'Throne','Geometric chair-shape resolving at mid-column. Empty.',(nx,ny,t)=>{
+  // seat slab
+  const seat=(Math.abs(nx)<.5 && Math.abs(ny+.05)<.08) ? .85 : 0;
+  // back
+  const back=(Math.abs(nx)<.5 && ny>0 && ny<.7 && Math.abs(nx)>.42) ? .8 : 0;
+  // back top crossbar
+  const top=(Math.abs(nx)<.5 && Math.abs(ny-.7)<.06) ? .8 : 0;
+  // legs
+  const legs=(Math.abs(Math.abs(nx)-.42)<.06 && ny<-.1 && ny>-.7) ? .7 : 0;
+  const v=Math.max(seat,back,top,legs) * (.7+.15*Math.sin(t*.5));
+  if(v<.1) return null;
+  return [v*1.0, v*.88, v*.55];
+});
+
+// kick it off
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

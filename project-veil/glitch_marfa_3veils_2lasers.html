@@ -15,8 +15,8 @@ canvas{display:block}
 </head>
 <body>
 <div id="info">
-  <strong>THE VEIL </strong><br>
-  3 veils installation mockup<br>
+  <strong>THE VEIL 2 LASERS</strong><br>
+  3 veils, lasers at both ends (cross-beam)<br>
   <span class="dim">25ft × 30ft × 14ft drag to orbit, scroll to zoom</span>
 </div>
 <div id="controls">
@@ -133,7 +133,7 @@ veilData.forEach((v,i)=>{
   // (labels handled in HUD overlay)
 });
 
-// ── Laser unit ──
+// ── Laser units (front + back) ──
 const laserBody=new THREE.Mesh(
   new THREE.BoxGeometry(.8,.5,1),
   new THREE.MeshStandardMaterial({color:0x111111,metalness:.5,roughness:.3})
@@ -141,7 +141,6 @@ const laserBody=new THREE.Mesh(
 laserBody.position.set(RW/2,4,2);
 scene.add(laserBody);
 
-// Laser lens
 const lens=new THREE.Mesh(
   new THREE.CircleGeometry(.12,16),
   new THREE.MeshStandardMaterial({color:0x00ff88,emissive:0x00ff44,emissiveIntensity:2})
@@ -149,59 +148,60 @@ const lens=new THREE.Mesh(
 lens.position.set(RW/2,4,2.51);
 scene.add(lens);
 
+// Second laser back of room, firing forward
+const laserBody2=new THREE.Mesh(
+  new THREE.BoxGeometry(.8,.5,1),
+  new THREE.MeshStandardMaterial({color:0x111111,metalness:.5,roughness:.3})
+);
+laserBody2.position.set(RW/2,6,RD-2);
+scene.add(laserBody2);
+
+const lens2=new THREE.Mesh(
+  new THREE.CircleGeometry(.12,16),
+  new THREE.MeshStandardMaterial({color:0xff3366,emissive:0xff1144,emissiveIntensity:2})
+);
+lens2.position.set(RW/2,6,RD-2.51);
+lens2.rotation.y=Math.PI;
+scene.add(lens2);
+
 // ── Beam rays (the core visual) ──
 // Multiple beam lines from laser through each veil
 const beamGroup=new THREE.Group();
 scene.add(beamGroup);
 
-function createBeamRays(){
-  // Clear existing
-  while(beamGroup.children.length)beamGroup.remove(beamGroup.children[0]);
-
-  const laserPos=new THREE.Vector3(RW/2,4,2.5);
-  const beamColors=[0x4466ff,0x5577ff,0x3355ee,0x6688ff,0x2244dd,0x4488ff,0x3366cc];
-
-  // Fan of beams from laser through the veils to back wall
+function fanFrom(origin,dir,spread,depth,palette,centerColor){
   for(let i=0;i<25;i++){
-    const angle=(i/24-.5)*0.35; // horizontal spread
-    const vAngle=(Math.random()-.5)*.25; // vertical variation
-    const endX=RW/2+Math.tan(angle)*(RD-3);
-    const endY=4+Math.tan(vAngle)*(RD-3);
-    const endZ=RD-.5;
-
-    const points=[
-      laserPos,
-      new THREE.Vector3(
-        THREE.MathUtils.lerp(laserPos.x,endX,1),
-        THREE.MathUtils.lerp(laserPos.y,endY,1),
-        endZ
-      )
-    ];
-
+    const angle=(i/24-.5)*spread;
+    const vAngle=(Math.random()-.5)*.25;
+    const endX=origin.x+Math.tan(angle)*depth;
+    const endY=origin.y+Math.tan(vAngle)*depth;
+    const endZ=origin.z+dir*depth;
+    const points=[origin,new THREE.Vector3(endX,endY,endZ)];
     const geo=new THREE.BufferGeometry().setFromPoints(points);
     const mat=new THREE.LineBasicMaterial({
-      color:beamColors[i%beamColors.length],
+      color:palette[i%palette.length],
       transparent:true,
       opacity:.18+Math.random()*.1,
       blending:THREE.AdditiveBlending
     });
     beamGroup.add(new THREE.Line(geo,mat));
   }
-
-  // Brighter center beams
   for(let i=0;i<8;i++){
-    const a=(i/7-.5)*.12;
-    const va=(i/7-.5)*.08;
-    const points=[
-      laserPos,
-      new THREE.Vector3(RW/2+Math.tan(a)*(RD-3),4+Math.tan(va)*(RD-3),RD-.5)
-    ];
+    const a=(i/7-.5)*.12, va=(i/7-.5)*.08;
+    const points=[origin,new THREE.Vector3(origin.x+Math.tan(a)*depth,origin.y+Math.tan(va)*depth,origin.z+dir*depth)];
     const geo=new THREE.BufferGeometry().setFromPoints(points);
-    const mat=new THREE.LineBasicMaterial({
-      color:0x88aaff,transparent:true,opacity:.35,blending:THREE.AdditiveBlending
-    });
-    beamGroup.add(new THREE.Line(geo,mat));
+    beamGroup.add(new THREE.Line(geo,new THREE.LineBasicMaterial({color:centerColor,transparent:true,opacity:.35,blending:THREE.AdditiveBlending})));
   }
+}
+
+function createBeamRays(){
+  while(beamGroup.children.length)beamGroup.remove(beamGroup.children[0]);
+  // Front laser (cyan/blue) firing toward back wall
+  fanFrom(new THREE.Vector3(RW/2,4,2.5),+1,0.35,RD-3,
+    [0x4466ff,0x5577ff,0x3355ee,0x6688ff,0x2244dd,0x4488ff,0x3366cc],0x88aaff);
+  // Back laser (red/magenta) firing toward front wall
+  fanFrom(new THREE.Vector3(RW/2,6,RD-2.5),-1,0.35,RD-3,
+    [0xff3366,0xee2255,0xff5577,0xcc1144,0xff4488,0xdd2266,0xff6699],0xffaacc);
 }
 createBeamRays();
 
@@ -296,7 +296,8 @@ function makeLabel(text,x,y,z,color){
   scene.add(sprite);
 }
 
-makeLabel('LASER',RW/2,.3,2,'#ff5500');
+makeLabel('LASER 1',RW/2,.3,2,'#00ff88');
+makeLabel('LASER 2',RW/2,.3,RD-2,'#ff3366');
 makeLabel('V1 TELESTIAL',RW/2,.3,10,'#8888cc');
 makeLabel('V2 TERRESTRIAL',RW/2,.3,17,'#9999dd');
 makeLabel('V3 CELESTIAL',RW/2,.3,23,'#aaaaee');
@@ -394,6 +395,7 @@ function animate(time){
 
   // Laser glow pulse
   lens.material.emissiveIntensity=2+Math.sin(t*3)*.5;
+  lens2.material.emissiveIntensity=2+Math.sin(t*3+Math.PI)*.5;
 
   renderer.render(scene,camera);
 }

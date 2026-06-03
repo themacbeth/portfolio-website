@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+*{margin:0;padding:0;background:#000}
+canvas{display:block}
+#info{position:fixed;top:12px;left:16px;font:11px/1.6 monospace;color:#666;pointer-events:none;z-index:10;max-width:380px}
+#info strong{color:#7fffaa}
+#info .dim{color:#444}
+#info .key{color:#bbb}
+#controls{position:fixed;bottom:16px;left:16px;font:10px monospace;color:#444;z-index:10}
+#controls span,#mode-controls span,#scene-controls span{color:#666;cursor:pointer;padding:4px 8px;border:1px solid #222;display:inline-block}
+#controls span{margin-right:10px}
+#controls span:hover,#mode-controls span:hover,#scene-controls span:hover{color:#7fffaa;border-color:#7fffaa}
+#controls span.active,#mode-controls span.active,#scene-controls span.active{color:#7fffaa;border-color:#7fffaa}
+#mode-controls{position:fixed;top:12px;right:16px;font:10px monospace;color:#444;z-index:10}
+#mode-controls span{margin-left:6px}
+#mode-controls .lbl{color:#444;margin-right:4px;border:none;padding:0}
+#scene-controls{position:fixed;top:46px;right:16px;font:10px monospace;color:#444;z-index:10}
+#scene-controls span{margin-left:6px}
+#scene-controls .lbl{color:#444;margin-right:4px;border:none;padding:0}
+#hud{position:fixed;bottom:16px;right:16px;font:10px/1.5 monospace;color:#7fffaa;z-index:10;text-align:right;background:rgba(0,0,0,.5);padding:8px 12px;border:1px solid #1a3a2a;border-radius:3px;min-width:200px}
+#hud .row{color:#888}
+#hud .row b{color:#7fffaa;font-weight:normal}
+</style>
+</head>
+<body>
+<div id="info">
+  <strong>THE VEIL · LASER ↔ LED REGISTRATION</strong><br>
+  <span class="dim">Front strand-row = laser-registered plane.<br>
+  Galvo XY mapped to stage XY via 4-pt homography.<br>
+  Anchor points snap to nearest LED on that plane.</span>
+</div>
+<div id="mode-controls">
+  <span class="lbl">DISPLAY MODE</span>
+  <span class="active" onclick="setMode('targeted',this)">Targeted</span>
+  <span onclick="setMode('volumetric',this)">Volumetric</span>
+  <span onclick="setMode('calibration',this)">Calibration</span>
+</div>
+<div id="scene-controls">
+  <span class="lbl">SCENE</span>
+  <span class="active" onclick="setScene('galaxy',this)">Galaxy</span>
+  <span onclick="setScene('sun',this)">Sun</span>
+  <span onclick="setScene('core',this)">Core</span>
+  <span onclick="setScene('auto',this)">Auto</span>
+</div>
+<div id="controls">
+  <span class="active" onclick="setView('overview',this)">Overview</span>
+  <span onclick="setView('viewer',this)">Viewer POV</span>
+  <span onclick="setView('top',this)">Top Down</span>
+  <span onclick="setView('side',this)">Side</span>
+  <span onclick="setView('front',this)">Front Plane</span>
+</div>
+<div id="hud">
+  <div class="row">scene: <b id="hScene">galaxy</b></div>
+  <div class="row">anchor: <b id="hAnchor">—</b> / <b id="hAnchorTotal">—</b></div>
+  <div class="row">target LED: <b id="hLed">ix— iy—</b></div>
+  <div class="row">stage XY: <b id="hStage">—</b></div>
+  <div class="row">galvo XY: <b id="hGalvo">—</b></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x040410,.003);
+const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,200);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.6;
+document.body.appendChild(renderer.domElement);
+
+const RW=25,RD=30,RH=14;
+
+// Room
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(RW,RD),
+  new THREE.MeshStandardMaterial({color:0x2a2a2a,roughness:.85}));
+floor.rotation.x=-Math.PI/2; floor.position.set(RW/2,0,RD/2); scene.add(floor);
+
+const rug=new THREE.Mesh(new THREE.PlaneGeometry(10,12),
+  new THREE.MeshStandardMaterial({color:0x4a1515,roughness:.9}));
+rug.rotation.x=-Math.PI/2; rug.position.set(RW/2,.01,RD/2); scene.add(rug);
+
+scene.add(new THREE.LineSegments(
+  new THREE.EdgesGeometry(new THREE.PlaneGeometry(RW,RD)),
+  new THREE.LineBasicMaterial({color:0x555555,transparent:true,opacity:.5})
+).rotateX(-Math.PI/2).translateOnAxis(new THREE.Vector3(0,0,1),0));
+// (note: simpler — just add a flat outline)
+const ro=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(RW,RD)),
+  new THREE.LineBasicMaterial({color:0x555555,transparent:true,opacity:.5}));
+ro.rotation.x=-Math.PI/2; ro.position.set(RW/2,.02,RD/2); scene.add(ro);
+
+[[0,0],[RW,0],[0,RD],[RW,RD]].forEach(([cx,cz])=>{
+  const post=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,RH,4),
+    new THREE.MeshBasicMaterial({color:0x444444,transparent:true,opacity:.3}));
+  post.position.set(cx,RH/2,cz); scene.add(post);
+});
+
+// ─── LED VOLUME ────────────────────────────────────────────
+const NX=16, NZ=24, NY=32;
+const VX0=RW/2-5, VX1=RW/2+5;
+const VZ0=RD/2-7, VZ1=RD/2+7;
+const VY0=2,      VY1=11;
+const VCX=(VX0+VX1)/2, VCY=(VY0+VY1)/2, VCZ=(VZ0+VZ1)/2;
+const HX=(VX1-VX0)/2,  HY=(VY1-VY0)/2;
+
+// Strand wires
+const wireMat=new THREE.LineBasicMaterial({color:0x222222,transparent:true,opacity:.3});
+for(let ix=0;ix<NX;ix++) for(let iz=0;iz<NZ;iz++){
+  const x=VX0+ix/(NX-1)*(VX1-VX0), z=VZ0+iz/(NZ-1)*(VZ1-VZ0);
+  scene.add(new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x,RH,z),new THREE.Vector3(x,VY0-.2,z)]),
+    iz===0 ? new THREE.LineBasicMaterial({color:0x2a4a3a,transparent:true,opacity:.5}) : wireMat
+  ));
+}
+
+// Voxels
+const TOTAL=NX*NY*NZ;
+const positions=new Float32Array(TOTAL*3);
+const colors=new Float32Array(TOTAL*3);
+const voxelIdx=[];
+let k=0;
+for(let ix=0;ix<NX;ix++) for(let iy=0;iy<NY;iy++) for(let iz=0;iz<NZ;iz++){
+  const x=VX0+ix/(NX-1)*(VX1-VX0);
+  const y=VY0+iy/(NY-1)*(VY1-VY0);
+  const z=VZ0+iz/(NZ-1)*(VZ1-VZ0);
+  positions[k*3]=x; positions[k*3+1]=y; positions[k*3+2]=z;
+  voxelIdx.push({ix,iy,iz,x,y,z});
+  k++;
+}
+const voxGeo=new THREE.BufferGeometry();
+voxGeo.setAttribute('position',new THREE.BufferAttribute(positions,3));
+voxGeo.setAttribute('color',new THREE.BufferAttribute(colors,3));
+const voxPoints=new THREE.Points(voxGeo,new THREE.PointsMaterial({
+  size:.18,vertexColors:true,transparent:true,opacity:.95,
+  blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true
+}));
+scene.add(voxPoints);
+
+// Helper: voxel array index from (ix,iy,iz)
+const vIdx=(ix,iy,iz)=>(ix*NY+iy)*NZ+iz;
+
+// ─── Front-plane snapping ─────────────────────────────────
+// Stage XY ∈ [-1..1] maps to a front-plane LED (ix, iy) at z = VZ0
+function snapFrontLED(sx,sy){
+  // stage (-1..1) → world XY on front plane
+  const wx = VCX + sx*HX;
+  const wy = VCY + sy*HY;
+  // nearest strand ix (X axis), nearest pixel iy
+  const ix=Math.max(0,Math.min(NX-1,Math.round((wx-VX0)/(VX1-VX0)*(NX-1))));
+  const iy=Math.max(0,Math.min(NY-1,Math.round((wy-VY0)/(VY1-VY0)*(NY-1))));
+  // actual world position of that LED
+  const lx=VX0+ix/(NX-1)*(VX1-VX0);
+  const ly=VY0+iy/(NY-1)*(VY1-VY0);
+  return {ix,iy,iz:0,x:lx,y:ly,z:VZ0};
+}
+
+// ─── Anchor points per scene (stage XY ∈ [-1..1]) ─────────
+function ringPts(R,n,phase=0){
+  const out=[];
+  for(let k=0;k<n;k++){const t=k/n*Math.PI*2+phase; out.push([R*Math.cos(t),R*Math.sin(t)])}
+  return out;
+}
+const anchors={
+  galaxy: [
+    ...ringPts(.78,16),                    // outer disc
+    ...ringPts(.22,6),                     // inner core
+    ...ringPts(.78,4,Math.PI/4),           // throne emphasis
+    ...ringPts(.50,8,Math.PI/8),           // arm intermediates
+    [0,0]                                  // center
+  ],
+  sun: [
+    ...ringPts(.35,8),                     // disc
+    ...ringPts(.58,8,Math.PI/8),           // corona
+    ...ringPts(.78,8),                     // ray tips
+    [0,0]
+  ],
+  core: [
+    ...[0,1,2].map(k=>{const a=k/3*Math.PI*2-Math.PI/2; return [.36*Math.cos(a),.36*Math.sin(a)]}), // triad
+    ...ringPts(.78,12),                    // 12 systems
+    [0,0]                                  // sealed center
+  ]
+};
+// Precompute snapped LED targets per scene
+const targets={};
+for(const k in anchors){
+  targets[k]=anchors[k].map(([sx,sy])=>({sx,sy,led:snapFrontLED(sx,sy)}));
+}
+
+// ─── Scene content for VOLUMETRIC mode (back-fill 3D field) ─
+function scGalaxy(v,t){
+  const dx=(v.x-VCX)/HX, dz=(v.z-VCZ)/((VZ1-VZ0)/2), dy=(v.y-VCY)/HY;
+  const r=Math.sqrt(dx*dx+dz*dz);
+  if(r>1.05) return null;
+  const theta=Math.atan2(dz,dx);
+  const armPhase=Math.sin(2*(theta+r*3.5+t*.4))*.5+.5;
+  const discY=Math.exp(-Math.pow(dy/.18,2));
+  const radial=Math.exp(-Math.pow((r-.55)/.5,2))+Math.exp(-Math.pow(r/.12,2))*1.6;
+  const v_=radial*discY*(.35+armPhase*.85);
+  if(v_<.06) return null;
+  const warm=Math.exp(-Math.pow(r/.18,2));
+  return [v_*(.45+warm*.55), v_*(.55+warm*.2), v_*(.95-warm*.3)];
+}
+function scSun(v,t){
+  const dx=(v.x-VCX)/HX, dy=(v.y-VCY)/HY, dz=(v.z-VCZ)/((VZ1-VZ0)/2);
+  const r=Math.sqrt(dx*dx+dy*dy+dz*dz);
+  const core=Math.exp(-Math.pow(r/.22,2));
+  const corona=Math.exp(-Math.pow((r-.55)/.18,2))*(.55+.45*Math.sin(t*1.2+r*8));
+  const v_=core*1.2+corona*.55;
+  if(v_<.06) return null;
+  return [v_, v_*(.55+.25*Math.sin(t*.8)), v_*.15];
+}
+function scCore(v,t){
+  const dx=(v.x-VCX)/HX, dy=(v.y-VCY)/HY, dz=(v.z-VCZ)/((VZ1-VZ0)/2);
+  const r=Math.sqrt(dx*dx+dy*dy+dz*dz);
+  const center=Math.exp(-Math.pow(r/.10,2))*1.4;
+  let triad=0;
+  for(let k=0;k<3;k++){
+    const a=k/3*Math.PI*2+t*.35;
+    const tx=.35*Math.cos(a), tz=.35*Math.sin(a);
+    const d=Math.sqrt((dx-tx)*(dx-tx)+dy*dy+(dz-tz)*(dz-tz));
+    triad+=Math.exp(-Math.pow(d/.10,2));
+  }
+  let ring=0;
+  for(let k=0;k<12;k++){
+    const a=k/12*Math.PI*2-t*.12;
+    const tx=.78*Math.cos(a), tz=.78*Math.sin(a);
+    const d=Math.sqrt((dx-tx)*(dx-tx)+dy*dy+(dz-tz)*(dz-tz));
+    ring+=Math.exp(-Math.pow(d/.06,2))*.7;
+  }
+  const v_=center+triad+ring;
+  if(v_<.08) return null;
+  return [v_*.85, v_*.95, v_*(.7+.3*Math.sin(t*.5))];
+}
+const scenes={galaxy:scGalaxy,sun:scSun,core:scCore};
+
+// ─── Laser ──────────────────────────────────────────────
+const LASER_POS=new THREE.Vector3(RW/2,4,2);
+const laserBody=new THREE.Mesh(new THREE.BoxGeometry(.8,.5,1),
+  new THREE.MeshStandardMaterial({color:0x111111,metalness:.5,roughness:.3}));
+laserBody.position.copy(LASER_POS); scene.add(laserBody);
+const lens=new THREE.Mesh(new THREE.CircleGeometry(.12,16),
+  new THREE.MeshStandardMaterial({color:0x7fffaa,emissive:0x33ff77,emissiveIntensity:2}));
+lens.position.set(LASER_POS.x,LASER_POS.y,LASER_POS.z+.51); scene.add(lens);
+
+// Single live beam (recomputed each frame to point at current target LED)
+const beamGeo=new THREE.BufferGeometry().setFromPoints([LASER_POS.clone(),LASER_POS.clone()]);
+const beamMat=new THREE.LineBasicMaterial({color:0x7fffaa,transparent:true,opacity:.85,blending:THREE.AdditiveBlending});
+const beam=new THREE.Line(beamGeo,beamMat); scene.add(beam);
+
+// Halo at hit point
+const hit=new THREE.Mesh(new THREE.SphereGeometry(.10,12,12),
+  new THREE.MeshBasicMaterial({color:0xaaffcc,transparent:true,opacity:.9,blending:THREE.AdditiveBlending}));
+scene.add(hit);
+
+// Recent-hit trail (small spheres that fade)
+const TRAIL_N=8;
+const trail=[];
+for(let i=0;i<TRAIL_N;i++){
+  const s=new THREE.Mesh(new THREE.SphereGeometry(.06,8,8),
+    new THREE.MeshBasicMaterial({color:0x7fffaa,transparent:true,opacity:0,blending:THREE.AdditiveBlending}));
+  scene.add(s); trail.push({mesh:s,age:99});
+}
+
+// ─── Calibration overlay (front-plane grid + 4-corner homography lines) ─
+const calibGroup=new THREE.Group(); scene.add(calibGroup); calibGroup.visible=false;
+
+// Front-plane grid wireframe
+function buildCalib(){
+  while(calibGroup.children.length) calibGroup.remove(calibGroup.children[0]);
+  // mesh grid
+  const gMat=new THREE.LineBasicMaterial({color:0x4488aa,transparent:true,opacity:.45});
+  for(let ix=0;ix<NX;ix++){
+    const x=VX0+ix/(NX-1)*(VX1-VX0);
+    calibGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(x,VY0,VZ0),new THREE.Vector3(x,VY1,VZ0)]),gMat));
+  }
+  for(let iy=0;iy<NY;iy+=2){
+    const y=VY0+iy/(NY-1)*(VY1-VY0);
+    calibGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(VX0,y,VZ0),new THREE.Vector3(VX1,y,VZ0)]),gMat));
+  }
+  // 4-corner homography fit lines (galvo → corner LED)
+  const corners=[snapFrontLED(-.95,-.95),snapFrontLED(.95,-.95),snapFrontLED(.95,.95),snapFrontLED(-.95,.95)];
+  const cMat=new THREE.LineBasicMaterial({color:0xffaa33,transparent:true,opacity:.7});
+  corners.forEach(c=>{
+    calibGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+      LASER_POS,new THREE.Vector3(c.x,c.y,c.z)]),cMat));
+    const m=new THREE.Mesh(new THREE.SphereGeometry(.12,12,12),
+      new THREE.MeshBasicMaterial({color:0xffaa33,transparent:true,opacity:.95,blending:THREE.AdditiveBlending}));
+    m.position.set(c.x,c.y,c.z); calibGroup.add(m);
+  });
+  // floor label for the front plane
+  const fpOutline=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(VX1-VX0,VY1-VY0)),
+    new THREE.LineBasicMaterial({color:0x66ddaa,transparent:true,opacity:.8}));
+  fpOutline.position.set((VX0+VX1)/2,(VY0+VY1)/2,VZ0); calibGroup.add(fpOutline);
+}
+buildCalib();
+
+// Haze
+const hazeGeo=new THREE.BufferGeometry();
+const hazeCount=1200;
+const hazePos=new Float32Array(hazeCount*3);
+for(let i=0;i<hazeCount;i++){
+  hazePos[i*3]=Math.random()*RW; hazePos[i*3+1]=Math.random()*RH; hazePos[i*3+2]=Math.random()*RD;
+}
+hazeGeo.setAttribute('position',new THREE.BufferAttribute(hazePos,3));
+scene.add(new THREE.Points(hazeGeo,new THREE.PointsMaterial({
+  color:0x445566,size:.07,transparent:true,opacity:.2,blending:THREE.AdditiveBlending,depthWrite:false
+})));
+
+scene.add(new THREE.AmbientLight(0x222244,.5));
+
+// Speaker
+const speaker=new THREE.Mesh(new THREE.BoxGeometry(.8,1.2,.6),
+  new THREE.MeshStandardMaterial({color:0x1a1a1a,roughness:.8}));
+speaker.position.set(RW-2,2.5,RD/2); scene.add(speaker);
+
+// Labels
+function makeLabel(text,x,y,z,color){
+  const canvas=document.createElement('canvas'); canvas.width=512; canvas.height=64;
+  const ctx=canvas.getContext('2d');
+  ctx.font='24px monospace'; ctx.fillStyle=color||'#444'; ctx.textAlign='center';
+  ctx.fillText(text,256,40);
+  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({
+    map:new THREE.CanvasTexture(canvas),transparent:true,opacity:.75,depthTest:false}));
+  sprite.position.set(x,y,z); sprite.scale.set(5,.6,1); scene.add(sprite);
+}
+makeLabel('LASER',RW/2,.3,2,'#7fffaa');
+makeLabel('FRONT STRAND PLANE',RW/2,.3,VZ0-.5,'#66ddaa');
+makeLabel('LED VOLUME',RW/2,.3,VCZ,'#666');
+makeLabel('SPEAKER',RW-2,.3,RD/2+2,'#666');
+
+// ─── State ──────────────────────────────────────────────
+let mode='targeted';
+let activeScene='galaxy';
+let autoMode=false;
+let anchorIdx=0;
+let anchorTimer=0;
+const ANCHOR_HZ=8; // anchors-per-second
+
+function setMode(m,el){
+  document.querySelectorAll('#mode-controls span').forEach(s=>{if(!s.classList.contains('lbl'))s.classList.remove('active')});
+  if(el)el.classList.add('active');
+  mode=m;
+  calibGroup.visible=(m==='calibration');
+}
+function setScene(s,el){
+  document.querySelectorAll('#scene-controls span').forEach(x=>{if(!x.classList.contains('lbl'))x.classList.remove('active')});
+  if(el)el.classList.add('active');
+  if(s==='auto'){autoMode=true} else {autoMode=false; activeScene=s; anchorIdx=0}
+}
+
+// ─── Camera ──────────────────────────────────────────────
+let isDragging=false,prevX=0,prevY=0;
+let camTheta=.5,camPhi=.4,camDist=28;
+let targetTheta=camTheta,targetPhi=camPhi,targetDist=camDist;
+let lookAt=new THREE.Vector3(RW/2,5,RD/2), targetLookAt=lookAt.clone();
+
+renderer.domElement.addEventListener('mousedown',e=>{isDragging=true;prevX=e.clientX;prevY=e.clientY});
+renderer.domElement.addEventListener('mousemove',e=>{
+  if(!isDragging)return;
+  targetTheta+=(e.clientX-prevX)*.005;
+  targetPhi=Math.max(.1,Math.min(Math.PI/2-.05,targetPhi-(e.clientY-prevY)*.005));
+  prevX=e.clientX;prevY=e.clientY;
+});
+renderer.domElement.addEventListener('mouseup',()=>isDragging=false);
+renderer.domElement.addEventListener('wheel',e=>{targetDist=Math.max(5,Math.min(100,targetDist+e.deltaY*.03))});
+
+let touchDist=0;
+renderer.domElement.addEventListener('touchstart',e=>{
+  if(e.touches.length===1){isDragging=true;prevX=e.touches[0].clientX;prevY=e.touches[0].clientY}
+  if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX;const dy=e.touches[0].clientY-e.touches[1].clientY;touchDist=Math.sqrt(dx*dx+dy*dy)}
+});
+renderer.domElement.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(e.touches.length===1&&isDragging){
+    targetTheta+=(e.touches[0].clientX-prevX)*.005;
+    targetPhi=Math.max(.1,Math.min(Math.PI/2-.05,targetPhi-(e.touches[0].clientY-prevY)*.005));
+    prevX=e.touches[0].clientX;prevY=e.touches[0].clientY;
+  }
+  if(e.touches.length===2){
+    const dx=e.touches[0].clientX-e.touches[1].clientX, dy=e.touches[0].clientY-e.touches[1].clientY;
+    const d=Math.sqrt(dx*dx+dy*dy); targetDist=Math.max(5,Math.min(100,targetDist-(d-touchDist)*.05));touchDist=d;
+  }
+},{passive:false});
+renderer.domElement.addEventListener('touchend',()=>isDragging=false);
+
+function setView(name,el){
+  document.querySelectorAll('#controls span').forEach(s=>s.classList.remove('active'));
+  if(el)el.classList.add('active');
+  if(name==='overview'){targetTheta=.5;targetPhi=.4;targetDist=28;targetLookAt.set(RW/2,5,RD/2)}
+  else if(name==='viewer'){targetTheta=-.3;targetPhi=.15;targetDist=12;targetLookAt.set(RW/2,5,15)}
+  else if(name==='top'){targetTheta=0;targetPhi=1.5;targetDist=32;targetLookAt.set(RW/2,0,RD/2)}
+  else if(name==='side'){targetTheta=Math.PI/2;targetPhi=.2;targetDist=22;targetLookAt.set(RW/2,5,RD/2)}
+  else if(name==='front'){targetTheta=Math.PI;targetPhi=.05;targetDist=14;targetLookAt.set(RW/2,5,VZ0)}
+}
+camera.position.set(20,12,22);
+
+// ─── HUD helpers ─────────────────────────────────────────
+const hScene=document.getElementById('hScene');
+const hAnchor=document.getElementById('hAnchor');
+const hAnchorTotal=document.getElementById('hAnchorTotal');
+const hLed=document.getElementById('hLed');
+const hStage=document.getElementById('hStage');
+const hGalvo=document.getElementById('hGalvo');
+
+// fake "galvo" coordinate = inverse homography (here approximated as scaled stage)
+function galvoFromStage(sx,sy){
+  // crude: simulate keystone — galvo XY drifts more for off-axis points
+  return [sx*0.82+sy*.04, sy*0.78-sx*.03];
+}
+
+// ─── Animate ─────────────────────────────────────────────
+const colorAttr=voxGeo.getAttribute('color');
+let lastVoxUpdate=0;
+const VOX_HZ=20;
+
+function animate(time){
+  requestAnimationFrame(animate);
+  const t=time*.001;
+
+  camTheta+=(targetTheta-camTheta)*.06;
+  camPhi+=(targetPhi-camPhi)*.06;
+  camDist+=(targetDist-camDist)*.06;
+  lookAt.lerp(targetLookAt,.04);
+  camera.position.set(
+    lookAt.x+Math.sin(camTheta)*Math.cos(camPhi)*camDist,
+    lookAt.y+Math.sin(camPhi)*camDist,
+    lookAt.z+Math.cos(camTheta)*Math.cos(camPhi)*camDist);
+  camera.lookAt(lookAt);
+
+  if(autoMode){
+    const seq=['galaxy','sun','core'];
+    const next=seq[Math.floor(t/6)%3];
+    if(next!==activeScene){activeScene=next; anchorIdx=0}
+  }
+  hScene.textContent=activeScene;
+  const tgList=targets[activeScene];
+  hAnchorTotal.textContent=tgList.length;
+
+  // Advance anchor pointer at ANCHOR_HZ
+  anchorTimer+=1/60;
+  if(anchorTimer>=1/ANCHOR_HZ){
+    anchorTimer=0;
+    anchorIdx=(anchorIdx+1)%tgList.length;
+    // Push current to trail
+    for(let i=TRAIL_N-1;i>0;i--){trail[i].age=trail[i-1].age; trail[i].mesh.position.copy(trail[i-1].mesh.position)}
+    const cur=tgList[anchorIdx];
+    trail[0].age=0; trail[0].mesh.position.set(cur.led.x,cur.led.y,cur.led.z);
+  }
+  // Fade trail
+  trail.forEach(tr=>{
+    tr.age+=1/60;
+    tr.mesh.material.opacity=Math.max(0,.85-tr.age*1.8);
+  });
+
+  const cur=tgList[anchorIdx];
+  hAnchor.textContent=(anchorIdx+1).toString().padStart(2,'0');
+  hLed.textContent=`ix${cur.led.ix.toString().padStart(2,'0')} iy${cur.led.iy.toString().padStart(2,'0')}`;
+  hStage.textContent=`${cur.sx.toFixed(2)},${cur.sy.toFixed(2)}`;
+  const g=galvoFromStage(cur.sx,cur.sy);
+  hGalvo.textContent=`${g[0].toFixed(2)},${g[1].toFixed(2)}`;
+
+  // Beam endpoint = current LED world position
+  const ep=new THREE.Vector3(cur.led.x,cur.led.y,cur.led.z);
+  const arr=beamGeo.attributes.position.array;
+  arr[0]=LASER_POS.x; arr[1]=LASER_POS.y; arr[2]=LASER_POS.z+.5;
+  arr[3]=ep.x; arr[4]=ep.y; arr[5]=ep.z;
+  beamGeo.attributes.position.needsUpdate=true;
+  // Pulse the beam
+  beamMat.opacity = .65 + .25*Math.sin(t*30);
+  hit.position.copy(ep);
+  hit.material.opacity = .7 + .3*Math.sin(t*30);
+  lens.material.emissiveIntensity=2+Math.sin(t*3)*.5;
+
+  // Voxel colors
+  if(time-lastVoxUpdate>1000/VOX_HZ){
+    lastVoxUpdate=time;
+    const arrC=colorAttr.array;
+    const sceneFn=scenes[activeScene];
+
+    if(mode==='volumetric'){
+      // Full 3D field, all voxels
+      for(let i=0;i<voxelIdx.length;i++){
+        const v=voxelIdx[i];
+        const c=sceneFn(v,t);
+        if(c){arrC[i*3]=c[0]; arrC[i*3+1]=c[1]; arrC[i*3+2]=c[2]}
+        else {arrC[i*3]=0; arrC[i*3+1]=0; arrC[i*3+2]=0}
+      }
+    } else if(mode==='targeted'){
+      // Black out everything; light only the target front-plane LEDs (anchors)
+      for(let i=0;i<arrC.length;i++) arrC[i]=0;
+      // Light all anchors faintly (the "registered set")
+      tgList.forEach((a,i)=>{
+        const idx=vIdx(a.led.ix,a.led.iy,0);
+        arrC[idx*3]+=.18; arrC[idx*3+1]+=.35; arrC[idx*3+2]+=.25;
+      });
+      // Light the currently-fired LED bright
+      const ci=vIdx(cur.led.ix,cur.led.iy,0);
+      arrC[ci*3]=1.0; arrC[ci*3+1]=1.5; arrC[ci*3+2]=1.1;
+      // Light recently-fired LEDs trailing
+      trail.forEach((tr,i)=>{
+        if(tr.age>2)return;
+        const a=tgList[(anchorIdx-i-1+tgList.length)%tgList.length];
+        const idx=vIdx(a.led.ix,a.led.iy,0);
+        const w=Math.max(0,1-tr.age*.6);
+        arrC[idx*3]=Math.max(arrC[idx*3],.6*w); arrC[idx*3+1]=Math.max(arrC[idx*3+1],1.0*w); arrC[idx*3+2]=Math.max(arrC[idx*3+2],.7*w);
+      });
+    } else if(mode==='calibration'){
+      // Show only the 4 corner LEDs lit (the calibration fit points)
+      for(let i=0;i<arrC.length;i++) arrC[i]=0;
+      const corners=[snapFrontLED(-.95,-.95),snapFrontLED(.95,-.95),snapFrontLED(.95,.95),snapFrontLED(-.95,.95)];
+      corners.forEach(c=>{
+        const idx=vIdx(c.ix,c.iy,0);
+        arrC[idx*3]=1.2; arrC[idx*3+1]=.7; arrC[idx*3+2]=.2;
+      });
+    }
+    colorAttr.needsUpdate=true;
+  }
+
+  // In calibration mode hide the live beam (calib lines tell the story)
+  beam.visible=(mode!=='calibration');
+  hit.visible=(mode!=='calibration');
+  trail.forEach(tr=>tr.mesh.visible=(mode==='targeted'));
+
+  renderer.render(scene,camera);
+}
+
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+
+animate(0);
+</script>
+</body>
+</html>
