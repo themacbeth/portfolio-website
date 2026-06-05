@@ -17,13 +17,14 @@ body{font:11px/1.5 ui-monospace,monospace;color:#888;overflow:hidden}
 #tl-row .now{color:#ffd58a;font-size:11px;letter-spacing:.18em;flex:1}
 #tl-row .clock{color:#888;font-variant-numeric:tabular-nums}
 #tl-row .next{color:#444}
-#tl-track{height:24px;background:#0a0a0a;border:1px solid #181818;border-radius:2px;position:relative;overflow:hidden}
+#tl-track{height:32px;background:#0a0a0a;border:1px solid #181818;border-radius:2px;position:relative;overflow:hidden;cursor:pointer}
+#tl-track:hover{border-color:#3a3a3a}
 .tl-seg{position:absolute;top:0;bottom:0;border-right:1px solid rgba(255,255,255,.06);
-  display:flex;align-items:center;justify-content:center;color:#444;font-size:9px;letter-spacing:.06em;
-  cursor:pointer;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;padding:0 4px;transition:color .1s}
-.tl-seg:hover{color:#ffd58a}
-.tl-seg.active{color:#ffd58a;background:rgba(255,213,138,.08)}
-#tl-head{position:absolute;top:-2px;bottom:-2px;width:2px;background:#ffd58a;box-shadow:0 0 8px #ffd58a;pointer-events:none;transition:left .05s linear}
+  display:flex;align-items:center;justify-content:center;color:#666;font-size:9px;letter-spacing:.06em;
+  cursor:pointer;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;padding:0 4px;transition:color .1s,background .1s;pointer-events:auto}
+.tl-seg:hover{color:#ffd58a;background:rgba(255,213,138,.05)}
+.tl-seg.active{color:#ffd58a;background:rgba(255,213,138,.10)}
+#tl-head{position:absolute;top:-2px;bottom:-2px;width:2px;background:#ffd58a;box-shadow:0 0 10px #ffd58a;pointer-events:none}
 #hud{position:fixed;bottom:62px;right:18px;z-index:10;font-size:10px;color:#555;text-align:right;letter-spacing:.1em}
 #hud b{color:#ffd58a;font-weight:normal}
 #beat{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);z-index:10;
@@ -187,6 +188,21 @@ spill.position.set(0,CY,0); scene.add(spill);
 
 function clamp01(x){return x<0?0:(x>1?1:x)}
 function expBell(x,s){return Math.exp(-(x*x)/(s*s))}
+// HSL → RGB (h,s,l in 0..1)
+function hsl2rgb(h,s,l){
+  const c=(1-Math.abs(2*l-1))*s;
+  const x=c*(1-Math.abs(((h*6)%2)-1));
+  const m=l-c/2;
+  let r=0,g=0,b=0;
+  const seg=Math.floor(h*6)%6;
+  if(seg===0){r=c;g=x;b=0}
+  else if(seg===1){r=x;g=c;b=0}
+  else if(seg===2){r=0;g=c;b=x}
+  else if(seg===3){r=0;g=x;b=c}
+  else if(seg===4){r=x;g=0;b=c}
+  else {r=c;g=0;b=x}
+  return [r+m,g+m,b+m];
+}
 
 // ───────────────────────────────────────────────────────────
 // VIRTUAL BEAT CLOCK — 66 BPM drone hymnal
@@ -235,20 +251,37 @@ function beatClock(ph){
 // Sub-bass kick on every beat, sustained pad with chord per scene,
 // bell on bar 1, reverb tail. No external files.
 // ───────────────────────────────────────────────────────────
-const Note={D2:73.42, A2:110.0, D3:146.83, F3:174.61, G3:196.0, A3:220.0,
+const Note={D2:73.42, E2:82.41, F2:87.31, A2:110.0,
+            D3:146.83, E3:164.81, F3:174.61, G3:196.0, Ab3:207.65, A3:220.0,
             Bb3:233.08, B3:246.94, C4:261.63, Db4:277.18, D4:293.66,
-            E4:329.63, F4:349.23, G4:392.0, A4:440.0, D5:587.33};
+            E4:329.63, F4:349.23, Fs4:369.99, G4:392.0, A4:440.0, B4:493.88,
+            D5:587.33, E5:659.25};
+// Per-scene musical intensity: arpeggio? hi-hat? pad-volume multiplier? lead on phrase?
+const SCENE_INTENSE = {
+  creation:   {arp:[Note.D4,Note.F4,Note.Ab3,Note.A3],         hat:true,  pad:1.0, lead:Note.D5},
+  kolob:      {arp:[Note.D4,Note.F4,Note.A4,Note.D5],          hat:true,  pad:1.15,lead:Note.D5},
+  worlds:     {arp:[Note.A3,Note.E4,Note.A4,Note.E4],          hat:true,  pad:.95, lead:Note.A4},
+  threeSuns:  {arp:[Note.D4,Note.F4,Note.A4,Note.F4],          hat:true,  pad:1.1, lead:Note.D5},
+  twelve:     {arp:[Note.F4,Note.A4,Note.C4,Note.A4],          hat:true,  pad:1.0, lead:0},
+  garden:     {arp:[Note.G3,Note.B3,Note.D4,Note.G4],          hat:false, pad:.95, lead:Note.G4},
+  trees:      {arp:[Note.E3,Note.G3,Note.B3,Note.E4],          hat:true,  pad:1.0, lead:Note.B4},
+  telestial:  {arp:null,                                       hat:false, pad:.55, lead:0},
+  terrestrial:{arp:[Note.F3,Note.A3,Note.C4,Note.F4],          hat:true,  pad:1.0, lead:Note.F4},
+  veil:       {arp:[Note.D4,Note.A4,Note.D5,Note.A4],          hat:true,  pad:1.1, lead:Note.D5},
+  holdKolob:  {arp:null,                                       hat:false, pad:.55, lead:0}
+};
 const SCENE_CHORDS = {
-  cloud:    {root: Note.D2, pad:[Note.D3, Note.A3, Note.D4], drive:.6, kick:.4},
-  kolob:    {root: Note.D2, pad:[Note.D3, Note.A3, Note.F4, Note.D5], drive:.95, kick:1.0},
-  worlds:   {root: Note.A2, pad:[Note.A2, Note.E4, Note.A3], drive:.7, kick:.7},
-  threeSuns:{root: Note.D2, pad:[Note.D3, Note.F3, Note.A3, Note.D4], drive:.85, kick:.85},
-  twelve:   {root: Note.F3, pad:[Note.F3, Note.A3, Note.C4, Note.F4], drive:.75, kick:.7},
-  collapse: {root: Note.D2, pad:[Note.D3, Note.F3, Note.G3, Note.Db4], drive:.8, kick:.6},
-  ladder:   {root: Note.G3, pad:[Note.G3, Note.B3, Note.D4], drive:.8, kick:.9},
-  figure:   {root: Note.G3, pad:[Note.G3, Note.B3, Note.D4, Note.G4], drive:.75, kick:.7},
-  fire:     {root: Note.D2, pad:[Note.D3, Note.F3, Note.A3, Note.Db4], drive:1.0, kick:1.3},
-  holdKolob:{root: Note.D2, pad:[Note.D3, Note.A3], drive:.55, kick:.3}
+  creation:   {root: Note.D2, pad:[Note.D3, Note.F3, Note.Ab3, Note.A3], drive:.85, kick:.7},
+  kolob:      {root: Note.D2, pad:[Note.D3, Note.A3, Note.F4, Note.D5], drive:.95, kick:1.0},
+  worlds:     {root: Note.A2, pad:[Note.A2, Note.E4, Note.A3], drive:.7, kick:.7},
+  threeSuns:  {root: Note.D2, pad:[Note.D3, Note.F3, Note.A3, Note.D4], drive:.85, kick:.85},
+  twelve:     {root: Note.F3, pad:[Note.F3, Note.A3, Note.C4, Note.F4], drive:.75, kick:.7},
+  garden:     {root: Note.G3, pad:[Note.G3, Note.B3, Note.D4, Note.G4], drive:.75, kick:.55},
+  trees:      {root: Note.E3, pad:[Note.E3, Note.G3, Note.B3, Note.E4], drive:.85, kick:.8},
+  telestial:  {root: Note.D2, pad:[Note.D3, Note.F3, Note.Ab3, Note.Bb3], drive:.75, kick:.55},
+  terrestrial:{root: Note.F2, pad:[Note.F3, Note.A3, Note.C4, Note.F4], drive:.95, kick:.9},
+  veil:       {root: Note.D2, pad:[Note.D3, Note.A3, Note.D4], drive:1.0, kick:.85},
+  holdKolob:  {root: Note.D2, pad:[Note.D3, Note.A3], drive:.55, kick:.3}
 };
 
 // Playback state — hoisted so toggleSound() never hits a TDZ on click
@@ -309,6 +342,52 @@ function scheduleKick(T, gain){
   osc.start(T); osc.stop(T+.6);
   click.start(T); click.stop(T+.1);
 }
+// ── Arpeggiator — 4 sixteenth notes per beat, for dynamic scenes
+function scheduleArp(T_beat, notes, gain){
+  const subDur = BEAT_SEC/4;
+  notes.forEach((f,i)=>{
+    const T = T_beat + i*subDur;
+    const o=audioCtx.createOscillator(), e=audioCtx.createGain();
+    const filt=audioCtx.createBiquadFilter();
+    o.type='square'; o.frequency.value=f;
+    filt.type='lowpass'; filt.frequency.value=1800; filt.Q.value=4;
+    e.gain.setValueAtTime(0,T);
+    e.gain.linearRampToValueAtTime(.07*gain, T+.004);
+    e.gain.exponentialRampToValueAtTime(.0001, T+subDur*.9);
+    o.connect(filt); filt.connect(e); e.connect(masterOut); e.connect(reverbIn);
+    o.start(T); o.stop(T+subDur+.02);
+  });
+}
+// ── Hi-hat noise burst — for off-beats during energetic scenes
+let _hatBuf=null;
+function getHatBuf(){
+  if(_hatBuf) return _hatBuf;
+  const len=.06*audioCtx.sampleRate|0;
+  _hatBuf=audioCtx.createBuffer(1,len,audioCtx.sampleRate);
+  const d=_hatBuf.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=(Math.random()*2-1);
+  return _hatBuf;
+}
+function scheduleHat(T, gain){
+  const src=audioCtx.createBufferSource(); src.buffer=getHatBuf();
+  const filt=audioCtx.createBiquadFilter(); filt.type='highpass'; filt.frequency.value=7000; filt.Q.value=1;
+  const env=audioCtx.createGain();
+  env.gain.setValueAtTime(0,T);
+  env.gain.linearRampToValueAtTime(.16*gain,T+.002);
+  env.gain.exponentialRampToValueAtTime(.0001,T+.05);
+  src.connect(filt); filt.connect(env); env.connect(masterOut);
+  src.start(T); src.stop(T+.08);
+}
+// ── Lead — single bright sine on phrase boundaries, for moments of awe
+function scheduleLead(T, freq, gain){
+  const o=audioCtx.createOscillator(), e=audioCtx.createGain();
+  o.type='triangle'; o.frequency.value=freq;
+  e.gain.setValueAtTime(0,T);
+  e.gain.linearRampToValueAtTime(.10*gain, T+.04);
+  e.gain.exponentialRampToValueAtTime(.0001, T+2.5);
+  o.connect(e); e.connect(reverbIn); e.connect(masterOut);
+  o.start(T); o.stop(T+2.8);
+}
 function scheduleBell(T, freq, gain){
   const tones=[1, 2.01, 3.02, 4.21];   // inharmonic for bell character
   tones.forEach((m,i)=>{
@@ -363,8 +442,9 @@ function setSceneChord(sceneKey){
   if(!audioActive) return;
   if(sceneKey===currentPadKey) return;
   const ch=SCENE_CHORDS[sceneKey];
+  const ix=SCENE_INTENSE[sceneKey] || {pad:1.0};
   if(!ch) return;
-  startPad(ch.pad, ch.drive);
+  startPad(ch.pad, ch.drive * (ix.pad||1.0));
   currentPadKey=sceneKey;
 }
 function audioPlayheadTime(){
@@ -425,13 +505,28 @@ function tickAudioScheduler(){
     const sceneIdx = findScene((beatTime - audioStartT) % TOTAL_DUR);
     const sc = PROGRAM[sceneIdx];
     const ch = SCENE_CHORDS[sc.scene] || SCENE_CHORDS.cloud;
+    const ix = SCENE_INTENSE[sc.scene] || SCENE_INTENSE.cloud;
     // Kick on every beat, accent on beat 1
     const kg = (beatNum===0 ? 1.0 : .6) * ch.kick;
     scheduleKick(beatTime, kg);
-    // Bell on bar 1 (beat 0) every 2 bars during dramatic scenes
+    // Arp — 4 sixteenths per beat, rotated per beat for variety
+    if(ix.arp){
+      const arpNotes = ix.arp.map((_,i)=>ix.arp[(i+beatNum)%ix.arp.length]);
+      scheduleArp(beatTime, arpNotes, .85);
+    }
+    // Hi-hat — on the "and" of each beat, slightly louder on the 4 (push to next beat)
+    if(ix.hat){
+      const hatT = beatTime + BEAT_SEC*.5;
+      scheduleHat(hatT, beatNum===3 ? 1.0 : .65);
+    }
+    // Bell on bar-1 of every 2nd bar during dramatic scenes
     const barIdx = Math.floor(nextBeatIdx/4);
     if(beatNum===0 && barIdx%2===0 && (sc.scene==='kolob'||sc.scene==='fire'||sc.scene==='figure'||sc.scene==='holdKolob')){
       scheduleBell(beatTime, ch.root*4, .25);
+    }
+    // Lead — every phrase boundary (every 16 beats), held high note
+    if(beatNum===0 && barIdx%4===0 && ix.lead){
+      scheduleLead(beatTime, ix.lead, .9);
     }
     lastBeatScheduled = nextBeatIdx;
     nextBeatIdx++;
@@ -441,38 +536,84 @@ function tickAudioScheduler(){
 // Scenes registry (functions assigned below; consumed by evalProgram)
 const Scenes = {};
 
-// 1) Pillar of Cloud — drone bass breathing field, brightens on every bar
-Scenes.cloud = (v,t,localT)=>{
-  // turbulence advected by the drone LFO + bar position
-  const flow = BEAT.barPhase*.6;
-  const f1 = Math.sin(v.ny*2.4 + flow*3 + BEAT.droneA*1.4) *
-             Math.cos(v.nx*1.8 - flow*2 + v.nz*1.6 + BEAT.droneB*1.1);
-  const radial = expBell(Math.sqrt(v.nx*v.nx+v.nz*v.nz)*.7, .95);
-  // Per-bar swell pulls density up; beats add gentle ripple
-  const bar = .45 + BEAT.barPulse*.7;
-  const beatRipple = .05*Math.sin((v.ny - BEAT.beatPhase)*8);
-  const val = radial*(.55 + .4*f1 + beatRipple) * bar * (.7 + BEAT.swell*.5);
-  if(val<.10) return [0,0,0];
-  return [val*.92, val*.96, val*1.0];
+// 1) CREATION — spiral / black hole vortex pulling particles inward
+Scenes.creation = (v,t,localT)=>{
+  const r = Math.sqrt(v.nx*v.nx + v.nz*v.nz);
+  const theta = Math.atan2(v.nz, v.nx);
+  // Two-arm logarithmic spiral wrapping inward
+  const armPhase = theta*2 + Math.log(r+.04)*4.5 - t*.65;
+  const armWidth = .25;
+  const arm = Math.exp(-Math.pow(((armPhase%(Math.PI*2)+Math.PI*2)%(Math.PI*2)) - Math.PI, 2)/armWidth);
+  // Vertical falloff so arms span the column but center is densest
+  const heightFalloff = 1 - Math.abs(v.ny)*.35;
+  // Inner accretion ring at varying Y — kicked outward on beat then sucked back
+  const ringR = .12 + BEAT.beatPulse*.04;
+  const ring = Math.exp(-Math.pow((r-ringR)/.025,2)) * Math.exp(-Math.pow(v.ny/.85,2)*.6);
+  // Event horizon — pure black core
+  if(r<.07 && Math.abs(v.ny)<.15) return [0,0,0];
+  // Falling particles: discrete shells of particles being pulled in (one per beat)
+  let infall=0;
+  for(let s=0;s<4;s++){
+    const age = (BEAT.beatIdx-s) + BEAT.beatPhase;
+    if(age<0||age>4) continue;
+    const shellR = .85 * Math.exp(-age*.45);
+    const angOff = age*1.8;
+    const armMatch = Math.exp(-Math.pow(Math.sin(theta+angOff)*.5,2)*8);
+    infall += Math.exp(-Math.pow((r-shellR)/.05,2)) * armMatch * (1-age/4) * .8;
+  }
+  const sum = arm*heightFalloff*(.4 + .5/Math.max(.10,r)) + ring*1.3 + infall;
+  if(sum<.10) return [0,0,0];
+  // Color: violet/blue at outer, white-hot at horizon
+  const hue = (.62 - r*.35 + Math.sin(t*.3)*.04 + 1)%1; // .27(outer warm)→.62(deep blue)
+  const lit = .50 + (1-r)*.20;
+  const [cr,cg,cb] = hsl2rgb(hue, .85, lit);
+  // Ring + infall punch white
+  const whiteHot = (ring + infall*.3) * 1.2;
+  return [(sum*cr + whiteHot)*1.5, (sum*cg + whiteHot*.85)*1.5, (sum*cb + whiteHot)*1.5];
 };
 
-// 2) Kolob — core throbs per beat; SHOCKWAVE rings expand per bar;
-//    phrase resets blow the corona out to the column edges.
+// 2) Kolob — multi-color sun with corona shockwaves, sunburst rays,
+//    chromatic ring storms on phrases. Hue cycles per bar.
 Scenes.kolob = (v,t,localT)=>{
   const r = Math.sqrt(v.nx*v.nx + v.ny*v.ny + v.nz*v.nz);
+  const theta = Math.atan2(v.nz, v.nx);
+  // Core throbs with kick
   const coreSize = .14 + BEAT.beatPulse*.10;
   const core = expBell(r/coreSize, 1.0) * (1.2 + BEAT.beatPulse*1.1);
-  // Two stacked corona rings expanding at different speeds (bar + phrase)
-  const r1 = .30 + BEAT.barPhase*.60;        // travels outward across a bar
-  const r2 = .25 + BEAT.phrasePhase*1.20;    // travels outward across a phrase (4 bars)
-  const ring1 = expBell((r-r1)/.08, 1.0) * (1 - BEAT.barPhase) * 1.1;
-  const ring2 = expBell((r-r2)/.06, 1.0) * (1 - BEAT.phrasePhase) * .7;
-  // Phrase whiteout: brief radial flare on bar 0 of each phrase
-  const flare = (BEAT.barNum===0 ? BEAT.phrasePulse : 0) * expBell(r/.5, 1.0) * .55;
-  const val = core + ring1 + ring2 + flare;
-  if(val<.08) return [0,0,0];
-  const hot = BEAT.beatPulse*.25 + flare*.6;
-  return [val*1.0, val*(.80+hot), val*(.40+hot*.7)];
+  // Sunburst rays — 8 spokes rotating with the bar
+  const rayN=8, rayPhase=BEAT.barPhase*Math.PI*2 + t*.4;
+  const rayAng=((theta-rayPhase) % (Math.PI*2/rayN) + Math.PI*2/rayN) % (Math.PI*2/rayN);
+  const raySharp=Math.exp(-Math.pow((rayAng - Math.PI/rayN)/(.10+BEAT.beatPulse*.05),2)*8);
+  const rayLen=expBell((r-.5)/.30, 1.0);
+  const rays = raySharp * rayLen * (.4 + BEAT.beatPulse*.55);
+  // Two corona shockwave rings (different speeds)
+  const r1 = .30 + BEAT.barPhase*.60;
+  const r2 = .20 + BEAT.phrasePhase*1.30;
+  const ring1 = expBell((r-r1)/.07, 1.0) * (1 - BEAT.barPhase) * 1.1;
+  const ring2 = expBell((r-r2)/.05, 1.0) * (1 - BEAT.phrasePhase) * .85;
+  // Phrase chromatic flare — radial pulse with rotating color
+  const flare = (BEAT.barNum===0 ? BEAT.phrasePulse : 0) * expBell(r/.55, 1.0) * .7;
+  const sum = core + rays + ring1 + ring2 + flare;
+  if(sum<.08) return [0,0,0];
+  // Hue cycles gold→orange→white over each bar; rings carry complementary chroma
+  const baseHue = .12 + .03*Math.sin(BEAT.barPhase*Math.PI*2);   // gold zone
+  const ringHueShift = .65 * (1 - BEAT.barPhase);               // ring carries cyan→gold
+  const flareHue = (.5 + BEAT.phraseIdx*.13) % 1;
+  let [r_,g_,b_]=hsl2rgb(baseHue, .85, .50);
+  // Mix in ring hue
+  const rmix = (ring1+ring2)/Math.max(.01,sum);
+  const [rr,rg,rb] = hsl2rgb((baseHue+ringHueShift)%1, .85, .55);
+  r_ = r_*(1-rmix)+rr*rmix;
+  g_ = g_*(1-rmix)+rg*rmix;
+  b_ = b_*(1-rmix)+rb*rmix;
+  // Flare splash
+  if(flare>.05){
+    const [fr,fg,fb]=hsl2rgb(flareHue, .9, .6);
+    const fmix = flare*1.4;
+    r_=r_+fr*fmix; g_=g_+fg*fmix; b_=b_+fb*fmix;
+  }
+  const v_=sum;
+  return [v_*r_*1.8, v_*g_*1.8, v_*b_*1.8];
 };
 
 // 3) 144 Worlds · 15 Sealed — particle field
@@ -486,18 +627,20 @@ function ensureWorldsPts(){
     const sealed=i<15;
     const r = sealed?(.05+R()*.25):(.3+R()*.85);
     const a=R()*Math.PI*2;
-    pts.push({x:Math.cos(a)*r, y:(R()*2-1)*.92, z:Math.sin(a)*r, sealed, ph:R()*Math.PI*2});
+    // Each world gets a unique hue (rainbow spread for outer, gold for sealed)
+    const hue = sealed ? (.10+R()*.06) : R();
+    pts.push({x:Math.cos(a)*r, y:(R()*2-1)*.92, z:Math.sin(a)*r, sealed, ph:R()*Math.PI*2, hue});
   }
   Scenes._worldsPts=pts;
 }
 Scenes.worlds = (v,t,localT)=>{
   ensureWorldsPts();
-  // Sealed-15 hard kick. Off-beat (and-of-2) adds shimmer for outer worlds.
-  // On bar-1-of-phrase, ALL 144 simultaneously flash (the sealing event).
+  // Multicolor swarm. Each world has its own hue. Sealed core glows gold.
+  // Phrase boundary: all 144 simultaneously flash white.
   const sealedKick = .55 + BEAT.beatPulse*1.1 + BEAT.halfBarPulse*.3;
-  const outerJit   = .015 + BEAT.barPulse*.04;
-  const sealEvent  = (BEAT.barNum===0 ? BEAT.phrasePulse : 0);  // big phrase event
-  let val=0, sVal=0;
+  const outerJit   = .020 + BEAT.barPulse*.05;
+  const sealEvent  = (BEAT.barNum===0 ? BEAT.phrasePulse : 0);
+  let r=0,g=0,b=0;
   for(const p of Scenes._worldsPts){
     const amp = p.sealed?outerJit*.4:outerJit;
     const px=p.x+Math.sin(t*1.1+p.ph)*amp;
@@ -506,57 +649,171 @@ Scenes.worlds = (v,t,localT)=>{
     const d=Math.sqrt((v.nx-px)*(v.nx-px)+(v.ny-py)*(v.ny-py)+(v.nz-pz)*(v.nz-pz));
     let weight;
     if(p.sealed) weight = sealedKick + sealEvent*1.2;
-    else weight = .35 + BEAT.halfBarPulse*.35 + sealEvent*.9;
+    else weight = .35 + BEAT.halfBarPulse*.4 + sealEvent*.9;
     const w=Math.exp(-(d*d)/.0035)*weight;
-    val+=w; if(p.sealed) sVal+=w;
+    // Apply this world's color, with sealed worlds biased gold
+    const hueShift = BEAT.phrasePhase*.1;
+    const sat = p.sealed?.65:.85;
+    const [cr,cg,cb]=hsl2rgb((p.hue+hueShift)%1, sat, p.sealed?.65:.55);
+    r += w*cr; g += w*cg; b += w*cb;
   }
-  if(val<.08) return [0,0,0];
-  return [val*.7+sVal*.6, val*.85+sVal*.35 + sealEvent*.4, val*.95-sVal*.2];
+  // Phrase white-out adds achromatic flash
+  r += sealEvent*.3; g += sealEvent*.3; b += sealEvent*.3;
+  if(Math.max(r,g,b)<.08) return [0,0,0];
+  return [r*1.4, g*1.4, b*1.4];
 };
 
-// 4) Three Great Suns — beat-quantized orbit advance; orbs flare per beat
+// 4) THREE GREAT SUNS — 3 large stacked spheres (kolob's three kingdoms)
+//    Bottom = cyan telestial, middle = magenta terrestrial, top = gold celestial.
+//    Each breathes, swirls internally, fires on its own beat in the bar.
+const THREE_SUNS = [
+  {y:-.62, R:.30, hue:.52, sat:.65, lit:.55, name:'telestial-cyan'},
+  {y: 0.0,  R:.34, hue:.92, sat:.70, lit:.60, name:'terrestrial-magenta'},
+  {y: 0.62, R:.30, hue:.12, sat:.75, lit:.58, name:'celestial-gold'}
+];
+Scenes.threeSuns_old = null;
 Scenes.threeSuns = (v,t,localT)=>{
-  // Discrete orbital steps: 3 orbs share 12 positions, advance 1 per beat
+  let r=0,g=0,b=0;
+  // Phrase event: connecting beam through all three suns (axis-mundi flash)
+  const axisPulse = (BEAT.barNum===0 ? BEAT.phrasePulse : 0);
+  const axisCol = Math.exp(-Math.pow(Math.sqrt(v.nx*v.nx+v.nz*v.nz)/.04,2)) * axisPulse * .9;
+  for(let i=0;i<THREE_SUNS.length;i++){
+    const s = THREE_SUNS[i];
+    // Each sun breathes with the bar
+    const breathR = s.R + Math.sin(t*.8+i*1.3)*.012 + BEAT.barPulse*.025;
+    const dx=v.nx, dy=v.ny-s.y, dz=v.nz;
+    const d = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    // Internal swirl: angular pattern rotating around sphere's own axis
+    const theta = Math.atan2(dz,dx);
+    const phi = Math.atan2(dy, Math.sqrt(dx*dx+dz*dz));
+    const swirl = .80 + .20*Math.sin(theta*4 + phi*3 + t*1.6 + i*2.1);
+    // Beat: this sun flashes when (beatNum % 3) == i (polyrhythmic)
+    const isMine = (BEAT.beatNum%3)===i;
+    const flare = isMine ? (1.0 + BEAT.beatPulse*1.3) : (.78 + BEAT.barPulse*.18);
+    // Core: bell function for spherical glow
+    const core = expBell(d/breathR, 1.0) * swirl * flare;
+    // Halo: thin shell just outside surface — pulses on beat
+    const halo = Math.exp(-Math.pow((d-breathR-.04)/.025,2)) * (.4 + BEAT.beatPulse*.55);
+    const intensity = core + halo;
+    if(intensity < .04) continue;
+    const [cr,cg,cb] = hsl2rgb((s.hue + Math.sin(t*.15+i)*.02)%1, s.sat, s.lit);
+    r += intensity*cr; g += intensity*cg; b += intensity*cb;
+  }
+  // Axis-mundi connector
+  r += axisCol*.95; g += axisCol*.90; b += axisCol*1.0;
+  if(Math.max(r,g,b)<.08) return [0,0,0];
+  return [r*1.7, g*1.7, b*1.7];
+};
+Scenes._threeSunsOldDontUse = (v,t,localT)=>{
   const stepPhase = BEAT.beatIdx*(Math.PI*2/12) + BEAT.beatPulse*(Math.PI*2/12)*.4;
-  // Each orb flashes on a different beat (polyrhythm)
+  // Phrase explosion: all three suns blast outward simultaneously
+  const explode = (BEAT.barNum===0 ? BEAT.phrasePulse : 0);
   let r=0,g=0,b=0;
   for(let k=0;k<3;k++){
     const yk=-.65+k*.65;
-    const a=stepPhase + k*Math.PI*2/3;
-    const orbR = .45 + BEAT.barPulse*.06;
-    const xk=Math.cos(a)*orbR, zk=Math.sin(a)*orbR;
-    const d=Math.sqrt((v.nx-xk)*(v.nx-xk)+(v.ny-yk)*(v.ny-yk)+(v.nz-zk)*(v.nz-zk));
-    // This orb flashes when (beatNum % 3) == k
+    // Add tracer trail: 5 stamps along recent orbit positions
     const isMine = (BEAT.beatNum%3)===k;
-    const flare = isMine ? (1 + BEAT.beatPulse*1.6) : (.7 + BEAT.barPulse*.3);
-    const w=Math.exp(-(d*d)/.018)*flare;
-    r+=w; g+=w*.78; b+=w*.35;
+    const baseFlare = isMine ? (1 + BEAT.beatPulse*1.6) : (.7 + BEAT.barPulse*.3);
+    const col = THREE_SUN_COLORS[k];
+    for(let trail=0;trail<4;trail++){
+      const trailA = stepPhase + k*Math.PI*2/3 - trail*.18;
+      const orbR = (.45 + BEAT.barPulse*.06) + explode*.45;
+      const xk=Math.cos(trailA)*orbR, zk=Math.sin(trailA)*orbR;
+      const d=Math.sqrt((v.nx-xk)*(v.nx-xk)+(v.ny-yk)*(v.ny-yk)+(v.nz-zk)*(v.nz-zk));
+      const trailFade = Math.pow(.55,trail);
+      const w=Math.exp(-(d*d)/(.018+explode*.05))*baseFlare*trailFade;
+      r += w*col[0]; g += w*col[1]; b += w*col[2];
+    }
+    // Sun's vertical "halo plane" — bright band at its Y line on bar 1
+    if(BEAT.beatNum===0){
+      const halo = Math.exp(-Math.pow((v.ny-yk)/.06,2)) * BEAT.barPulse * .25;
+      r += halo*col[0]; g += halo*col[1]; b += halo*col[2];
+    }
+  }
+  // Phrase explosion overlay — radial flash from column center
+  if(explode>.02){
+    const r3=Math.sqrt(v.nx*v.nx+v.ny*v.ny+v.nz*v.nz);
+    const flash = Math.exp(-Math.pow((r3-.6*explode)/.2,2)) * explode * .8;
+    r += flash; g += flash*.9; b += flash*.95;
   }
   if(Math.max(r,g,b)<.1) return [0,0,0];
-  return [Math.min(2.0,r), Math.min(1.6,g), Math.min(1.0,b)];
+  return [Math.min(2.4,r), Math.min(2.0,g), Math.min(1.8,b)];
 };
 
-// 5) Twelve Governing Systems — sequence walks the helix; bar 1 flashes ALL;
-//    phrase reset reverses the walk direction.
+// 5) Twelve Governing Systems — rainbow helix, each system its own hue.
+//    Walk reverses each phrase. Bar 1 fires all 12. Connecting arcs flash on beats.
+Scenes.twelve_OLD = null;
 Scenes.twelve = (v,t,localT)=>{
+  // 12 medium spheres stacked vertically, cycling kolob palette (gold/cyan/magenta).
+  // Each breathes; one fires per beat; phrase event ignites all twelve.
+  const N=12;
+  const KOLOB_PAL = [
+    [.12, .75, .58],  // gold
+    [.52, .65, .55],  // cyan
+    [.92, .70, .58]   // magenta
+  ];
+  const litK = BEAT.beatIdx % N;
+  const phrasePulse = (BEAT.barNum===0 ? BEAT.phrasePulse : 0);
+  let r=0,g=0,b=0;
+  for(let k=0;k<N;k++){
+    const y = -.92 + k*(1.84/(N-1));
+    const breathR = .085 + Math.sin(t*.6 + k*.55)*.012 + BEAT.barPulse*.012;
+    const dx=v.nx, dy=v.ny-y, dz=v.nz;
+    const d=Math.sqrt(dx*dx+dy*dy+dz*dz);
+    const isLit = (k===litK);
+    const flare = isLit ? (1.2 + BEAT.beatPulse*1.4) : (.55 + phrasePulse*.9);
+    const core = expBell(d/breathR, 1.0) * flare;
+    const halo = Math.exp(-Math.pow((d-breathR-.03)/.020,2)) * (.30 + (isLit?BEAT.beatPulse*.6:0));
+    const intensity = core + halo;
+    if(intensity<.04) continue;
+    const [hue,sat,lit] = KOLOB_PAL[k%3];
+    const [cr,cg,cb] = hsl2rgb((hue + Math.sin(t*.2+k)*.02)%1, sat, lit);
+    r += intensity*cr; g += intensity*cg; b += intensity*cb;
+  }
+  if(Math.max(r,g,b)<.08) return [0,0,0];
+  return [r*1.6, g*1.6, b*1.6];
+};
+Scenes._twelveOldDontUse = (v,t,localT)=>{
   const phraseReverse = (BEAT.phraseIdx % 2 === 1);
   const stepIdx = phraseReverse ? (11 - BEAT.beatIdx%12) : (BEAT.beatIdx % 12);
-  const litK = stepIdx;
-  const allFlash = (BEAT.beatNum===0) ? BEAT.beatPulse*.8 : 0;
+  const allFlash = (BEAT.beatNum===0) ? BEAT.beatPulse*.9 : 0;
   const stepAngle = BEAT.beatIdx*(Math.PI*2/12) * (phraseReverse?-1:1);
-  let val=0, hot=0;
+  let r=0,g=0,b=0, hotR=0,hotG=0,hotB=0;
+  // Compute positions for each system + draw it with its hue
   for(let k=0;k<12;k++){
     const yk=-.92+k*1.84/11;
     const a=k*Math.PI*2/12 + stepAngle*.4;
-    const orbR=.62 + BEAT.barPulse*.04;
+    const orbR=.62 + BEAT.barPulse*.05;
     const xk=Math.cos(a)*orbR, zk=Math.sin(a)*orbR;
     const d=Math.sqrt((v.nx-xk)*(v.nx-xk)+(v.ny-yk)*(v.ny-yk)+(v.nz-zk)*(v.nz-zk));
-    const lit = (k===litK) ? (1 + BEAT.beatPulse*1.6) : (.5 + allFlash);
+    const lit = (k===stepIdx) ? (1 + BEAT.beatPulse*1.7) : (.5 + allFlash);
     const w=Math.exp(-(d*d)/.011)*lit;
-    val+=w; if(k===litK) hot+=w;
+    // Each system has its own hue (full color wheel)
+    const hue = (k/12 + BEAT.phrasePhase*.15) % 1;
+    const [cr,cg,cb] = hsl2rgb(hue, .85, .55);
+    r += w*cr; g += w*cg; b += w*cb;
+    if(k===stepIdx){hotR+=w*cr; hotG+=w*cg; hotB+=w*cb;}
   }
-  if(val<.1) return [0,0,0];
-  return [val*.42+hot*.4, val*.95+allFlash*.2, val*.92];
+  // Connecting arc between current lit and next — flashes on beat
+  if(BEAT.beatPulse>.3){
+    const k1=stepIdx, k2=phraseReverse?(k1-1+12)%12:(k1+1)%12;
+    const y1=-.92+k1*1.84/11, y2=-.92+k2*1.84/11;
+    const a1=k1*Math.PI*2/12+stepAngle*.4, a2=k2*Math.PI*2/12+stepAngle*.4;
+    const orbR=.62;
+    // sample 5 points along the arc
+    for(let s=0;s<5;s++){
+      const u=s/4;
+      const ax=Math.cos(a1+(a2-a1)*u)*orbR;
+      const az=Math.sin(a1+(a2-a1)*u)*orbR;
+      const ay=y1+(y2-y1)*u;
+      const d=Math.sqrt((v.nx-ax)*(v.nx-ax)+(v.ny-ay)*(v.ny-ay)+(v.nz-az)*(v.nz-az));
+      const w=Math.exp(-(d*d)/.008)*BEAT.beatPulse*.6;
+      r+=w*.7; g+=w; b+=w*.95;
+    }
+  }
+  const total=Math.max(r,g,b);
+  if(total<.1) return [0,0,0];
+  return [r+hotR*.4, g+hotG*.4+allFlash*.2, b+hotB*.4];
 };
 
 // 6) Time Collapse — particles converge to single point (one Kolob day)
@@ -575,110 +832,356 @@ function ensureCollapsePts(){
 }
 Scenes.collapse = (v,t,localT,dur)=>{
   ensureCollapsePts();
-  // Stepped collapse: each BAR pulls particles one notch inward
   const totalBars = Math.max(1, Math.floor(dur/BAR_SEC));
   const barInScene = Math.min(totalBars, Math.floor(localT/BAR_SEC));
   const barProg = clamp01((localT - barInScene*BAR_SEC)/BAR_SEC);
-  // step from barInScene/totalBars to (barInScene+1)/totalBars
-  const stepA = barInScene/totalBars;
-  const stepB = Math.min(1,(barInScene+1)/totalBars);
-  // ease within bar — beats inside provide small inward kicks
+  const stepA = barInScene/totalBars, stepB = Math.min(1,(barInScene+1)/totalBars);
   const ease = stepA + (stepB-stepA) * (1 - Math.pow(1-barProg, 3));
   const collapse = Math.pow(ease, 1.4);
-  // Beat kicks pull a tiny bit extra
+  // Spiraling collapse: rotation accelerates as particles fall inward
+  const spin = ease*Math.PI*4 + t*.5;
+  const c=Math.cos(spin), s=Math.sin(spin);
   const kickPull = BEAT.beatPulse*.04;
-  let val=0;
+  // Phrase event: brief outward EXPLOSION before re-collapsing
+  const explode = (BEAT.barNum===0 ? BEAT.phrasePulse : 0) * .5;
+  // Chromatic aberration: RGB channels sample at slightly different radii on beats
+  const chroma = BEAT.beatPulse*.05;
+  let valR=0,valG=0,valB=0;
   for(const p of Scenes._collapsePts){
-    const radius=(1 - collapse - kickPull);
-    const px=p.sx*radius, py=p.sy*radius, pz=p.sz*radius;
-    const d=Math.sqrt((v.nx-px)*(v.nx-px)+(v.ny-py)*(v.ny-py)+(v.nz-pz)*(v.nz-pz));
-    val+=Math.exp(-(d*d)/.005)*(.5+ease*.9 + BEAT.beatPulse*.3);
+    const radius=(1 - collapse - kickPull + explode);
+    // rotated XZ positions
+    const rx = (p.sx*c - p.sz*s) * radius;
+    const rz = (p.sx*s + p.sz*c) * radius;
+    const py = p.sy*radius;
+    for(let ch=0;ch<3;ch++){
+      const cAdj = (ch-1)*chroma;
+      const dx = v.nx-rx*(1+cAdj), dy = v.ny-py, dz = v.nz-rz*(1+cAdj);
+      const d=Math.sqrt(dx*dx+dy*dy+dz*dz);
+      const w=Math.exp(-(d*d)/.005)*(.5+ease*.9 + BEAT.beatPulse*.4 + explode*1.4);
+      if(ch===0) valR+=w; else if(ch===1) valG+=w; else valB+=w;
+    }
   }
-  if(val<.1) return [0,0,0];
-  // Color cools as it collapses (heat death → singular point)
-  return [val*(.85-ease*.15), val*.95, val*(.78+ease*.15)];
+  if(Math.max(valR,valG,valB)<.1) return [0,0,0];
+  // Hue cycles cool→warm as collapse intensifies (terror of singularity)
+  const hue = (.55 - ease*.35 + BEAT.phrasePhase*.1 + 1) % 1;
+  const [hr,hg,hb] = hsl2rgb(hue, .85, .55);
+  return [valR*hr*1.5, valG*hg*1.5, valB*hb*1.5];
 };
 
-// 7) Jacob's Ladder — rungs climb ONE STEP per beat (snap up, hold)
+// 7) Jacob's Ladder — rungs climb per beat, each its own color climbing
+//    through the spectrum. Sparks travel between rails. Rails glow on bar.
 Scenes.ladder = (v,t,localT)=>{
-  // Rails pulse with bar
-  const railLit = .45 + BEAT.barPulse*.4;
-  const rail = (Math.abs(Math.abs(v.nx)-.55)<.10 && Math.abs(v.nz)<.4) ? railLit : 0;
-  // 8 rungs total. New rung emerges at bottom each beat; older rungs climb.
-  let rung=0;
+  const railLit = .35 + BEAT.barPulse*.4;
+  const railOn = (Math.abs(Math.abs(v.nx)-.55)<.09 && Math.abs(v.nz)<.4) ? railLit : 0;
+  let rungVal=0, rungHue=0;
   const NUM_RUNGS=8;
   for(let r=0;r<NUM_RUNGS;r++){
-    // birth beat for this rung = current beat - r
-    const ageBeats = r; // index 0 = newest
-    // y-position: newest at -.95, each older +.24 up
-    const yPos = -.95 + ageBeats*(1.9/NUM_RUNGS);
-    // Slight ease-in during beatPhase for newest rung's brightness
+    const yPos = -.95 + r*(1.9/NUM_RUNGS);
     const isNew = (r===0);
-    const rungWidth=.10 + (isNew?BEAT.beatPulse*.04:0);
+    const rungWidth=.10 + (isNew?BEAT.beatPulse*.05:0);
     const inRung = (Math.abs(v.ny-yPos)<rungWidth && Math.abs(v.nx)<.6 && Math.abs(v.nz)<.4);
     if(inRung){
       const fade = 1 - r/(NUM_RUNGS+1);
-      const flash = isNew ? (.7+BEAT.beatPulse*.7) : fade*.85;
-      rung = Math.max(rung, flash);
+      const flash = isNew ? (.8+BEAT.beatPulse*.8) : fade*.85;
+      if(flash>rungVal){
+        rungVal=flash;
+        // hue cycles as rung climbs (newest = warm, oldest = cool)
+        rungHue = (r/NUM_RUNGS + BEAT.phraseIdx*.13) % 1;
+      }
     }
   }
-  const val=Math.max(rail,rung);
-  if(val<.1) return [0,0,0];
-  if(rung>.4) return [val*.85, val*.95, val*1.0];
-  return [val*.45, val*.55, val*.7];
+  // Lateral spark — travels between rails on each beat
+  const sparkX = -.55 + Math.cos(BEAT.beatPhase*Math.PI)*1.1;   // sweeps L→R
+  const sparkY = -.95 + (BEAT.beatIdx%NUM_RUNGS)*(1.9/NUM_RUNGS); // at the newest rung Y
+  const sparkD = Math.sqrt((v.nx-sparkX)*(v.nx-sparkX) + (v.ny-sparkY)*(v.ny-sparkY) + v.nz*v.nz);
+  const spark = Math.exp(-Math.pow(sparkD/.07,2)) * (1-BEAT.beatPhase) * 1.0;
+  const total = Math.max(railOn, rungVal, spark);
+  if(total<.1) return [0,0,0];
+  // Color the rung
+  let cr=.7,cg=.85,cb=1.0;  // default rail blue-white
+  if(rungVal>railOn){
+    const [r_,g_,b_]=hsl2rgb(rungHue, .75, .58);
+    cr=r_; cg=g_; cb=b_;
+  }
+  if(spark>railOn && spark>rungVal){
+    cr=1.0; cg=.95; cb=.6;  // spark = yellow-white
+  }
+  return [total*cr*1.4, total*cg*1.4, total*cb*1.4];
 };
 
-// 8) Standing Figure of Light — chest swells on beat (heartbeat), bar = breath
+// 8) Standing Figure of Light — chest heartbeat, aura waves outward,
+//    chromatic halo with hue rotation, phrase = full white-out resolution.
 Scenes.figure = (v,t,localT)=>{
-  // Heart pulse swells the chest region with the beat (kick = heartbeat)
   const chestPulse = BEAT.beatPulse;
   const headPulse = BEAT.barPulse*.4;
   const head=expBell(v.nx/.18,1)*expBell((v.ny-.75)/(.13+headPulse*.04),1)*expBell(v.nz/.55,1)*(1.0+headPulse*.4);
-  // torso — heartbeat originates from chest (ny~.2)
   const heartRing = expBell((v.ny-.2)/(.10+chestPulse*.06), 1.0);
   const torsoMask=(Math.abs(v.nx)<.30 && v.ny>-.45 && v.ny<.55 && Math.abs(v.nz)<.32);
   const torsoFall=expBell((v.ny+.05)/.55,1);
   const torso = torsoMask ? (.75 + heartRing*chestPulse*.9) * torsoFall : 0;
-  // legs — flicker slightly with each beat
   const legs=(Math.abs(Math.abs(v.nx)-.12)<.10 && v.ny<-.4 && v.ny>-.95 && Math.abs(v.nz)<.25) ?
     (.65 + BEAT.beatPulse*.25) : 0;
-  // arms
   const arms=(Math.abs(Math.abs(v.nx)-.38)<.08 && v.ny<.4 && v.ny>-.15 && Math.abs(v.nz)<.20) ?
     (.55 + BEAT.barPulse*.25) : 0;
-  // Halo around head pulses with bar
-  const halo = expBell(Math.sqrt(v.nx*v.nx + (v.ny-.75)*(v.ny-.75) + v.nz*v.nz)/(.30+BEAT.barPulse*.10), 1.0) * BEAT.barPulse*.5;
-  const val=Math.max(head,torso,legs,arms,halo) * (.85 + BEAT.swell*.2);
-  if(val<.13) return [0,0,0];
-  return [val*.95, val*1.0, val*.88];
+  // Aura wave: radiates outward from chest every bar
+  const auraR = Math.sqrt(v.nx*v.nx + (v.ny-.2)*(v.ny-.2) + v.nz*v.nz);
+  const auraFront = BEAT.barPhase*.85;
+  const aura = Math.exp(-Math.pow((auraR-auraFront)/.10,2)) * (1-BEAT.barPhase) * .5;
+  // Halo around head — pulses with bar, hue rotates per phrase
+  const haloR = Math.sqrt(v.nx*v.nx + (v.ny-.75)*(v.ny-.75) + v.nz*v.nz);
+  const halo = expBell(haloR/(.30+BEAT.barPulse*.10), 1.0) * (BEAT.barPulse*.5 + .15);
+  // Phrase resolution — figure becomes white & expanded
+  const resolve = (BEAT.barNum===0 ? BEAT.phrasePulse : 0) * .9;
+  const body = Math.max(head,torso,legs,arms) * (.85 + BEAT.swell*.2 + resolve*.5);
+  const sum = body + halo + aura + resolve*.3;
+  if(sum<.12) return [0,0,0];
+  // Halo cycles hue per phrase (gold→blue→violet→white→gold)
+  const haloHue = (BEAT.phraseIdx*.22 + BEAT.barPhase*.05) % 1;
+  const [hr,hg,hb] = hsl2rgb(haloHue, .7, .6);
+  // Body stays warm white but picks up halo tint
+  const haloMix = (halo+aura)/Math.max(.01,sum);
+  const r_ = .95 + (hr-.95)*haloMix*.8;
+  const g_ = 1.0 + (hg-1.0)*haloMix*.8;
+  const b_ = .85 + (hb-.85)*haloMix*.8;
+  // Phrase resolution adds pure white
+  return [sum*r_ + resolve*.6, sum*g_ + resolve*.6, sum*b_ + resolve*.6];
 };
 
-// 9) Pillar of Fire — bass kicks shove flames upward; off-beat sparks;
-//    phrase resets blast white-hot from base. 4 active plumes.
+// 9) Pillar of Fire — multi-hue inferno: red/orange/yellow turbulence,
+//    spiraling plumes, off-beat sparks, phrase blast becomes multicolored.
 Scenes.fire = (v,t,localT)=>{
   const advect = BEAT.beatIdx*.5 + BEAT.beatPulse*.4;
   const f1 = Math.sin(v.ny*5 + advect*3 + Math.cos(v.nx*3-t*2.2)*1.4);
   const f2 = Math.sin(v.ny*8 - advect*4 + Math.sin(v.nz*4+t*1.6)*1.2);
-  const f = (f1+f2)*.25 + .5;
+  const f3 = Math.sin(v.nx*4 + v.nz*4 + t*3.0);                // adds cross-grain motion
+  const f = (f1+f2+f3*.5)*.22 + .5;
   const radial = (1 - Math.sqrt(v.nx*v.nx+v.nz*v.nz)*(.55 - BEAT.beatPulse*.10));
-  // Four overlapping plumes
-  let plume=0;
-  for(let p=0;p<4;p++){
-    const plumeAge = (BEAT.beatIdx-p) + BEAT.beatPhase;
+  // Six spiraling plumes — each rotates as it climbs
+  let plume=0, plumeColor=0;
+  for(let p=0;p<6;p++){
+    const plumeAge = (BEAT.beatIdx-p*.6) + BEAT.beatPhase;
     if(plumeAge<0||plumeAge>4) continue;
     const yPos = -1 + (plumeAge/4)*2.2;
-    plume = Math.max(plume, Math.exp(-Math.pow((v.ny-yPos)/(.22+plumeAge*.05),2)*4) * (1-plumeAge/4));
+    // Spiral around the column axis
+    const spiralAng = plumeAge*Math.PI + p*1.04;
+    const xOff = Math.cos(spiralAng)*.20*plumeAge;
+    const zOff = Math.sin(spiralAng)*.20*plumeAge;
+    const d = Math.sqrt((v.nx-xOff)*(v.nx-xOff)+(v.nz-zOff)*(v.nz-zOff)+(v.ny-yPos)*(v.ny-yPos));
+    const w = Math.exp(-Math.pow(d/(.22+plumeAge*.05),2)*3.5) * (1-plumeAge/4);
+    if(w>plume){plume=w; plumeColor=p/6;}
   }
-  // Off-beat sparks — small bright voxels off-axis on the "and"
-  const spark = BEAT.halfBarPulse * .35 * (Math.abs(v.nx)>.4||Math.abs(v.nz)>.4?1:0) * Math.random();
+  // Off-beat sparks — bright tips on the "and"
+  const spark = BEAT.halfBarPulse * .4 * (Math.abs(v.nx)>.45||Math.abs(v.nz)>.45?1:0) * Math.random();
   const barFlare = (BEAT.beatNum===0 ? BEAT.beatPulse : 0) * .8;
-  // Phrase reset: white-hot blast from base, climbs in .5 sec
+  // Phrase blast — multicolored rising wave
   const phraseBlast = (BEAT.barNum===0 ? BEAT.phrasePulse : 0);
-  const blastY = -1 + BEAT.phrasePhase*4; // shoots up fast
-  const blastShape = Math.exp(-Math.pow((v.ny-blastY)/.30,2)*3) * phraseBlast * 1.2;
-  const val = Math.max(0, radial) * (.45 + .55*f + barFlare + spark) * (.45 + plume*1.1) + blastShape;
-  if(val<.10) return [0,0,0];
-  const whiteHot = blastShape + spark*.5;
-  return [val*1.3, val*(.45+.3*f+barFlare*.4+whiteHot*.7), val*(.08+.12*f+whiteHot*.8)];
+  const blastY = -1 + BEAT.phrasePhase*4;
+  const blastShape = Math.exp(-Math.pow((v.ny-blastY)/.32,2)*3) * phraseBlast * 1.3;
+  const sum = Math.max(0, radial) * (.45 + .55*f + barFlare + spark) * (.45 + plume*1.2) + blastShape;
+  if(sum<.10) return [0,0,0];
+  // Base hue: red at base → yellow at top, modulated by f and plume color
+  const heightHue = .08 + (v.ny+1)*.5*.08;   // .08 (red-orange) → .16 (yellow-gold)
+  const flickerHue = heightHue + f*.04 + plumeColor*.06;
+  const blastHue = (BEAT.phraseIdx*.17 + .55) % 1; // wild color per phrase
+  let [r,g,b] = hsl2rgb(flickerHue, .95, .55);
+  // Blast splashes with a wild color
+  if(blastShape>.05){
+    const [br,bg,bb] = hsl2rgb(blastHue, .9, .65);
+    const mix = blastShape*1.6;
+    r += br*mix; g += bg*mix; b += bb*mix;
+  }
+  // Spark stays white-hot
+  if(spark>.05){
+    r += spark; g += spark*.8; b += spark*.5;
+  }
+  return [sum*r*1.6, sum*g*1.6, sum*b*1.6];
+};
+
+// ── THE GARDEN — paradisal green/blue field, mist + canopy + drifting fruit
+Scenes.garden = (v,t,localT)=>{
+  // Soft mist filling the lower half, gentle wave motion
+  const mist = Math.exp(-Math.pow((v.ny+.4)/.55,2)) *
+               (.45 + .25*Math.sin(v.nx*3+t*.5)*Math.cos(v.nz*3-t*.4));
+  // Floating canopy at top: lush spherical cluster
+  const cR = Math.sqrt(v.nx*v.nx + (v.ny-.55)*(v.ny-.55) + v.nz*v.nz);
+  const canopy = expBell(cR/.42, 1.0) * (.55 + Math.sin(t*.6+v.ny*4)*.20);
+  // Drifting orbs of fruit-light circling at canopy height
+  let fruit=0, fruitFlash=0;
+  for(let k=0;k<6;k++){
+    const fa = k/6*Math.PI*2 + t*.22 + BEAT.barPhase*.4;
+    const fy = .50 + Math.sin(t*.3+k*1.7)*.15;
+    const fx = Math.cos(fa)*.32;
+    const fz = Math.sin(fa)*.32;
+    const fd = Math.sqrt((v.nx-fx)*(v.nx-fx)+(v.ny-fy)*(v.ny-fy)+(v.nz-fz)*(v.nz-fz));
+    const w = Math.exp(-Math.pow(fd/.055,2));
+    fruit = Math.max(fruit, w*(.65+.35*Math.sin(t*1.8+k)));
+    if(w>fruitFlash) fruitFlash = w * BEAT.beatPulse * .6;
+  }
+  // Vine-like vertical streamers rising slowly
+  const streamer = Math.exp(-Math.pow(Math.sin(v.nx*5+v.nz*5)*.3 - ((t*.4+v.ny*.7)%1)+.5,2)*4) * .15;
+  const total = Math.max(mist, canopy*.85, fruit*1.2, streamer) + fruitFlash;
+  if(total<.10) return [0,0,0];
+  // Color: green-blue mist, gold fruit, teal canopy
+  if(fruit>.4){
+    const fh=(.12 + Math.sin(t*.3)*.04)%1;
+    const [r_,g_,b_]=hsl2rgb(fh,.75,.60);
+    return [total*r_*1.6+fruitFlash*.5, total*g_*1.6+fruitFlash*.5, total*b_*1.6+fruitFlash*.3];
+  }
+  const [r_,g_,b_] = hsl2rgb(.36 + Math.sin(t*.2+v.ny)*.05, .60, .48);
+  return [total*r_*1.4, total*g_*1.4, total*b_*1.4];
+};
+
+// ── TREES OF KNOWLEDGE & LIFE — single tree, two crowns (lower red, upper white-gold)
+Scenes.trees = (v,t,localT)=>{
+  // Central trunk through the whole column
+  const trunkOn = (Math.abs(v.nx)<.08 && Math.abs(v.nz)<.08);
+  const trunk = trunkOn ? (.55 + Math.sin(t*.6+v.ny*5)*.10) : 0;
+  // Lower crown — TREE OF KNOWLEDGE (red, more chaotic)
+  const lowCR = Math.sqrt(v.nx*v.nx + (v.ny+.25)*(v.ny+.25) + v.nz*v.nz);
+  const lowCanopy = expBell(lowCR/.22, 1.0) *
+                    (.55 + Math.sin(t*1.2+v.nx*4+v.nz*4)*.20);
+  // Upper crown — TREE OF LIFE (white/gold, radiant)
+  const hiCR = Math.sqrt(v.nx*v.nx + (v.ny-.60)*(v.ny-.60) + v.nz*v.nz);
+  const hiCanopy = expBell(hiCR/.28, 1.0) *
+                   (.65 + Math.sin(t*.8+v.ny*3)*.15);
+  // Knowledge fruit — 3 forbidden red orbs orbiting lower crown
+  let lowFruit=0;
+  for(let k=0;k<3;k++){
+    const fa = k/3*Math.PI*2 + t*.28;
+    const fy = -.25 + Math.sin(t*.5+k)*.06;
+    const fd = Math.sqrt(Math.pow(v.nx-Math.cos(fa)*.17,2)+Math.pow(v.ny-fy,2)+Math.pow(v.nz-Math.sin(fa)*.17,2));
+    lowFruit = Math.max(lowFruit, Math.exp(-Math.pow(fd/.055,2))*(.75+.25*Math.sin(t*2.2+k)));
+  }
+  // Life fruit — 5 white orbs orbiting upper crown
+  let hiFruit=0;
+  for(let k=0;k<5;k++){
+    const fa = k/5*Math.PI*2 - t*.18;
+    const fy = .60 + Math.sin(t*.4+k*1.3)*.08;
+    const fd = Math.sqrt(Math.pow(v.nx-Math.cos(fa)*.22,2)+Math.pow(v.ny-fy,2)+Math.pow(v.nz-Math.sin(fa)*.22,2));
+    hiFruit = Math.max(hiFruit, Math.exp(-Math.pow(fd/.05,2))*(.80+.20*Math.sin(t*2.6+k)));
+  }
+  // Tree of Life RAYS — on every bar, light radiates outward from upper crown
+  const lifeRay = hiCanopy * (BEAT.barPulse*.7 + .15);
+  // Phrase event: forbidden-fruit pulse all simultaneous
+  const tempt = (BEAT.barNum===0 ? BEAT.phrasePulse : 0) * lowFruit * 1.5;
+  const totalLow = Math.max(lowCanopy*.55, lowFruit*1.3) + tempt;
+  const totalHi  = Math.max(hiCanopy*.7,  hiFruit*1.3) + lifeRay;
+  const total = trunk*.55 + totalLow + totalHi;
+  if(total<.08) return [0,0,0];
+  // Color decisions
+  if(lowFruit>.35 || tempt>.15){
+    const [r_,g_,b_] = hsl2rgb(.02, .9, .55);   // forbidden red
+    return [total*r_*1.5+tempt*.5, total*g_*1.3, total*b_*1.3];
+  }
+  if(hiFruit>.35 || lifeRay>.30){
+    const [r_,g_,b_] = hsl2rgb(.13, .35, .70);  // life white-gold
+    return [total*r_*1.6, total*g_*1.6, total*b_*1.5];
+  }
+  if(trunk>0 && Math.abs(v.ny)<.45){
+    return [total*.50, total*.40, total*.25];   // brown trunk
+  }
+  // canopy default green
+  const hue = v.ny>.3 ? .30 : .35;
+  const [r_,g_,b_] = hsl2rgb(hue, .55, .45);
+  return [total*r_*1.3, total*g_*1.3, total*b_*1.3];
+};
+
+// ── TELESTIAL KINGDOM — lone & dreary, desaturated grey-blue, fragmented
+Scenes.telestial = (v,t,localT)=>{
+  // Low ambient haze
+  const ground = Math.exp(-Math.pow((v.ny+.7)/.5,2)) * .45;
+  // Fragmented shards — broken vertical streaks that flicker
+  const streakPhase = v.nx*4 + v.nz*4 + Math.sin(t*.3)*.5;
+  const streak = Math.exp(-Math.pow(Math.sin(streakPhase)*.5+.5-.5,2)*8) *
+                 Math.exp(-Math.pow(v.ny/.85,2)*.4) * .40;
+  // Cold flickers — sporadic dim spikes at random positions per frame
+  const cellHash = Math.sin((Math.floor(v.nx*10)+Math.floor(v.ny*10)*7+Math.floor(v.nz*10)*13)*9.7);
+  const flicker = (Math.sin(t*4+cellHash*100)>.94) ? .35 : 0;
+  // Slow ominous swell, one cycle per bar
+  const pulse = .55 + BEAT.barPulse*.18 + Math.sin(BEAT.swellPhase*Math.PI*2)*.10;
+  // Distant "preacher" point — single dim spot up & off-axis
+  const preachD = Math.sqrt((v.nx-.4)*(v.nx-.4)+(v.ny-.55)*(v.ny-.55)+v.nz*v.nz);
+  const preach = Math.exp(-Math.pow(preachD/.10,2)) * (.4 + .3*Math.sin(t*.8));
+  const val = (ground + streak + flicker + preach*.6) * pulse;
+  if(val<.07) return [0,0,0];
+  // Desaturated cool slate
+  const hue = .58 + Math.sin(t*.08)*.04;
+  const [r_,g_,b_] = hsl2rgb(hue, .22, .42);
+  // Preacher gets slight warmth
+  if(preach>.25){
+    return [val*r_*1.3+preach*.3, val*g_*1.2+preach*.20, val*b_*1.2+preach*.10];
+  }
+  return [val*r_*1.3, val*g_*1.3, val*b_*1.3];
+};
+
+// ── TERRESTRIAL KINGDOM — brighter, warm green-gold paradise with structure
+Scenes.terrestrial = (v,t,localT)=>{
+  // Upward-rolling waves of light
+  const wavePh = ((v.ny+1)*.5 - ((t*.4 + v.nx*.08)%1) + 1)%1;
+  const wave = Math.exp(-Math.pow(wavePh/.18,2)) * .55;
+  // Stable luminous base
+  const base = expBell((v.ny+.2)/.85, 1.0) * .50;
+  // Crystalline structure — gentle hex-like grid
+  const grid = (Math.abs(Math.sin(v.nx*7))*Math.abs(Math.sin(v.nz*7))*Math.abs(Math.sin(v.ny*7+t*.3))) * .35;
+  // Beat: column-wide bloom
+  const beatBloom = BEAT.beatPulse * Math.exp(-Math.sqrt(v.nx*v.nx+v.nz*v.nz)*1.0) * .35;
+  // Phrase: golden swell rises through column
+  const swellY = -1 + BEAT.phrasePhase*2.2;
+  const phraseSwell = Math.exp(-Math.pow((v.ny-swellY)/.30,2)) * BEAT.phrasePulse * .55;
+  const total = (base + wave + grid*.5) * (.75 + BEAT.barPulse*.25) + beatBloom + phraseSwell;
+  if(total<.10) return [0,0,0];
+  // Warm amber → green gradient over Y
+  const hue = .14 + (v.ny+1)*.5*.10 + Math.sin(t*.2)*.03;
+  const [r_,g_,b_] = hsl2rgb(hue, .65, .55);
+  return [total*r_*1.5+phraseSwell*.3, total*g_*1.5+phraseSwell*.2, total*b_*1.5];
+};
+
+// ── VEIL + SYMBOLS — shimmering veil texture; sacred marks cycle through
+//    every 2 bars: compass Λ → square L → navel • → knee —, fade in/out.
+Scenes.veil = (v,t,localT)=>{
+  // Shimmering veil backdrop — gentle white ripple
+  const ripple = Math.exp(-Math.pow(Math.sin(v.ny*4+t*.6)*Math.cos(v.nx*3+t*.4),2)*1.5) * .28;
+  // Symbol cycle — 2 bars (8 beats) per symbol; 4 symbols total = 8 bars per cycle
+  const symBeats = 8;
+  const symIdx = Math.floor(BEAT.beatIdx/symBeats) % 4;
+  const symAgeBeats = (BEAT.beatIdx%symBeats) + BEAT.beatPhase;
+  const symFadeIn  = Math.min(1, symAgeBeats/1.5);
+  const symFadeOut = Math.max(0, Math.min(1, (symBeats-symAgeBeats)/1.5));
+  const symFade = symFadeIn * symFadeOut;
+  let sym=0;
+  if(symIdx===0){
+    // Compass Λ — two diagonals meeting at top
+    const apexY = .35, slope = 1.4;
+    const leftLine = v.nx<0 ? Math.abs(v.ny - (apexY + v.nx*slope)) : 9;
+    const rightLine = v.nx>0 ? Math.abs(v.ny - (apexY - v.nx*slope)) : 9;
+    const closeEnough = Math.min(leftLine, rightLine);
+    if(closeEnough<.07 && Math.abs(v.nx)<.40 && Math.abs(v.nz)<.18) sym = 1.0;
+  } else if(symIdx===1){
+    // Square L — vertical line + horizontal line meeting at lower-left
+    const vert = (Math.abs(v.nx+.30)<.05 && v.ny>-.30 && v.ny<.30 && Math.abs(v.nz)<.18);
+    const horiz = (Math.abs(v.ny+.30)<.05 && v.nx>-.30 && v.nx<.20 && Math.abs(v.nz)<.18);
+    if(vert||horiz) sym = 1.0;
+  } else if(symIdx===2){
+    // Navel • — bright single sphere at center
+    const d = Math.sqrt(v.nx*v.nx+v.ny*v.ny+v.nz*v.nz);
+    sym = Math.exp(-Math.pow(d/.10,2)) * 1.2;
+  } else {
+    // Knee mark — horizontal line low
+    if(Math.abs(v.ny+.45)<.04 && Math.abs(v.nx)<.40 && Math.abs(v.nz)<.18) sym = 1.0;
+  }
+  sym *= symFade * (.85 + BEAT.beatPulse*.50);
+  // Phrase event: ALL four symbols briefly flash
+  const reveal = (BEAT.barNum===0 ? BEAT.phrasePulse : 0);
+  // Background veil pulses with bar
+  const veilPulse = ripple * (.7 + BEAT.barPulse*.4);
+  const total = veilPulse + sym + reveal*.25;
+  if(total<.07) return [0,0,0];
+  if(sym>.25){
+    // Sacred mark = bright gold
+    return [total*1.0+sym*.3, total*.85+sym*.20, total*.45];
+  }
+  // Veil = warm white-gold drape
+  return [total*.88, total*.85, total*.92];
 };
 
 // 10) HOLD on Kolob — single voxel, breathing locked to the bar
@@ -692,19 +1195,20 @@ Scenes.holdKolob = (v,t,localT)=>{
 };
 
 // ───────────────────────────────────────────────────────────
-// TIMELINE  (total 240 sec = 4:00)
+// TIMELINE  (total ~250 sec = 4:10)
 // ───────────────────────────────────────────────────────────
 const PROGRAM=[
-  {name:'CREATION — Pillar of Cloud',  scene:'cloud',     dur:30, color:'#aeb8c2', spillR:.55, spillG:.55, spillB:.65},
-  {name:'KOLOB — the governing star',  scene:'kolob',     dur:25, color:'#ffd58a', spillR:1.0, spillG:.85, spillB:.50},
-  {name:'144 WORLDS · 15 SEALED',      scene:'worlds',    dur:30, color:'#a8d8e0', spillR:.55, spillG:.85, spillB:.95},
-  {name:'THREE GREAT SUNS',            scene:'threeSuns', dur:28, color:'#ffb368', spillR:1.0, spillG:.70, spillB:.35},
-  {name:'TWELVE GOVERNING SYSTEMS',    scene:'twelve',    dur:28, color:'#7fffd4', spillR:.45, spillG:.95, spillB:.85},
-  {name:'TIME COLLAPSE — one Kolob day', scene:'collapse', dur:24, color:'#dde6c0', spillR:.80, spillG:.85, spillB:.70},
-  {name:'JACOB\'S LADDER',             scene:'ladder',    dur:22, color:'#cfe4ff', spillR:.55, spillG:.70, spillB:.95},
-  {name:'STANDING FIGURE OF LIGHT',    scene:'figure',    dur:24, color:'#f4ffe9', spillR:.92, spillG:1.0, spillB:.80},
-  {name:'PILLAR OF FIRE — climax',     scene:'fire',      dur:22, color:'#ff7733', spillR:1.0, spillG:.55, spillB:.18},
-  {name:'HOLD — Kolob alone',          scene:'holdKolob', dur:7,  color:'#ffd58a', spillR:1.0, spillG:.85, spillB:.50}
+  {name:'CREATION — spiral vortex',    scene:'creation',   dur:28, color:'#88aaff', spillR:.45, spillG:.55, spillB:.95},
+  {name:'KOLOB — the governing star',  scene:'kolob',      dur:24, color:'#ffd58a', spillR:1.0, spillG:.85, spillB:.50},
+  {name:'144 WORLDS · 15 SEALED',      scene:'worlds',     dur:26, color:'#cce0e8', spillR:.65, spillG:.80, spillB:.95},
+  {name:'THREE GREAT SUNS · stacked',  scene:'threeSuns',  dur:24, color:'#ff99dd', spillR:.95, spillG:.65, spillB:.85},
+  {name:'TWELVE GOVERNING SYSTEMS',    scene:'twelve',     dur:24, color:'#ffd58a', spillR:.95, spillG:.80, spillB:.60},
+  {name:'THE GARDEN',                  scene:'garden',     dur:24, color:'#7fdd9a', spillR:.50, spillG:1.0, spillB:.60},
+  {name:'TREES OF KNOWLEDGE & LIFE',   scene:'trees',      dur:22, color:'#ffaa55', spillR:.95, spillG:.70, spillB:.50},
+  {name:'TELESTIAL KINGDOM',           scene:'telestial',  dur:22, color:'#6a7a8a', spillR:.40, spillG:.45, spillB:.55},
+  {name:'TERRESTRIAL KINGDOM',         scene:'terrestrial',dur:22, color:'#bbcc66', spillR:.75, spillG:.85, spillB:.45},
+  {name:'VEIL + SYMBOLS',              scene:'veil',       dur:24, color:'#ffe3a0', spillR:1.0, spillG:.90, spillB:.65},
+  {name:'HOLD — Kolob alone',          scene:'holdKolob',  dur:8,  color:'#ffd58a', spillR:1.0, spillG:.85, spillB:.50}
 ];
 const TOTAL_DUR = PROGRAM.reduce((s,p)=>s+p.dur,0);
 const TRANS_LEN = 2.6; // seconds cross-fade between scenes
@@ -727,10 +1231,28 @@ PROGRAM.forEach((p,i)=>{
   s.dataset.i=i;
   s.style.left=(p.start/TOTAL_DUR*100)+'%';
   s.style.width=(p.dur/TOTAL_DUR*100)+'%';
-  s.title=p.name;
+  s.title=p.name+' · '+fmtSec(p.start)+'–'+fmtSec(p.start+p.dur);
   s.textContent=p.name.split(' — ')[0].split(' · ')[0];
-  s.addEventListener('click',()=>{playhead=p.start; paused=false; bPause.textContent='⏸ PAUSE'});
+  s.addEventListener('click',(e)=>{
+    e.stopPropagation();
+    seekTo(p.start);
+  });
   tlTrack.appendChild(s);
+});
+function fmtSec(s){const m=Math.floor(s/60), x=Math.floor(s%60); return `${m}:${x<10?'0':''}${x}`}
+function seekTo(sec){
+  playhead = Math.max(0, Math.min(TOTAL_DUR-.05, sec));
+  if(audioActive){
+    audioStartT = audioCtx.currentTime - playhead;
+    lastBeatScheduled = -1;
+  }
+  paused=false; bPause.textContent='⏸ PAUSE';
+}
+// Click-anywhere-on-track to scrub to that time
+tlTrack.addEventListener('click',(e)=>{
+  const rect=tlTrack.getBoundingClientRect();
+  const frac=(e.clientX-rect.left)/rect.width;
+  seekTo(frac*TOTAL_DUR);
 });
 
 function fmt(sec){const m=Math.floor(sec/60), s=Math.floor(sec%60); return `${m}:${s<10?'0':''}${s}`}
@@ -943,13 +1465,6 @@ function animate(time){
   const baseInt = (cur.scene==='fire') ? 2.6 : (cur.scene==='holdKolob') ? 1.6 :
                   (cur.scene==='cloud') ? .95 : 1.3;
   spill.intensity = baseInt * (.65 + BEAT.beatPulse*.55 + BEAT.swell*.25);
-
-  // Subtle camera kick on the downbeat of FIRE & KOLOB (climactic scenes)
-  if(cur.scene==='fire' || cur.scene==='kolob'){
-    const shake = BEAT.beatPulse * (cur.scene==='fire' ? .035 : .015);
-    camera.position.x += (Math.random()-.5)*shake;
-    camera.position.y += (Math.random()-.5)*shake;
-  }
 
   // Beat indicators (4 dots — one lights per beat in the bar)
   const beatDots=document.querySelectorAll('#beat span');
