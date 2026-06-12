@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KOLOB · upgrade phases</title>
+<!-- 3 random thrones × 3 tiers (Telestial → Terrestrial → Celestial).
+     Each cell embeds the live renderer (visual-test.html) at bare mode,
+     so this is exactly what each upgrade phase looks like. -->
+<style>
+  :root{--gold:#e9c987;--mag:#e98fce;--cyan:#7fc8ff}
+  html,body{margin:0;height:100%;background:#000;color:#cdd0d8;
+    font:11px/1.5 ui-monospace,Menlo,Consolas,monospace}
+  #bar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:14px;
+    padding:10px 16px;background:#08080c;border-bottom:1px solid #181820}
+  #bar h1{font:600 14px/1 Jost,system-ui,sans-serif;letter-spacing:.22em;color:#fff;margin:0}
+  #bar .sp{flex:1}
+  #bar button{background:rgba(255,255,255,.07);color:#cdd0d8;border:1px solid rgba(255,255,255,.18);
+    border-radius:3px;padding:8px 13px;font:10px/1 ui-monospace,monospace;letter-spacing:.14em;cursor:pointer}
+  #bar button:hover{background:rgba(255,255,255,.16);color:#fff}
+  #bar .hint{color:#5a5e6b;letter-spacing:.06em}
+  /* grid: 1 label column + 3 tier columns */
+  #grid{display:grid;grid-template-columns:62px repeat(3,1fr);gap:6px;padding:6px}
+  .head{display:flex;flex-direction:column;justify-content:center;align-items:center;
+    padding:8px 0 10px;letter-spacing:.18em;text-transform:uppercase;font-size:10px}
+  .head .dot{width:8px;height:8px;border-radius:50%;margin-bottom:6px}
+  .head.tel{color:var(--cyan)} .head.ter{color:var(--mag)} .head.cel{color:var(--gold)}
+  .rowlab{display:flex;flex-direction:column;justify-content:center;align-items:center;
+    writing-mode:vertical-rl;transform:rotate(180deg);letter-spacing:.2em;color:#9aa0ad;font-size:10px}
+  .cell{position:relative;aspect-ratio:1/1;background:#000;border:1px solid #141420;border-radius:4px;overflow:hidden}
+  .cell iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+  .cell .cap{position:absolute;left:6px;bottom:5px;z-index:2;font-size:9px;color:#7a7e8b;
+    letter-spacing:.08em;text-shadow:0 0 4px #000;pointer-events:none}
+  .corner{color:#5a5e6b;font-size:9px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px}
+  @media(max-width:720px){#grid{grid-template-columns:1fr;gap:10px}
+    .rowlab{writing-mode:horizontal-tb;transform:none;padding:6px 0 0}
+    .head{display:none}.thronehead{display:block!important}}
+  .thronehead{display:none;padding:8px 4px 2px;color:#fff;letter-spacing:.16em;font-size:11px}
+</style>
+</head>
+<body>
+
+<div id="bar">
+  <h1>KOLOB · UPGRADE PHASES</h1>
+  <span class="hint">Telestial (mint) → Terrestrial → Celestial · live renderer, drag any cell to orbit</span>
+  <span class="sp"></span>
+  <button id="reroll">⟲ NEW 3 THRONES</button>
+</div>
+
+<div id="grid"><!-- filled by script --></div>
+
+<script>
+var REND='visual-test.html';
+var TIERS=[
+  {t:2,name:'TELESTIAL',cls:'tel',note:'base mint'},
+  {t:1,name:'TERRESTRIAL',cls:'ter',note:'+ ringed relic, warmer'},
+  {t:0,name:'CELESTIAL',cls:'cel',note:'+ binary, comets, gold'}
+];
+function pick3(){
+  // 3 distinct throne invocations (15..143). Seeded off the clock so reroll varies.
+  var s=Date.now(),out=[],guard=0;
+  function rnd(){s=(Math.imul(s,1103515245)+12345)>>>0;return s/4294967296;}
+  while(out.length<3 && guard++<999){var inv=15+((rnd()*129)|0);
+    if(out.indexOf(inv)<0) out.push(inv);}
+  return out;
+}
+function build(){
+  var thrones=pick3();
+  var g=document.getElementById('grid');
+  var html='';
+  // header row
+  html+='<div class="corner">THRONE</div>';
+  TIERS.forEach(function(T){
+    html+='<div class="head '+T.cls+'"><span class="dot" style="background:var(--'+
+      (T.cls==='tel'?'cyan':T.cls==='ter'?'mag':'gold')+')"></span>'+T.name+
+      '<span style="color:#5a5e6b;letter-spacing:.04em;text-transform:none;margin-top:4px;font-size:9px">'+T.note+'</span></div>';
+  });
+  // throne rows
+  thrones.forEach(function(inv){
+    var n=('00'+(inv-15)).slice(-3);
+    html+='<div class="rowlab">THRONE '+n+'</div>';
+    TIERS.forEach(function(T){
+      var src=REND+'?inv='+inv+'&tier='+T.t+'&bare=1';
+      html+='<div class="cell"><div class="thronehead">THRONE '+n+' · '+T.name+'</div>'+
+        '<iframe loading="lazy" src="'+src+'"></iframe>'+
+        '<div class="cap">#'+n+' · '+T.name+'</div></div>';
+    });
+  });
+  g.innerHTML=html;
+}
+document.getElementById('reroll').addEventListener('click',build);
+build();
+</script>
+</body>
+</html>

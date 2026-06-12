@@ -144,9 +144,9 @@ document.querySelectorAll('#filters button').forEach(function(b){
 function compare(){
   var n=parseInt(document.getElementById('cmpNum').value);
   if(isNaN(n)||n<0||n>128) n=7;
-  document.getElementById('cmpA').src=POD+'#embed=throne:'+n+':2';
-  document.getElementById('cmpB').src=POD+'#embed=throne:'+n+':1';
-  document.getElementById('cmpC').src=POD+'#embed=throne:'+n+':0';
+  document.getElementById('cmpA').src='token.html?inv='+(15+n)+'&tier=2';
+  document.getElementById('cmpB').src='token.html?inv='+(15+n)+'&tier=1';
+  document.getElementById('cmpC').src='token.html?inv='+(15+n)+'&tier=0';
 }
 document.getElementById('cmpGo').addEventListener('click',compare);
 document.getElementById('cmpNum').addEventListener('keydown',function(e){if(e.key==='Enter')compare();});

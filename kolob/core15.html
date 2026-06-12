@@ -91,7 +91,7 @@ var sH="";
 SUNS.forEach(function(s,i){
   var an=authoredName('sun',i)||s.n;
   sH+='<a class="card live" href="'+POD+'#sun='+i+'">'+
-    '<div class="swatch"><iframe class="liveframe" data-src="'+POD+'#embed=sun:'+i+'" title="'+an+'"></iframe></div>'+
+    '<div class="swatch"><iframe class="liveframe" data-src="token.html?inv='+i+'" title="'+an+'"></iframe></div>'+
     '<span class="k">Great Star '+(i+1)+' / 3 · locked · 0.50 ETH'+badge('sun',i)+'</span>'+
     '<h3>'+an+'</h3><p>'+s.d+'</p></a>';
 });
@@ -100,7 +100,7 @@ var cH="";
 CORES.forEach(function(s,i){
   var an=authoredName('core',i)||s.n;
   cH+='<a class="card live" href="'+POD+'#core='+i+'">'+
-    '<div class="swatch"><iframe class="liveframe" data-src="'+POD+'#embed=core:'+i+'" title="'+an+'"></iframe></div>'+
+    '<div class="swatch"><iframe class="liveframe" data-src="token.html?inv='+(3+i)+'" title="'+an+'"></iframe></div>'+
     '<span class="k">Core '+(i+1)+' / 12 · locked · 0.20 ETH'+badge('core',i)+'</span>'+
     '<h3>'+an+'</h3><p class="dim">'+s.p+'</p></a>';
 });
