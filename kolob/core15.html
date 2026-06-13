@@ -90,8 +90,8 @@ function badge(kind,i){return isAuthored(kind,i)?'<span class="auth">✦ Authore
 var sH="";
 SUNS.forEach(function(s,i){
   var an=authoredName('sun',i)||s.n;
-  sH+='<a class="card live" href="'+POD+'#sun='+i+'">'+
-    '<div class="swatch"><iframe class="liveframe" data-src="token.html?inv='+i+'" title="'+an+'"></iframe></div>'+
+  sH+='<a class="card live" href="token.html?inv='+i+'">'+
+    '<div class="swatch"><iframe class="liveframe" scrolling="no" data-src="token.html?inv='+i+'&lite=1" title="'+an+'"></iframe></div>'+
     '<span class="k">Great Star '+(i+1)+' / 3 · locked · 0.50 ETH'+badge('sun',i)+'</span>'+
     '<h3>'+an+'</h3><p>'+s.d+'</p></a>';
 });
@@ -99,8 +99,8 @@ document.getElementById('suns').innerHTML=sH;
 var cH="";
 CORES.forEach(function(s,i){
   var an=authoredName('core',i)||s.n;
-  cH+='<a class="card live" href="'+POD+'#core='+i+'">'+
-    '<div class="swatch"><iframe class="liveframe" data-src="token.html?inv='+(3+i)+'" title="'+an+'"></iframe></div>'+
+  cH+='<a class="card live" href="token.html?inv='+(3+i)+'">'+
+    '<div class="swatch"><iframe class="liveframe" scrolling="no" data-src="token.html?inv='+(3+i)+'&lite=1" title="'+an+'"></iframe></div>'+
     '<span class="k">Core '+(i+1)+' / 12 · locked · 0.20 ETH'+badge('core',i)+'</span>'+
     '<h3>'+an+'</h3><p class="dim">'+s.p+'</p></a>';
 });

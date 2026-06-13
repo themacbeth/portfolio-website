@@ -47,9 +47,9 @@
     <span class="dim">advancing is paid — this is what you unlock</span>
   </div>
   <div class="compare three">
-    <div class="pane"><span class="lab t-tel">Telestial</span><iframe id="cmpA" title="telestial"></iframe></div>
-    <div class="pane"><span class="lab t-ter">Terrestrial</span><iframe id="cmpB" title="terrestrial"></iframe></div>
-    <div class="pane"><span class="lab t-cel">Celestial</span><iframe id="cmpC" title="celestial"></iframe></div>
+    <div class="pane"><span class="lab t-tel">Telestial</span><iframe id="cmpA" scrolling="no" title="telestial"></iframe></div>
+    <div class="pane"><span class="lab t-ter">Terrestrial</span><iframe id="cmpB" scrolling="no" title="terrestrial"></iframe></div>
+    <div class="pane"><span class="lab t-cel">Celestial</span><iframe id="cmpC" scrolling="no" title="celestial"></iframe></div>
   </div>
 </section>
 
@@ -65,7 +65,7 @@
   <p class="dim" id="driftNote" style="display:none;margin-top:18px;font:11px/1.7 var(--mono);color:#c9a96b;letter-spacing:.04em">
     These thrones are still at the Telestial rim. On <b style="color:#e0d6c2">22 October 2026 UTC</b> (<b class="odDays" style="color:#e0d6c2">…</b> days),
     any that have not been advanced enter <b style="color:#e0d6c2">Outer Darkness</b>, a silent monochrome drift.
-    <a href="kolob-pod-1d.html#throne=20&od" style="color:var(--cyan);text-decoration:underline">Preview the drift ▸</a>
+    <a href="token.html?inv=35&od" style="color:var(--cyan);text-decoration:underline">Preview the drift ▸</a>
   </p>
 </section>
 
@@ -123,7 +123,7 @@ function build(filter){
     else if(filter!=='all' && n.tier!=+filter) return;
     var sc=rs(STAR[n.star].col), tc=rs(TIER_COL[n.tier]);
     var driftClass=drifting?' drifted':'';
-    var href=POD+'#throne='+n.i+(drifting?'&od':'');
+    var href='token.html?inv='+(15+n.i)+'&tier='+n.tier+(drifting?'&od':'');
     html+='<a class="tcell'+driftClass+'" href="'+href+'" title="Throne '+n.i+' · '+TIER_NAMES[n.tier]+(drifting?' · Outer Darkness preview':'')+'">'+
       '<span class="ring"></span>'+
       '<span class="dot" style="color:'+sc+';background:'+sc+'"></span>'+

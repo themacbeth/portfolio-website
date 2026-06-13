@@ -28,7 +28,7 @@ var tokenData = (typeof tokenData!=="undefined") ? tokenData : {
 </script>
 <style>
   html{height:100%}
-  body{min-height:100%;margin:0;padding:0;background:#000}
+  body{min-height:100%;margin:0;padding:0;background:#000;overflow:hidden}
   canvas{padding:0;margin:auto;display:block;position:absolute;top:0;bottom:0;left:0;right:0}
 </style>
 </head>
@@ -390,10 +390,13 @@ function coreBoost(sys,r){var orig=sys.planets,oc=orig.length,i;
   for(i=0;i<nc;i++) sys.comets.push({a:r.rng(1.3,2.7),e:r.rng(0.7,0.95),peri:r()*TAU,inc:r.g()*0.5,rev:r.pick([2,3,4,5]),M0:r()*TAU});
   return sys;}
 
+/* preview-only LITE mode (?lite): fewer particles + dimmer suns for the small
+   grid thumbnails on core15.html. Never sent by Art Blocks → no on-chain effect. */
+var LITE=/[?&]lite\b/.test(location.search);
 /* ── the great-sun engine ── */
 var SUN,sunStrands=[],sunOrbits=[],sunSpin=0,starIntroT=1;   // pre-warmed so the sun reads at frame 0 for thumbnails
 function buildStar(seed){var r=mk(seed>>>0),i;sunStrands=[];sunOrbits=[];
-  var nS=3600,nO=400;
+  var nS=LITE?1200:3600,nO=LITE?150:400;
   for(i=0;i<nS;i++){var u=r()*TAU,ct=2*r()-1,st=Math.sqrt(1-ct*ct);var d=[st*Math.cos(u),st*Math.sin(u),ct];
     var up=Math.abs(d[1])<0.92?[0,1,0]:[1,0,0];var t1=norm(cross(d,up)),t2=cross(d,t1);var erupt=r()<(0.14+SUN.big);
     sunStrands.push({d:d,t1:t1,t2:t2,ph:r()*40,tipExt:erupt?(1.0+r()*1.2):(0.25+r()*0.4),amp:0.7+r()*1.1,coil:2.0+r()*3.0,flow:0.18+r()*0.5,bri:0.65+r()*0.6});}
@@ -410,7 +413,7 @@ function renderStar(){
   var DOT=Math.max(2,Math.round(Math.min(W,H)/820)),REF=Math.min(W,H)*0.30;
   sunSpin+=0.004*SUN.rot;var cosS=Math.cos(sunSpin),sinS=Math.sin(sunSpin);
   var t=clock*0.013*SUN.speed,s=REF*zoom*SUN.size,i,k,u,f,amp,na,nb,px,py,pz,pl,rr,sp,a,rx,rz;
-  var NK=40,INVK=1/(NK-1),aS=Math.round(sunStrands.length*SUN.density),aO=Math.round(sunOrbits.length*SUN.orbit);
+  var NK=LITE?22:40,INVK=1/(NK-1),aS=Math.round(sunStrands.length*SUN.density),aO=Math.round(sunOrbits.length*SUN.orbit);
   for(i=0;i<aS;i++){var sd=sunStrands[i];var sx=sd.d[0]*1.6,sy=sd.d[1]*1.6,sz=sd.d[2]*1.6,tw=t*sd.flow+sd.ph;
     for(k=0;k<NK;k++){u=k*INVK;f=u*u;amp=(0.10+f*0.85)*sd.amp*SUN.noise;
       na=fbm(sx+f*sd.coil*SUN.curl+tw,sy,sz)-0.44;nb=fbm(sy,sz+f*sd.coil*SUN.curl+tw,sx)-0.44;
@@ -418,7 +421,7 @@ function renderStar(){
       px=sd.d[0]+sd.t1[0]*na*amp+sd.t2[0]*nb*amp;py=sd.d[1]+sd.t1[1]*na*amp+sd.t2[1]*nb*amp;pz=sd.d[2]+sd.t1[2]*na*amp+sd.t2[2]*nb*amp;
       pl=Math.sqrt(px*px+py*py+pz*pz)||1;pl=rr/pl;px*=pl;py*=pl;pz*=pl;
       rx=px*cosS-pz*sinS;rz=px*sinS+pz*cosS;sp=sunProject(rx,py,rz,s);
-      a=sd.bri*(0.34-f*0.20)*intro;if(a<0.03)a=0.03;if(a>1)a=1;
+      a=sd.bri*(0.34-f*0.20)*intro*(LITE?0.55:1);if(a<0.03)a=0.03;if(a>1)a=1;
       ctx.fillStyle='rgba('+(255*cr|0)+','+(255*cg|0)+','+(255*cb|0)+','+a.toFixed(3)+')';ctx.fillRect(sp[0],sp[1],DOT,DOT);}}
   for(i=0;i<aO;i++){var o=sunOrbits[i];for(k=0;k<3;k++){var th=o.ph+(t-k*0.045)*o.sp,cth=Math.cos(th),sth=Math.sin(th);
       px=(o.u[0]*cth+o.v[0]*sth)*o.rad;py=(o.u[1]*cth+o.v[1]*sth)*o.rad;pz=(o.u[2]*cth+o.v[2]*sth)*o.rad;sp=sunProject(px,py,pz,s);
@@ -488,7 +491,7 @@ function densify(sys){
   for(k=1;k<AMULT;k++) for(i=0;i<sys.asteroids.length;i++) out.push(clone(sys.asteroids[i],0.03,TAU));
   sys.asteroids=out;}
 function buildDust(sys,isCore){
-  var r=mk(sys.seed^0xD0577),n=isCore?15000:11000,d=[],i;
+  var r=mk(sys.seed^0xD0577),n=((isCore?15000:11000)*(LITE?0.32:1))|0,d=[],i;
   var hues=[sys.pal.gas,sys.pal.ice,sys.pal.belt,sys.pal.comet,sys.pal.star];
   for(i=0;i<n;i++){
     var band=r(),a,z;
