@@ -105,14 +105,17 @@ CORES.forEach(function(s,i){
     '<h3>'+an+'</h3><p class="dim">'+s.p+'</p></a>';
 });
 document.getElementById('cores').innerHTML=cH;
-// lazy-load on approach; pause/resume so only on-screen pieces actually render
+// Still-thumbnail mode: load each piece on approach, let it render to its iconic
+// frame, then freeze it (stop animating) — no ongoing render cost, no page lag.
 var io=new IntersectionObserver(function(es){es.forEach(function(e){
   var f=e.target;
   if(e.isIntersecting){
-    if(!f.src) f.src=f.dataset.src;                                  // load on approach
-    try{f.contentWindow.postMessage('kolob:play','*');}catch(_){}    // resume
+    if(!f.dataset.loaded){ f.dataset.loaded='1'; f.src=f.dataset.src;   // load once
+      f.addEventListener('load',function(){
+        setTimeout(function(){ try{f.contentWindow.postMessage('kolob:pause','*');}catch(_){} },2800); });
+    }
   } else {
-    try{f.contentWindow.postMessage('kolob:pause','*');}catch(_){}   // freeze off-screen
+    try{f.contentWindow.postMessage('kolob:pause','*');}catch(_){}       // pause if scrolled away mid-warmup
   }
 });},{rootMargin:'120px',threshold:0.01});
 document.querySelectorAll('.liveframe').forEach(function(f){io.observe(f);});

@@ -42,11 +42,11 @@
 <!-- ── see it live ─────────────────────────────────────────────────────── -->
 <section class="wrap" style="padding-top:0">
   <div class="grid cols-3">
-    <a class="card live" href="kolob-pod-1d.html#sun=0"><div class="swatch"><iframe class="liveframe" data-src="kolob-pod-1d.html#embed=sun:0" title="Oleblish"></iframe></div>
+    <a class="card live" href="token.html?inv=0"><div class="swatch"><iframe class="liveframe" scrolling="no" data-src="token.html?inv=0&lite=1" title="Oleblish"></iframe></div>
       <span class="k">Great Star · authored</span><h3>Oleblish</h3><p>one of the triangle, three suns flanking KOLOB</p></a>
-    <a class="card live" href="kolob-pod-1d.html#core=6"><div class="swatch"><iframe class="liveframe" data-src="kolob-pod-1d.html#embed=core:6" title="core"></iframe></div>
+    <a class="card live" href="token.html?inv=9"><div class="swatch"><iframe class="liveframe" scrolling="no" data-src="token.html?inv=9&lite=1" title="core"></iframe></div>
       <span class="k">Core System · authored</span><h3>Binary Heart</h3><p>one of 12 governing systems</p></a>
-    <a class="card live" href="kolob-pod-1d.html#throne=7"><div class="swatch"><iframe class="liveframe" data-src="kolob-pod-1d.html#embed=throne:7:0" title="throne"></iframe></div>
+    <a class="card live" href="token.html?inv=22&tier=0"><div class="swatch"><iframe class="liveframe" scrolling="no" data-src="token.html?inv=22&tier=0&lite=1" title="throne"></iframe></div>
       <span class="k">Throne · advanced</span><h3>Celestial</h3><p>one of 129 thrones</p></a>
   </div>
 </section>
@@ -64,7 +64,9 @@
       whole system. Same hash → same output, every time. Pure vanilla canvas, <b>zero external
       dependencies</b>, so it qualifies as fully on-chain.</p>
       <p>Orbits are real Keplerian ellipses in integer mean-motion resonance; belts carry Kirkwood
-      gaps; everything is particles (the "pixel-as-token" aesthetic).</p>
+      gaps; everything is particles (the "pixel-as-token" aesthetic), composited into a single
+      additive pixel buffer, tens of thousands of points per frame: a full-frame dust lattice,
+      densified belts, and noise-textured planet surfaces (banded gas giants, mottled rock).</p>
     </div></details>
 
     <!-- 2, collection structure -->
@@ -122,7 +124,7 @@
     throne still on the rim at <b style="color:#e0d6c2">22 October 2026 UTC</b> drifts into
     <b style="color:#e0d6c2">Outer Darkness</b>. The drift is <b style="color:#e0d6c2">permanent</b>,
     the tier PMP locks at the deadline, no repentance, no return. &nbsp;
-    <a href="kolob-pod-1d.html#throne=20&od" style="color:var(--cyan);text-decoration:underline">Preview the drift ▸</a></p>
+    <a href="token.html?inv=35&od" style="color:var(--cyan);text-decoration:underline">Preview the drift ▸</a></p>
     <details class="exp"><summary>How advancing works on-chain</summary><div class="body">
       <p>A throne's kingdom is an on-chain <b>PostParam</b> (Art Blocks PMP) set by the token owner;
       the artwork reads it and re-renders the new tier. PMP supports <b>lock dates</b> and min/max,
@@ -169,7 +171,7 @@
     on Ethereum.</p>
     <table class="ptab">
       <tr><th>Property</th><th style="text-align:right">Value</th></tr>
-      <tr><td>Per-token script size</td><td class="price">~10–12 KB min.</td></tr>
+      <tr><td>Per-token script size</td><td class="price">~24–28 KB min.</td></tr>
       <tr><td>Dependencies</td><td class="price">none (vanilla JS)</td></tr>
       <tr><td>Output</td><td class="price">deterministic</td></tr>
       <tr><td>Platform</td><td class="price">Engine Flex + PMP</td></tr>
@@ -196,7 +198,7 @@
       <tr><th>Field</th><th style="text-align:right">Value</th></tr>
       <tr><td>Script type</td><td class="price"><code>scriptType: js</code></td></tr>
       <tr><td>Library</td><td class="price">none (vanilla JS)</td></tr>
-      <tr><td>Script size</td><td class="price">~10–12 KB minified</td></tr>
+      <tr><td>Script size</td><td class="price">~24–28 KB minified</td></tr>
       <tr><td>Renderer</td><td class="price">Canvas 2D, CPU-safe (SwiftShader)</td></tr>
       <tr><td>Determinism</td><td class="price">sfc32 PRNG seeded by <code>tokenData.hash</code></td></tr>
       <tr><td>Platform</td><td class="price">Engine Flex, core v3.2.5+</td></tr>
