@@ -915,8 +915,14 @@ function goSystem(idx,ft){
   else AUDIO.setMode('system',nd.seed,tr);
   if(typeof starEditor!=='undefined') starEditor.sync();
   if(typeof coreEditor!=='undefined') coreEditor.sync();}
-$back.addEventListener('click',goGalaxy);
-$back.addEventListener('touchend',function(e){e.preventDefault();goGalaxy();});
+/* BACK button: when entered via mint.html's test-mint flow (#…&own), return
+   to mint.html. Otherwise go back to the galaxy view as before. */
+function goBack(){
+  if(ownMode){ location.href='mint.html'; return; }
+  goGalaxy();
+}
+$back.addEventListener('click',goBack);
+$back.addEventListener('touchend',function(e){e.preventDefault();goBack();});
 $throneGo.addEventListener('click',function(){var v=parseInt($throneNum.value);
   if(!isNaN(v)&&v>=0&&v<=128)goSystem(v);});
 $throneNum.addEventListener('keydown',function(e){if(e.key==='Enter'){
