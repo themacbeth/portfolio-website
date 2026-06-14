@@ -1509,9 +1509,15 @@ function buildDustE(sys,isCore){
       r:col[0]*bri|0,g:col[1]*bri|0,b:col[2]*bri|0,fl:r()*TAU,fs:(r()<0.12)?(0.5+r()):0});}
   sys._dust=d;}
 function applyPresetE(rich){GHOSTS=Math.round(2-rich);FIELD=1.5-0.25*rich;PLANPX=1.0-0.25*rich;syncPxE();}
-/* star-forward composition (set per piece in enhancePiece) */
+/* star-forward composition (set per piece in enhancePiece).
+   Aspect-aware: portrait viewports dial back the off-center offset and zoom
+   so the system never slides off-screen. Recomputed each frame, so rotation
+   re-frames automatically without re-navigating. */
 var vZoomE=1,vOffXE=0,vOffYE=0;
-function vcxE(){return CX+vOffXE*W;} function vcyE(){return CY+vOffYE*H;}
+function _portraitT(){var a=W/H;return a<1?Math.min(1,a/0.9):1;}
+function vcxE(){return CX+vOffXE*W*_portraitT();}
+function vcyE(){return CY+vOffYE*H*_portraitT();}
+function _effZoomE(){var p=_portraitT();return vZoomE*(0.45+0.55*p);}
 function projectE(x,y,z,cosP,sinP,scale){var rx=x*cosP-y*sinP,ry=x*sinP+y*cosP;
   return [vcxE()+rx*scale,vcyE()+ry*scale*tilt-z*scale*(1-tilt),ry];}
 function ellipseBE(a,e,peri,inc,cosP,sinP,scale,cr,cg,cb,step){
@@ -1520,10 +1526,17 @@ function ellipseBE(a,e,peri,inc,cosP,sinP,scale,cr,cg,cb,step){
     var sp=projectE(px,py*Math.cos(inc),py*Math.sin(inc),cosP,sinP,scale);
     bplot(sp[0],sp[1],cr,cg,cb);}}
 /* Called by goSystem / goCore after the system is built and possibly extremized.
-   Wires in respacing, densification, dust, palette presets, framing. */
+   Wires in respacing, densification, dust, palette presets, framing.
+   Archetype-aware: skips respace for eccentric/resonance cores (which need
+   their characteristic spacing), and tags mega-ring world so its colossal
+   giant is exempt from the size cap. */
 function enhancePiece(sys,tier){
   ensureBuf();
-  respaceE(sys);densifyE(sys);buildDustE(sys,!!sys.isCore);
+  var ci=sys._arch;
+  var keepWild = sys.isCore && (ci===5 /*ECCENTRIC CHAOS*/ || ci===7 /*RESONANCE CATHEDRAL*/);
+  if(!keepWild) respaceE(sys);
+  if(sys.isCore && ci===10) sys._megaRing=true;
+  densifyE(sys);buildDustE(sys,!!sys.isCore);
   var seed=sys.seed>>>0,rt=mk((seed^0xFADE)>>>0);
   if(sys.isCore){vZoomE=1.06+rt()*0.30;vOffXE=(rt()-0.5)*0.08;vOffYE=(rt()-0.5)*0.06;applyPresetE(1);}
   else{vZoomE=1.35+rt()*0.75;vOffXE=(rt()-0.5)*0.20;vOffYE=(rt()-0.5)*0.16;
@@ -1536,7 +1549,7 @@ function renderSystem(){
   var t=(clock%SYSLOOP)/SYSLOOP,phi=t*TAU+az,cosP=Math.cos(phi),sinP=Math.sin(phi),amax=0.1;
   for(i=0;i<sy.planets.length;i++) amax=Math.max(amax,sy.planets[i].a*(1+sy.planets[i].e));
   var PAL=sy.pal;
-  var scale=scaleRef*zoom*vZoomE/amax;
+  var scale=scaleRef*zoom*_effZoomE()/amax;
   var stark=sy.wealth===2 && !sy.isCore;
   buf.fill(0);
   /* dust lattice */
@@ -1611,9 +1624,11 @@ function renderSystem(){
     var pt=PTYPE[pl.type],base=sat(mix(palType(PAL,pl.type),sy.scheme[i%2],0.28),1.35);
     if(stark) base=lt(base,0.14);
     var pr=U*pt.sz*pl.szMul*1.12;
-    var cap=(i===bigA||(sy.planets.length>=5&&i===bigB))?starVis*0.88:starVis*0.50;
+    var megaHero = sy._megaRing && i===0;          // MEGA-RING WORLD's colossus breaks the rules
+    var cap=megaHero?starVis*1.55
+           :(i===bigA||(sy.planets.length>=5&&i===bigB))?starVis*0.88:starVis*0.50;
     if(pr>cap)pr=cap;
-    if(pl.type===1) pr*=0.70;
+    if(pl.type===1 && !megaHero) pr*=0.70;
     var pg=ctx.createRadialGradient(sp[0],sp[1],0,sp[0],sp[1],pr*2.6);
     pg.addColorStop(0,'rgba('+(base[0]|0)+','+(base[1]|0)+','+(base[2]|0)+',0.16)');
     pg.addColorStop(1,'rgba(0,0,0,0)');
@@ -1740,7 +1755,7 @@ function renderCoreStar(cx,cy,rad,seed,col){
 
 function buildStar(seed){
   var r=mk(seed>>>0),i;sunStrands=[];sunOrbits=[];
-  var nS=gpuMode?6000:(IS_MOBILE?1600:3600), nO=gpuMode?760:(IS_MOBILE?240:400);
+  var nS=IS_MOBILE?1000:3600, nO=IS_MOBILE?150:400;
   for(i=0;i<nS;i++){                                  // strands rooted on the surface
     var u=r()*TAU,ct=2*r()-1,st=Math.sqrt(1-ct*ct);
     var d=[st*Math.cos(u),st*Math.sin(u),ct];
@@ -1902,7 +1917,7 @@ function renderStar(){
   var cosS=Math.cos(sunSpin),sinS=Math.sin(sunSpin);
   var t=clock*0.013*SUN.speed, s=REF*zoom*SUN.size;
   var i,k,u,f,amp,na,nb,px,py,pz,pl,rr,sp,a,rx,rz;
-  var NK=gpuMode?60:(IS_MOBILE?26:40), INV=1/(NK-1);
+  var NK=IS_MOBILE?18:40, INV=1/(NK-1);
   // Clamp counts so a high density slider cannot iterate past array length (was freezing the frame)
   var aS=Math.min(sunStrands.length,Math.max(0,Math.round(sunStrands.length*Math.min(1,SUN.density))));
   var aO=Math.min(sunOrbits.length, Math.max(0,Math.round(sunOrbits.length *Math.min(1,SUN.orbit))));
@@ -1943,28 +1958,28 @@ function renderStar(){
 
 // ── CORE-12: twelve LOCKED, never-alike extreme throne systems ───────────
 function extremize(sys,r,ci){
-  var i,m,gm=gpuMode?2:1;
+  var i,m;
   for(i=0;i<sys.planets.length;i++){var pl=sys.planets[i];
     pl.szMul*=1.3+r()*0.7;pl.e=Math.min(0.5,pl.e+r()*0.18);}
   switch(ci){
-   case 0:  // RINGED DYNASTY, every world ringed
-     for(i=0;i<sys.planets.length;i++){sys.planets[i].ring=true;sys.planets[i].szMul*=1.35;} break;
-   case 1:  // MOON SWARM
-     for(i=0;i<sys.planets.length;i++){var p1=sys.planets[i],mr=[12,9,7,5,4,3,2],ad=r.int(4,9)*gm;
+   case 0:  // RINGED DYNASTY, every world ringed (and ring-wider)
+     for(i=0;i<sys.planets.length;i++){sys.planets[i].ring=true;sys.planets[i].szMul*=1.4;} break;
+   case 1:  // MOON SWARM, dramatic — every planet a swarm host
+     for(i=0;i<sys.planets.length;i++){var p1=sys.planets[i],mr=[12,9,7,5,4,3,2],ad=r.int(8,14);
        for(m=0;m<ad;m++) p1.moons.push({a:0.05+p1.moons.length*0.026+r()*0.012,
          rev:mr[m%mr.length],M0:r()*TAU,peri:r()*TAU});} break;
-   case 2:  // ASTEROID EMPIRE
-     sys.asteroids=[];for(i=0;i<2800*gm;i++){var aa=r.rng(0.3,1.5);
+   case 2:  // ASTEROID EMPIRE — vast belt
+     sys.asteroids=[];for(i=0;i<5000;i++){var aa=r.rng(0.3,1.5);
        sys.asteroids.push({a:aa,e:r()*0.25,peri:r()*TAU,inc:r.g()*0.15,
          rev:Math.max(1,Math.round(Math.pow(aa,-1.5))),M0:r()*TAU});} break;
-   case 3:  // COMET STORM
-     sys.comets=[];for(i=0;i<30*gm;i++) sys.comets.push({a:r.rng(1.0,2.4),e:r.rng(0.6,0.95),
+   case 3:  // COMET STORM — many active tails
+     sys.comets=[];for(i=0;i<55;i++) sys.comets.push({a:r.rng(1.0,2.4),e:r.rng(0.6,0.95),
        peri:r()*TAU,inc:r.g()*0.6,rev:r.pick([3,4,5]),M0:r()*TAU}); break;
-   case 4:  // EMBRYO NURSERY
-     sys.embryos=[];for(i=0;i<48*gm;i++) sys.embryos.push({a:0.12+r()*0.9,rev:r.int(4,12),M0:r()*TAU,ph:r()*TAU}); break;
-   case 5:  // ECCENTRIC CHAOS
-     for(i=0;i<sys.planets.length;i++){var p2=sys.planets[i];p2.e=0.4+r()*0.34;p2.inc=r()*0.7;}
-     sys.kuiper=[];for(i=0;i<700*gm;i++){var ka=r.rng(1.1,1.9);
+   case 4:  // EMBRYO NURSERY — clouds of glowing protoworlds
+     sys.embryos=[];for(i=0;i<90;i++) sys.embryos.push({a:0.12+r()*0.9,rev:r.int(4,12),M0:r()*TAU,ph:r()*TAU}); break;
+   case 5:  // ECCENTRIC CHAOS — wildly eccentric & tilted (preserved by enhancePiece skipping respace)
+     for(i=0;i<sys.planets.length;i++){var p2=sys.planets[i];p2.e=0.45+r()*0.40;p2.inc=r()*0.85;}
+     sys.kuiper=[];for(i=0;i<1100;i++){var ka=r.rng(1.1,1.9);
        sys.kuiper.push({a:ka,e:r()*0.4,peri:r()*TAU,inc:r.g()*0.3,
          rev:Math.max(1,Math.round(Math.pow(ka,-1.5))),M0:r()*TAU});} break;
    case 6:  // BINARY HEART, twin stars, near-circular circumbinary worlds
@@ -1980,7 +1995,7 @@ function extremize(sys,r,ci){
        for(i=0;i<3;i++)sys.planets.push({a:b7*Math.pow(0.55,i+1),e:0.02,peri:r()*TAU,inc:0.02,
          rev:r7*(i+2),M0:r()*TAU,type:0,spin:r()*TAU,ring:false,szMul:0.8,moons:[]});} break;
    case 8:  // FROZEN KUIPER, vast icy outer realm
-     sys.kuiper=[];for(i=0;i<1500*gm;i++){var ka2=r.rng(1.05,1.78);
+     sys.kuiper=[];for(i=0;i<3000;i++){var ka2=r.rng(1.05,1.78);
        sys.kuiper.push({a:ka2,e:r()*0.3,peri:r()*TAU,inc:r.g()*0.2,
          rev:Math.max(1,Math.round(Math.pow(ka2,-1.5))),M0:r()*TAU});} break;
    case 9:  // HOT-JUPITER FORGE, close-in giants, scorched worlds
@@ -1991,7 +2006,7 @@ function extremize(sys,r,ci){
      if(sys.planets[0]){sys.planets[0].type=1;sys.planets[0].ring=true;sys.planets[0].szMul*=2.4;} break;
    case 11: // TROJAN SWARMS, co-orbital clouds at a host's L4/L5
      sys.asteroids=[];var host=sys.planets[Math.min(1,sys.planets.length-1)];
-     if(host)for(i=0;i<1400*gm;i++){var lead=r()<0.5;
+     if(host)for(i=0;i<2800;i++){var lead=r()<0.5;
        sys.asteroids.push({a:host.a*(1+r.g()*0.04),e:host.e+r()*0.03,peri:host.peri,inc:r.g()*0.05,
          rev:host.rev,M0:host.M0+(lead?1.047:-1.047)+r.g()*0.20});} break;
   }
@@ -2034,7 +2049,9 @@ function applyCoreOverride(ci){
   var arch=(ovr&&typeof ovr.archetype==='number')?Math.max(0,Math.min(11,ovr.archetype|0)):ci;
   system=buildSystem(seed,0);
   extremize(system,mk((seed^0xABCDEF)>>>0),arch);
-  coreBoost(system,mk((seed^0x5A17C0)>>>0));
+  // Skip coreBoost for archetypes whose structure it would overwrite
+  // (ECCENTRIC CHAOS / RESONANCE CATHEDRAL / MEGA-RING WORLD).
+  if(arch!==5 && arch!==7 && arch!==10) coreBoost(system,mk((seed^0x5A17C0)>>>0));
   system.isCore=true;system._arch=arch;system._ci=ci;
   system.coreProfile=CORE_PROFILES[arch];
   if(ovr&&ovr.name){CORE_NAMES_OVR[ci]=ovr.name;system.coreName=ovr.name;}
@@ -2100,7 +2117,7 @@ var coreEditor=(function(){
     var ci=coreView, arch=+$arch.value, seed=CORE_SEEDS[3+ci];
     system=buildSystem(seed,0);
     extremize(system,mk((seed^0xABCDEF)>>>0),arch);
-    coreBoost(system,mk((seed^0x5A17C0)>>>0));
+    if(arch!==5 && arch!==7 && arch!==10) coreBoost(system,mk((seed^0x5A17C0)>>>0));
     system.isCore=true; system._arch=arch; system._ci=ci; system.coreProfile=CORE_PROFILES[arch];
     system.coreName=CORE_NAMES_OVR[ci]||JOSEPH_15[3+ci];
     enhancePiece(system,0);

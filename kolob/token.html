@@ -262,10 +262,15 @@ cv.addEventListener('pointerup',function(){drag=false;});
 cv.addEventListener('wheel',function(e){e.preventDefault();zoom*=Math.exp(-e.deltaY*0.0012);zoom=Math.max(0.3,Math.min(9,zoom));},{passive:false});
 
 /* ── render primitives ── */
-/* star-forward composition: seeded zoom-in + off-centre framing (set per piece) */
+/* star-forward composition: seeded zoom-in + off-centre framing (set per piece).
+   Aspect-aware: portrait viewports dial back the off-center offset & zoom so
+   the system never slides off-frame; recomputed each frame so rotation
+   re-frames automatically. */
 var vZoom=1,vOffX=0,vOffY=0;
-function vcx(){return CX+vOffX*W;}
-function vcy(){return CY+vOffY*H;}
+function _portraitT(){var a=W/H;return a<1?Math.min(1,a/0.9):1;}
+function vcx(){return CX+vOffX*W*_portraitT();}
+function vcy(){return CY+vOffY*H*_portraitT();}
+function _effZoom(){var p=_portraitT();return vZoom*(0.45+0.55*p);}
 function project(x,y,z,cosP,sinP,scale){var rx=x*cosP-y*sinP,ry=x*sinP+y*cosP;
   return [vcx()+rx*scale,vcy()+ry*scale*tilt-z*scale*(1-tilt),ry];}
 /* solid bodies via ctx (planets/moons/comet heads) — fractional CSS-px points */
@@ -347,18 +352,18 @@ function applyRelics(sys,tier,r){
       sys.stars[0].off=sys.sep*STAR[s2].rad/mm;sys.stars[1].off=-sys.sep*STAR[sys.stars[0].cls].rad/mm;}
     for(var i=0;i<10;i++) sys.comets.push({a:r.rng(1.1,2.1),e:r.rng(0.6,0.92),peri:r()*TAU,inc:r.g()*0.5,rev:r.pick([3,4,5]),M0:r()*TAU});}}
 
-function extremize(sys,r,ci){var i,m,gm=1;
+function extremize(sys,r,ci){var i,m;
   for(i=0;i<sys.planets.length;i++){var pl=sys.planets[i];pl.szMul*=1.3+r()*0.7;pl.e=Math.min(0.5,pl.e+r()*0.18);}
   switch(ci){
-   case 0: for(i=0;i<sys.planets.length;i++){sys.planets[i].ring=true;sys.planets[i].szMul*=1.35;} break;
-   case 1: for(i=0;i<sys.planets.length;i++){var p1=sys.planets[i],mr=[12,9,7,5,4,3,2],ad=r.int(4,9)*gm;
+   case 0: for(i=0;i<sys.planets.length;i++){sys.planets[i].ring=true;sys.planets[i].szMul*=1.4;} break;
+   case 1: for(i=0;i<sys.planets.length;i++){var p1=sys.planets[i],mr=[12,9,7,5,4,3,2],ad=r.int(8,14);
        for(m=0;m<ad;m++) p1.moons.push({a:0.05+p1.moons.length*0.026+r()*0.012,rev:mr[m%mr.length],M0:r()*TAU,peri:r()*TAU});} break;
-   case 2: sys.asteroids=[];for(i=0;i<2800*gm;i++){var aa=r.rng(0.3,1.5);
+   case 2: sys.asteroids=[];for(i=0;i<5000;i++){var aa=r.rng(0.3,1.5);
        sys.asteroids.push({a:aa,e:r()*0.25,peri:r()*TAU,inc:r.g()*0.15,rev:Math.max(1,Math.round(Math.pow(aa,-1.5))),M0:r()*TAU});} break;
-   case 3: sys.comets=[];for(i=0;i<30*gm;i++) sys.comets.push({a:r.rng(1.0,2.4),e:r.rng(0.6,0.95),peri:r()*TAU,inc:r.g()*0.6,rev:r.pick([3,4,5]),M0:r()*TAU}); break;
-   case 4: sys.embryos=[];for(i=0;i<48*gm;i++) sys.embryos.push({a:0.12+r()*0.9,rev:r.int(4,12),M0:r()*TAU,ph:r()*TAU}); break;
-   case 5: for(i=0;i<sys.planets.length;i++){var p2=sys.planets[i];p2.e=0.4+r()*0.34;p2.inc=r()*0.7;}
-     sys.kuiper=[];for(i=0;i<700*gm;i++){var ka=r.rng(1.1,1.9);sys.kuiper.push({a:ka,e:r()*0.4,peri:r()*TAU,inc:r.g()*0.3,rev:Math.max(1,Math.round(Math.pow(ka,-1.5))),M0:r()*TAU});} break;
+   case 3: sys.comets=[];for(i=0;i<55;i++) sys.comets.push({a:r.rng(1.0,2.4),e:r.rng(0.6,0.95),peri:r()*TAU,inc:r.g()*0.6,rev:r.pick([3,4,5]),M0:r()*TAU}); break;
+   case 4: sys.embryos=[];for(i=0;i<90;i++) sys.embryos.push({a:0.12+r()*0.9,rev:r.int(4,12),M0:r()*TAU,ph:r()*TAU}); break;
+   case 5: for(i=0;i<sys.planets.length;i++){var p2=sys.planets[i];p2.e=0.45+r()*0.40;p2.inc=r()*0.85;}
+     sys.kuiper=[];for(i=0;i<1100;i++){var ka=r.rng(1.1,1.9);sys.kuiper.push({a:ka,e:r()*0.4,peri:r()*TAU,inc:r.g()*0.3,rev:Math.max(1,Math.round(Math.pow(ka,-1.5))),M0:r()*TAU});} break;
    case 6: if(sys.stars.length<2){sys.stars.push({cls:Math.min(6,sys.stars[0].cls+1)});}
      sys.binary=true;sys.sep=0.13;sys.binRev=12;var mm=STAR[sys.stars[0].cls].rad+STAR[sys.stars[1].cls].rad;
      sys.stars[0].off=sys.sep*STAR[sys.stars[1].cls].rad/mm;sys.stars[1].off=-sys.sep*STAR[sys.stars[0].cls].rad/mm;
@@ -366,12 +371,12 @@ function extremize(sys,r,ci){var i,m,gm=1;
    case 7: for(i=0;i<sys.planets.length;i++){sys.planets[i].e*=0.3;sys.planets[i].inc*=0.4;}
      if(sys.planets[0]){var b7=sys.planets[0].a,r7=sys.planets[0].rev;
        for(i=0;i<3;i++)sys.planets.push({a:b7*Math.pow(0.55,i+1),e:0.02,peri:r()*TAU,inc:0.02,rev:r7*(i+2),M0:r()*TAU,type:0,spin:r()*TAU,ring:false,szMul:0.8,moons:[]});} break;
-   case 8: sys.kuiper=[];for(i=0;i<1500*gm;i++){var ka2=r.rng(1.05,1.78);sys.kuiper.push({a:ka2,e:r()*0.3,peri:r()*TAU,inc:r.g()*0.2,rev:Math.max(1,Math.round(Math.pow(ka2,-1.5))),M0:r()*TAU});} break;
+   case 8: sys.kuiper=[];for(i=0;i<3000;i++){var ka2=r.rng(1.05,1.78);sys.kuiper.push({a:ka2,e:r()*0.3,peri:r()*TAU,inc:r.g()*0.2,rev:Math.max(1,Math.round(Math.pow(ka2,-1.5))),M0:r()*TAU});} break;
    case 9: for(i=0;i<sys.planets.length;i++){var p3=sys.planets[i];if(p3.a<0.5){p3.type=1;p3.szMul*=1.6;p3.ring=r()<0.5;}else p3.type=3;} break;
    case 10: sys.planets=sys.planets.slice(0,Math.min(3,sys.planets.length));
      if(sys.planets[0]){sys.planets[0].type=1;sys.planets[0].ring=true;sys.planets[0].szMul*=2.4;} break;
    case 11: sys.asteroids=[];var host=sys.planets[Math.min(1,sys.planets.length-1)];
-     if(host)for(i=0;i<1400*gm;i++){var lead=r()<0.5;sys.asteroids.push({a:host.a*(1+r.g()*0.04),e:host.e+r()*0.03,peri:host.peri,inc:r.g()*0.05,rev:host.rev,M0:host.M0+(lead?1.047:-1.047)+r.g()*0.20});} break;
+     if(host)for(i=0;i<2800;i++){var lead=r()<0.5;sys.asteroids.push({a:host.a*(1+r.g()*0.04),e:host.e+r()*0.03,peri:host.peri,inc:r.g()*0.05,rev:host.rev,M0:host.M0+(lead?1.047:-1.047)+r.g()*0.20});} break;
   } return sys;}
 /* Core-12 grandeur pass, more planets (well-spaced), 2× belts, prominent comets */
 function coreBoost(sys,r){var orig=sys.planets,oc=orig.length,i;
@@ -510,7 +515,7 @@ function renderSystem(){
   var t=(clock%SYSLOOP)/SYSLOOP,phi=t*TAU+az,cosP=Math.cos(phi),sinP=Math.sin(phi),amax=0.1;
   for(i=0;i<sy.planets.length;i++) amax=Math.max(amax,sy.planets[i].a*(1+sy.planets[i].e));
   var PAL=sy.pal;
-  var scale=scaleRef*zoom*vZoom/amax;
+  var scale=scaleRef*zoom*_effZoom()/amax;
   var stark=sy.wealth===2 && !sy.isCore;
   buf.fill(0);
   /* dust lattice — differential rotation + sparse hard flickers */
@@ -591,9 +596,11 @@ function drawCommon(sy,t,cosP,sinP,scale,stark){
     var pt=PTYPE[pl.type],base=sat(mix(palType(PAL,pl.type),sy.scheme[i%2],0.28),1.35);
     if(stark) base=lt(base,0.14);
     var pr=U*pt.sz*pl.szMul*1.12;
-    var cap=(i===bigA||(sy.planets.length>=5&&i===bigB))?starVis*0.88:starVis*0.50;
+    var megaHero = sy._megaRing && i===0;            // MEGA-RING WORLD's colossus breaks the rules
+    var cap=megaHero?starVis*1.55
+           :(i===bigA||(sy.planets.length>=5&&i===bigB))?starVis*0.88:starVis*0.50;
     if(pr>cap)pr=cap;
-    if(pl.type===1) pr*=0.70;
+    if(pl.type===1 && !megaHero) pr*=0.70;
     var pg=ctx.createRadialGradient(sp[0],sp[1],0,sp[0],sp[1],pr*2.6);
     pg.addColorStop(0,'rgba('+(base[0]|0)+','+(base[1]|0)+','+(base[2]|0)+',0.16)');
     pg.addColorStop(1,'rgba(0,0,0,0)');
@@ -657,8 +664,15 @@ if(INV<3){
 }else if(INV<15){
   var ci=Math.max(0,Math.min(11,ppInt('archetype',INV-3)));   // Creator-mode: archetype swap (PMP)
   var cseed=CORE_SEEDS[3+(INV-3)];
-  system=buildSystem(cseed,0); extremize(system,mk((cseed^0xABCDEF)>>>0),ci); coreBoost(system,mk((cseed^0x5A17C0)>>>0)); system.isCore=true; system._ci=ci;
-  respace(system); densify(system); buildDust(system,true);
+  system=buildSystem(cseed,0); extremize(system,mk((cseed^0xABCDEF)>>>0),ci);
+  // Skip coreBoost for archetypes whose structure it would overwrite —
+  // it rebuilds the planet array with clamped e/inc/szMul and that erases
+  // ECCENTRIC CHAOS / RESONANCE CATHEDRAL / MEGA-RING WORLD identity.
+  if(ci!==5 && ci!==7 && ci!==10) coreBoost(system,mk((cseed^0x5A17C0)>>>0));
+  system.isCore=true; system._ci=ci; system._arch=ci;
+  if(ci===10) system._megaRing=true;                                 // MEGA-RING WORLD: cap exemption
+  if(ci!==5 && ci!==7 && ci!==10) respace(system);                   // and the same archetypes skip respace
+  densify(system); buildDust(system,true);
   var rc=mk((cseed^0xFADE)>>>0); vZoom=1.06+rc()*0.30; vOffX=(rc()-0.5)*0.08; vOffY=(rc()-0.5)*0.06;
   applyPreset(1);
   mode='system';
