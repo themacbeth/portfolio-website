@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mint Guide, KOLOB</title>
+<link rel="stylesheet" href="site.css">
+<script defer src="site.js"></script>
+<style>
+/* ── infographic layout ─────────────────────────────────────────────────── */
+.ig-wrap{max-width:760px;margin:0 auto;padding:0 24px}
+.ig-rule{border:0;border-top:1px solid var(--line);margin:0}
+.ig-eye{font:9px/1 var(--mono);letter-spacing:.28em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:14px;display:block}
+
+/* big step numbers */
+.ig-steps{counter-reset:igs}
+.ig-step{counter-increment:igs;padding:52px 0;border-bottom:1px solid var(--line)}
+.ig-step:first-child{border-top:1px solid var(--line)}
+.ig-step-head{display:flex;align-items:baseline;gap:18px;margin-bottom:20px}
+.ig-step-num{font:700 72px/1 var(--mono);color:rgba(233,201,135,.18);flex:none}
+.ig-step-num::before{content:counter(igs,"decimal-leading-zero")}
+.ig-step-title{font:500 clamp(20px,4vw,28px)/1.15 var(--font);color:#fff}
+
+/* ── what you get ───────────────────────────────────────────────────────── */
+.facts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;margin-top:20px}
+.fact{padding:20px 18px;background:rgba(255,255,255,.03)}
+.fact.yes{background:rgba(233,201,135,.06);border:1px solid rgba(233,201,135,.2)}
+.fact .fi{font:700 20px/1 sans-serif;margin-bottom:10px;display:block}
+.fact.no .fi{opacity:.25}
+.fact.yes .fi{color:var(--gold)}
+.fact b{display:block;font:500 12px/1.3 var(--font);color:#cdd0d8;margin-bottom:5px}
+.fact p{margin:0;font:11px/1.6 var(--font);color:var(--dim)}
+
+/* ── choose cards ───────────────────────────────────────────────────────── */
+.choose{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-top:20px}
+.ch{padding:28px 24px}
+.ch-throne{background:rgba(127,200,255,.05);border:1px solid rgba(127,200,255,.2)}
+.ch-core  {background:rgba(233,201,135,.05);border:1px solid rgba(233,201,135,.2)}
+.ch-kind{font:9px/1 var(--mono);letter-spacing:.24em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:16px;display:flex;justify-content:space-between}
+.ch-price{font:700 clamp(28px,5vw,44px)/1 var(--mono);color:#fff;margin-bottom:4px}
+.ch-from{font:11px/1 var(--mono);color:var(--dim);letter-spacing:.06em;margin-bottom:18px;display:block}
+.ch ul{margin:0;padding:0;list-style:none}
+.ch li{font:12px/1 var(--font);color:var(--dim);padding:7px 0;
+  border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:8px}
+.ch li::before{content:'';width:6px;height:6px;border-radius:50%;flex:none}
+.ch-throne li::before{background:rgba(127,200,255,.5)}
+.ch-core   li::before{background:rgba(233,201,135,.5)}
+.ch li.hl{color:#fff;font-weight:500}
+
+/* ── visual preview rows ─────────────────────────────────────────────────── */
+.vis-row{display:grid;gap:2px;margin-top:2px}
+.vis-row.cols3{grid-template-columns:1fr 1fr 1fr}
+.vis-row.cols2{grid-template-columns:1fr 1fr}
+.vis-cell{display:flex;flex-direction:column}
+.vis-label{font:9px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;
+  color:var(--dim);padding:10px 12px;background:rgba(255,255,255,.03);text-align:center}
+
+/* ── mint + explore ─────────────────────────────────────────────────────── */
+.twoup{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-top:20px}
+.twoup-cell{padding:24px 22px;background:rgba(255,255,255,.03)}
+.twoup-cell b{display:block;font:500 14px/1.3 var(--font);color:#fff;margin-bottom:8px}
+.twoup-cell p{margin:0;font:13px/1.65 var(--font);color:var(--dim)}
+
+/* ── kingdom path ───────────────────────────────────────────────────────── */
+.kpath-row{display:grid;grid-template-columns:1fr 80px 1fr 80px 1fr;align-items:stretch;gap:0;margin-top:20px}
+.kp{padding:22px 18px}
+.kp-tel{background:rgba(127,200,255,.07);border:1px solid rgba(127,200,255,.3)}
+.kp-ter{background:rgba(233,143,206,.07);border:1px solid rgba(233,143,206,.3)}
+.kp-cel{background:rgba(233,201,135,.09);border:1px solid rgba(233,201,135,.35)}
+.kp-tier{font:9px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;margin-bottom:10px;display:block}
+.kp-tel .kp-tier{color:var(--cyan)}
+.kp-ter .kp-tier{color:var(--mag)}
+.kp-cel .kp-tier{color:var(--gold)}
+.kp-price{font:700 20px/1 var(--mono);color:#fff;margin-bottom:10px;display:block}
+.kp ul{margin:0;padding:0;list-style:none}
+.kp li{font:11px/1.7 var(--font);color:var(--dim)}
+.kp-gap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}
+.kp-gap .plus{font:10px/1 var(--mono);color:var(--dim);letter-spacing:.06em}
+.kp-gap .eth{font:700 12px/1 var(--mono);color:#fff}
+.kp-gap .arr{font:22px/1 var(--mono);color:var(--dim)}
+
+/* ── deadline split ─────────────────────────────────────────────────────── */
+.od-bar{display:grid;grid-template-columns:1fr auto 1fr;gap:0;min-height:100px;margin-top:20px}
+.od-safe{background:rgba(127,200,255,.05);border:1px solid rgba(127,200,255,.2);
+  padding:22px 20px;display:flex;flex-direction:column;justify-content:center}
+.od-dark{background:#060405;border:1px solid #1a1410;
+  padding:22px 20px;display:flex;flex-direction:column;justify-content:center}
+.od-pivot{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:12px 10px;gap:6px;position:relative}
+.od-pivot::before{content:'';position:absolute;top:0;bottom:0;left:50%;
+  width:1px;background:#1a1410}
+.od-pivot .pivdate{font:700 9px/1.4 var(--mono);color:#e0d6c2;text-align:center;
+  letter-spacing:.06em;position:relative;z-index:1;background:#0d0b0c;padding:4px 6px}
+.od-pivot .pivtri{font:18px/1 var(--mono);color:#c9a96b;position:relative;z-index:1}
+.od-safe .label{font:700 9px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--cyan);margin-bottom:8px}
+.od-dark .label{font:700 9px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:#c9a96b;margin-bottom:8px}
+.od-safe p,.od-dark p{margin:0;font:12px/1.65 var(--font);color:var(--dim)}
+.od-dark p b{color:#e0d6c2}
+
+/* ── FAQ ────────────────────────────────────────────────────────────────── */
+.faq-item{border-bottom:1px solid var(--line);padding:16px 0}
+.faq-item:first-child{border-top:1px solid var(--line)}
+.faq-item b{display:block;font:500 13px/1.3 var(--font);color:#cdd0d8;margin-bottom:6px}
+.faq-item p{margin:0;font:13px/1.65 var(--font);color:var(--dim)}
+
+/* ── responsive ─────────────────────────────────────────────────────────── */
+@media(max-width:600px){
+  .facts,.choose,.twoup,.vis-row.cols2,.vis-row.cols3{grid-template-columns:1fr}
+  .kpath-row{display:block}
+  .kp-gap{display:none}
+  .kp{margin-bottom:2px}
+  .od-bar{grid-template-columns:1fr}
+  .od-pivot{display:none}
+  .ig-step-num{font-size:48px}
+}
+</style>
+<meta property="og:type"        content="website">
+<meta property="og:site_name"   content="KOLOB">
+<meta property="og:title"       content="Mint Guide · KOLOB">
+<meta property="og:description" content="How to mint KOLOB. Four steps, one decision.">
+<meta property="og:image"       content="https://macbeth.gallery/kolob/share.jpg">
+<meta property="og:url"         content="https://macbeth.gallery/kolob/mint-guide.html">
+<meta name="twitter:card"       content="summary_large_image">
+<meta name="twitter:title"      content="Mint Guide · KOLOB">
+<meta name="twitter:description" content="How to mint KOLOB. Four steps, one decision.">
+<meta name="twitter:image"      content="https://macbeth.gallery/kolob/share.jpg">
+</head>
+<body>
+
+<nav class="nav">
+  <a class="brand" href="index.html">KOLOB</a>
+  <a href="theorem.html">THEOREM</a>
+  <a href="core15.html">CORE 15</a>
+  <a href="collection.html">COLLECTION</a>
+  <a href="how-it-works.html">HOW IT WORKS</a>
+  <a class="active" href="mint.html">MINT</a>
+  <a class="enter" href="kolob-pod-1d.html">ENTER ▸</a>
+</nav>
+
+<!-- ── hero ──────────────────────────────────────────────────────────────── -->
+<section class="wrap" style="padding-top:150px;padding-bottom:56px">
+  <div class="ig-wrap" style="padding:0">
+    <p class="eyebrow">Mint guide</p>
+    <h1 style="font-size:clamp(44px,8vw,88px);line-height:1">Four steps.<br><span style="color:rgba(255,255,255,.3)">One decision.</span></h1>
+    <p style="margin-top:20px;font:14px/1.6 var(--font);color:var(--dim);max-width:480px">No prior experience needed. Here is exactly what happens when you mint, and the one thing you need to do afterward.</p>
+  </div>
+</section>
+
+<hr class="ig-rule">
+
+<section class="wrap" style="padding:0 0 80px">
+<div class="ig-wrap">
+<div class="ig-steps">
+
+  <!-- ── STEP 01 ───────────────────────────────────────────────────────────── -->
+  <div class="ig-step">
+    <div class="ig-step-head">
+      <div class="ig-step-num"></div>
+      <div class="ig-step-title">Understand what you own</div>
+    </div>
+    <div class="facts">
+      <div class="fact no">
+        <span class="fi">✗</span>
+        <b>Not an image file</b>
+        <p>No JPEG, no PNG, nothing stored on a server or IPFS.</p>
+      </div>
+      <div class="fact no">
+        <span class="fi">✗</span>
+        <b>Not a video or GIF</b>
+        <p>Not recorded. Not cached. Not static in any way.</p>
+      </div>
+      <div class="fact yes">
+        <span class="fi">✦</span>
+        <b>A program on Ethereum</b>
+        <p>Your browser downloads it from the chain and runs it live: stars orbiting, belts shimmering, every time you look. Forever.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 02 ───────────────────────────────────────────────────────────── -->
+  <div class="ig-step">
+    <div class="ig-step-head">
+      <div class="ig-step-num"></div>
+      <div class="ig-step-title">Choose what to mint</div>
+    </div>
+
+    <div class="choose">
+      <div class="ch ch-throne">
+        <div class="ch-kind"><span>Throne</span><span>129 available</span></div>
+        <div class="ch-price">0.01<span style="font-size:.45em;opacity:.6"> ETH</span></div>
+        <span class="ch-from">to start · up to 0.10 ETH fully advanced</span>
+        <ul>
+          <li>Your own unique solar system</li>
+          <li>No two are alike</li>
+          <li>Advance it inward through the kingdoms</li>
+          <li>Starts sparse, grows richer as you pay</li>
+        </ul>
+      </div>
+      <div class="ch ch-core">
+        <div class="ch-kind"><span>Core 15</span><span>15 total · sealed</span></div>
+        <div class="ch-price">0.20–<wbr>0.50<span style="font-size:.45em;opacity:.6"> ETH</span></div>
+        <span class="ch-from">final price · already at maximum richness</span>
+        <ul>
+          <li>One of 15 named, one-of-one pieces</li>
+          <li>3 great stars · 12 governing systems</li>
+          <li>No advancement needed, already celestial</li>
+          <li class="hl"><b>Set a canonical name on-chain</b></li>
+          <li class="hl"><b>Adjust visual parameters post-mint</b></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- visual examples -->
+    <div style="margin-top:28px">
+      <span class="ig-eye">The same throne across all three kingdoms</span>
+      <div class="vis-row cols3">
+        <div class="vis-cell">
+          <div class="swatch"><iframe class="liveframe" scrolling="no" data-src="token.html?inv=44&tier=2&lite=1" title="Telestial throne"></iframe></div>
+          <span class="vis-label" style="color:var(--cyan)">Telestial · 0.01 ETH</span>
+        </div>
+        <div class="vis-cell">
+          <div class="swatch"><iframe class="liveframe" scrolling="no" data-src="token.html?inv=44&tier=1&lite=1" title="Terrestrial throne"></iframe></div>
+          <span class="vis-label" style="color:var(--mag)">Terrestrial · 0.05 ETH total</span>
+        </div>
+        <div class="vis-cell">
+          <div class="swatch"><iframe class="liveframe" scrolling="no" data-src="token.html?inv=44&tier=0&lite=1" title="Celestial throne"></iframe></div>
+          <span class="vis-label" style="color:var(--gold)">Celestial · 0.10 ETH total</span>
+        </div>
+      </div>
+
+      <div style="margin-top:20px">
+        <span class="ig-eye">Core 15 examples</span>
+        <div class="vis-row cols2">
+          <div class="vis-cell">
+            <div class="swatch"><iframe class="liveframe" scrolling="no" data-src="token.html?inv=9&lite=1" title="Binary Heart core system"></iframe></div>
+            <span class="vis-label">Core System · Binary Heart</span>
+          </div>
+          <div class="vis-cell">
+            <div class="swatch"><iframe class="liveframe" scrolling="no" data-src="token.html?inv=0&lite=1" title="Oleblish great star"></iframe></div>
+            <span class="vis-label">Great Star · Oleblish</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 03 ───────────────────────────────────────────────────────────── -->
+  <div class="ig-step">
+    <div class="ig-step-head">
+      <div class="ig-step-num"></div>
+      <div class="ig-step-title">Mint, then explore</div>
+    </div>
+    <div class="twoup">
+      <div class="twoup-cell">
+        <b>Minting</b>
+        <p>On the <a href="mint.html" style="color:var(--cyan)">Mint page</a>, click Connect Wallet, then Mint. Confirm the transaction in your wallet. Your token arrives in under a minute. You need an Ethereum wallet (MetaMask, Coinbase Wallet, WalletConnect) with a little more ETH than the mint price to cover gas.</p>
+      </div>
+      <div class="twoup-cell">
+        <b>Exploring</b>
+        <p>Click VIEW next to your piece. The KOLOB explorer opens with your world running live. No loading, no servers. Or visit the <a href="kolob-pod-1d.html" style="color:var(--cyan)">galaxy explorer</a> to browse the full collection. Your token is visible to any wallet, on any device, instantly.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STEP 04 ───────────────────────────────────────────────────────────── -->
+  <div class="ig-step">
+    <div class="ig-step-head">
+      <div class="ig-step-num"></div>
+      <div class="ig-step-title">Advance your Throne<br><span style="color:rgba(255,255,255,.35);font-size:.75em">Core 15 holders: skip this step.</span></div>
+    </div>
+
+    <p style="font:13px/1.7 var(--font);color:var(--dim);margin:0 0 0">Every Throne starts at <b style="color:#7fc8ff">Telestial</b>. Pay to move it inward and it crosses a veil. A cinematic plays, your world emerges richer. You can advance one step at a time. You cannot go back.</p>
+
+    <div class="kpath-row">
+      <div class="kp kp-tel">
+        <span class="kp-tier">Telestial</span>
+        <span class="kp-price">0.01 ETH</span>
+        <ul><li>Where you start</li><li>Sparse · outer rim</li><li>Quiet, few planets</li></ul>
+      </div>
+      <div class="kp-gap">
+        <span class="plus">advance</span><span class="eth">+0.04</span><span class="arr">→</span>
+      </div>
+      <div class="kp kp-ter">
+        <span class="kp-tier">Terrestrial</span>
+        <span class="kp-price">0.05 ETH total</span>
+        <ul><li>Ringed giant joins</li><li>More planets · moons</li><li>Warmer palette</li></ul>
+      </div>
+      <div class="kp-gap">
+        <span class="plus">advance</span><span class="eth">+0.05</span><span class="arr">→</span>
+      </div>
+      <div class="kp kp-cel">
+        <span class="kp-tier">Celestial</span>
+        <span class="kp-price">0.10 ETH total</span>
+        <ul><li>Binary companion star</li><li>Comet swarm</li><li>Gold palette · densest</li></ul>
+      </div>
+    </div>
+
+    <p style="font:11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:32px 0 0">The one deadline</p>
+
+    <div class="od-bar">
+      <div class="od-safe">
+        <div class="label">Safe zone</div>
+        <p>Advance at least to Terrestrial and you are permanently protected. No further obligation.</p>
+      </div>
+      <div class="od-pivot">
+        <span class="pivdate">22 OCT<br>2026<br>UTC</span>
+        <span class="pivtri">▼</span>
+      </div>
+      <div class="od-dark">
+        <div class="label">Outer Darkness</div>
+        <p><b>Permanent.</b> Monochrome. Silent. No orbits. Any Throne still at Telestial after this date is locked there forever by the smart contract. No override, no exception.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:2px;display:flex;align-items:center;gap:16px;
+      padding:16px 18px;border:1px solid #1a1410;background:#0a0809">
+      <div>
+        <div style="font:700 40px/1 var(--mono);color:#e0d6c2"><span class="odDays">…</span></div>
+        <div style="font:9px/1.4 var(--mono);letter-spacing:.1em;color:#c9a96b;margin-top:4px">DAYS REMAINING</div>
+      </div>
+      <div style="flex:1;font:12px/1.65 var(--font);color:var(--dim)">
+        Minimum action: advance once to Terrestrial (+0.04 ETH). That is enough. Core 15 holders are unaffected. This deadline is only for Thrones at Telestial.
+      </div>
+      <a href="token.html?inv=35&od" style="flex:none;font:9px/1 var(--mono);
+        letter-spacing:.18em;text-transform:uppercase;color:var(--cyan);
+        text-decoration:underline;white-space:nowrap">Preview<br>Outer Darkness ▸</a>
+    </div>
+  </div>
+
+</div><!-- /ig-steps -->
+
+<!-- ── FAQ ────────────────────────────────────────────────────────────────── -->
+<div style="margin-top:56px">
+  <span class="ig-eye">Common questions</span>
+  <div class="faq-item">
+    <b>Is the artwork stored on a server or IPFS somewhere?</b>
+    <p>No. The program lives directly on Ethereum, not a file, not a cloud server. Your browser downloads and runs it from the chain every time. If Ethereum is live, your piece is live.</p>
+  </div>
+  <div class="faq-item">
+    <b>Do I have to advance both kingdoms, or can I stop at Terrestrial?</b>
+    <p>You can stop at Terrestrial. That is a valid final state and it protects you from the deadline. Celestial is optional. You can advance both before the deadline. Your call.</p>
+  </div>
+  <div class="faq-item">
+    <b>What if I sell my Throne before advancing it?</b>
+    <p>The new owner inherits the throne at whatever state it is in. They control the advancement and carry the deadline risk. If you are selling a Telestial throne close to October 2026, be transparent about it.</p>
+  </div>
+</div>
+
+<p style="margin-top:52px">
+  <a class="btn primary" href="mint.html">OPEN THE MINT ▸</a>
+  <a class="btn ghost" href="how-it-works.html">TECHNICAL DETAILS</a>
+</p>
+
+</div><!-- /ig-wrap -->
+</section>
+
+<footer class="foot">
+  <div class="links"></div>
+  KOLOB · mint guide
+</footer>
+
+<script>
+// lazy-load iframes + freeze after warmup
+var io2=new IntersectionObserver(function(es){es.forEach(function(e){
+  var f=e.target;
+  if(e.isIntersecting){
+    if(!f.dataset.loaded){
+      f.dataset.loaded='1';f.src=f.dataset.src;
+      f.addEventListener('load',function(){
+        setTimeout(function(){try{f.contentWindow.postMessage('kolob:pause','*');}catch(_){}},3200);});
+    }
+  } else {
+    try{f.contentWindow.postMessage('kolob:pause','*');}catch(_){}
+  }
+});},{rootMargin:'120px',threshold:0.01});
+document.querySelectorAll('.liveframe').forEach(function(f){io2.observe(f);});
+</script>
+</body>
+</html>

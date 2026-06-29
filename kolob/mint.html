@@ -32,6 +32,20 @@
     text-transform:uppercase;background:none;border:0}
   .tlink:hover{color:#fff}
   @media(max-width:600px){.mrow{flex-wrap:wrap}.mrow .pr{order:3}.mbtn{margin-left:auto}}
+  /* 3-step plain-language guide */
+  .mintflow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:28px 0 6px;text-align:left}
+  .mfs{border:1px solid var(--line);padding:15px 16px}
+  .mfs .mn{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;
+    border-radius:50%;background:rgba(233,201,135,.12);border:1px solid rgba(233,201,135,.3);
+    font:700 9px/1 var(--mono);color:var(--gold,#e9c987);margin-bottom:9px}
+  .mfs b{display:block;font:500 13px/1.2 var(--font);color:#fff;margin-bottom:6px}
+  .mfs p{margin:0;font:11px/1.6 var(--font);color:var(--dim)}
+  .mglink{display:block;text-align:center;margin:14px 0 26px;
+    font:10px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;
+    color:var(--dim);text-decoration:underline}
+  .mglink:hover{color:#fff}
+  .mfdiv{border-top:1px solid var(--line);margin-bottom:28px}
+  @media(max-width:560px){.mintflow{grid-template-columns:1fr}}
 </style>
 <meta property="og:type"        content="website">
 <meta property="og:site_name"   content="KOLOB">
@@ -69,6 +83,17 @@
     <p class="eyebrow" style="margin-bottom:14px">Mint · <span class="dry">Dry Run</span></p>
     <h1 style="font-size:clamp(44px,8vw,92px)">144</h1>
     <p class="lede" style="margin-top:20px">129 thrones, 15 sealed at the core.</p>
+
+    <div class="mintflow">
+      <div class="mfs"><span class="mn">1</span><b>Mint</b>
+        <p>0.01 ETH. A unique living solar system, drawn from your token. No images, no servers.</p></div>
+      <div class="mfs"><span class="mn">2</span><b>Explore</b>
+        <p>Watch your world run live: planets orbiting, belts shimmering, in any browser, forever.</p></div>
+      <div class="mfs"><span class="mn">3</span><b>Advance before 22 Oct 2026</b>
+        <p>Pay +0.04 ETH to move inward. Miss the deadline at Telestial and your throne drifts to Outer Darkness. Permanently.</p></div>
+    </div>
+    <a class="mglink" href="mint-guide.html">Full mint guide: what to expect, what choices to make ▸</a>
+    <div class="mfdiv"></div>
 
     <div class="wallet">
       <button class="mbtn" id="connect">Connect Wallet</button>

@@ -709,10 +709,15 @@ window.$features=feat;
 
 /* ── loop ── */
 var renderPaused=false;   // embeds pause when scrolled off-screen (no effect on AB)
+var _tspd=0.15;           // orbit speed; [ ] keys adjust at runtime
 addEventListener('message',function(e){var d=e&&e.data;
   if(d==='kolob:pause')renderPaused=true; else if(d==='kolob:play')renderPaused=false;});
+addEventListener('keydown',function(e){
+  if(e.key===']') _tspd=Math.min(1.2,_tspd*1.5);
+  else if(e.key==='[') _tspd=Math.max(0.03,_tspd/1.5);
+});
 function loop(){ if(renderPaused){requestAnimationFrame(loop);return;}
-  clock+=0.3; if(mode==='star') renderStar(); else renderSystem(); requestAnimationFrame(loop);}
+  clock+=_tspd; if(mode==='star') renderStar(); else renderSystem(); requestAnimationFrame(loop);}
 loop();
 </script>
 </body>

@@ -686,6 +686,7 @@ addEventListener('resize',resize);resize();
 // View state
 var mode="galaxy",system=null,curNode=-1,hoverStar=-1;
 var zoom=1,az=0,tilt=0.52,clock=0,speed=REDUCE_MOTION?0.08:0.3,paused=false,hud=true,hover=-1,keySel=-1,keyHeld=false;
+var _dspd=0.5; // display-mode speed multiplier (galaxy always runs at 1×)
 var cinematic=false,cinematicTime=0,cinematicUI=true,ownMode=false;
 // cinematic camera: glides to a new composition every camFreq seconds
 var camFreq=10,camT=0,camDur=480,camFromAz=0,camFromTilt=0.5,camFromZoom=1,
@@ -943,7 +944,7 @@ function showReward(t){ if(!$reward)return; $reward.textContent=REWARD[t]||"";
 var veilActive=false,veilT=0,veilNode=-1,veilDidAdvance=false,veilSpin=0,veilNz=0;
 var veilFrom=[110,215,255],veilTo=[255,110,210],veilPts=[],warpStars=[];
 // Ceremonial veil: slow passage through dust, total darkness, palette-shift emergence
-var VEIL_DUR=IS_MOBILE?320:380;                 // ~5.3–6.3s, deliberately slow
+var VEIL_DUR=IS_MOBILE?640:760;                 // ~10.7–12.7s, 50% slower by design
 function buildVeil(){
   var nP=IS_MOBILE?2400:5200,nW=IS_MOBILE?500:1100,r=mk((curNode*2654435761+777)>>>0),i;
   // dust particles in polar coords: drift inward then outward
@@ -1160,8 +1161,8 @@ addEventListener('keydown',function(e){var k=e.key.toLowerCase();
   if(k==="escape"||(k==="g"&&mode!=="galaxy")){if(cinematic)exitCinematic();goGalaxy();keySel=-1;}
   else if(k===" "){e.preventDefault();paused=!paused;}
   else if(k==="h"){hud=!hud;}
-  else if(k==="]"){speed=Math.min(4,speed*1.5);}
-  else if(k==="["){speed=Math.max(0.04,speed/1.5);}
+  else if(k==="]"){_dspd=Math.min(4,_dspd*1.5);}
+  else if(k==="["){_dspd=Math.max(0.04,_dspd/1.5);}
   // ←/→ step through thrones · ↑/↓ orbit around the galaxy
   else if(k==="arrowleft"||k==="arrowright"){
     var step=(k==="arrowright")?1:-1;
@@ -2155,7 +2156,7 @@ addEventListener('message',function(e){var d=e&&e.data;
   if(d==='kolob:pause')renderPaused=true; else if(d==='kolob:play')renderPaused=false;});
 function loop(){
   if(renderPaused){ requestAnimationFrame(loop); return; }   // idle when scrolled off-screen
-  if(!paused) clock+=speed;
+  if(!paused) clock+=speed*(mode==='galaxy'?1:_dspd);
   // veil cinematic takes over the whole frame while it plays
   if(veilActive){
     veilT+=1/VEIL_DUR;
