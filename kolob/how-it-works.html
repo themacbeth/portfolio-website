@@ -16,7 +16,6 @@
 <meta name="twitter:title"      content="How It Works · KOLOB">
 <meta name="twitter:description" content="Vanilla JS, deterministic, fully on-chain. Art Blocks Engine Flex + PostParams.">
 <meta name="twitter:image"      content="https://macbeth.gallery/kolob/share.jpg">
-
 </head>
 <body>
 
@@ -32,14 +31,14 @@
 
 <!-- ── hero ────────────────────────────────────────────────────────────── -->
 <section class="wrap" style="padding-top:150px;padding-bottom:30px">
-  <p class="eyebrow">How it works</p>
-  <h1 style="font-size:clamp(38px,7vw,78px)">A living galaxy,<br>drawn by the chain.</h1>
-  <p class="lede" style="margin-top:26px">Every KOLOB is a unique solar system,
-  generated live from its token, no images, no servers. Collectors can <em>advance</em> their
-  world inward through the kingdoms, and the fifteen at the core can be <em>authored</em>.</p>
+  <p class="eyebrow">Technical reference</p>
+  <h1 style="font-size:clamp(38px,7vw,78px)">For Art Blocks<br>reviewers.</h1>
+  <p class="lede" style="margin-top:26px">Script properties, PostParams schema, trait derivation,
+  compliance checklist. For a collector-friendly introduction — what KOLOB is, what to mint, and
+  what choices to make — see the <a href="mint-guide.html" style="color:var(--cyan)">Mint Guide ▸</a></p>
 </section>
 
-<!-- ── see it live ─────────────────────────────────────────────────────── -->
+<!-- ── live examples ────────────────────────────────────────────────────── -->
 <section class="wrap" style="padding-top:0">
   <div class="grid cols-3">
     <a class="card live" href="token.html?inv=0"><div class="swatch"><iframe class="liveframe" scrolling="no" data-src="token.html?inv=0&lite=1" title="Oleblish"></iframe></div>
@@ -54,86 +53,8 @@
 <section class="wrap" style="padding-top:60px">
   <div class="article" style="max-width:760px">
 
-    <!-- 1, the idea -->
-    <p class="say">It's code, not a picture.</p>
-    <p class="dim" style="margin-top:14px">When you mint, the blockchain hands the artwork a unique
-    number. That number grows a one-of-a-kind solar system, stars, planets, moons, comets, belts,
-    live in your browser, forever, with nothing stored off-chain.</p>
-    <details class="exp"><summary>The technical bit</summary><div class="body">
-      <p>Deterministic generative art: <code>tokenData.hash</code> seeds a PRNG that builds the
-      whole system. Same hash → same output, every time. Pure vanilla canvas, <b>zero external
-      dependencies</b>, so it qualifies as fully on-chain.</p>
-      <p>Orbits are real Keplerian ellipses in integer mean-motion resonance; belts carry Kirkwood
-      gaps; everything is particles (the "pixel-as-token" aesthetic), composited into a single
-      additive pixel buffer, tens of thousands of points per frame: a full-frame dust lattice,
-      densified belts, and noise-textured planet surfaces (banded gas giants, mottled rock).</p>
-    </div></details>
-
-    <!-- 2, collection structure -->
-    <h2 style="margin-top:70px">144 worlds. 15 are different.</h2>
-    <p class="dim">The collection splits in two: a sealed <b>Core 15</b> at the centre, and
-    <b>129 thrones</b> in the rings around them.</p>
-    <div class="split">
-      <div class="core"><div class="n">15</div><div class="l">Core · sealed</div>
-        <p>3 great suns + 12 governing systems. Fixed identities. Authored by their holders.</p></div>
-      <div class="thr"><div class="n">129</div><div class="l">Thrones</div>
-        <p>Unique systems, seeded by each token's hash. Mintable, and upgradeable through the kingdoms.</p></div>
-    </div>
-    <details class="exp"><summary>How a token knows which it is</summary><div class="body">
-      <p>By its <b>invocation number</b> (mint order): invocations <code>0–2</code> are the great
-      suns, <code>3–14</code> the core systems (all from locked seeds), and <code>15–143</code> are
-      thrones (seeded by the token's own hash). Deterministic and permanent.</p>
-    </div></details>
-
-    <!-- 3, kingdoms -->
-    <h2 style="margin-top:70px">Three kingdoms of light.</h2>
-    <p class="dim">Every throne lives in one of three concentric rings. Further in = rarer, denser,
-    more elaborate.</p>
-    <div class="kings" style="margin-top:14px">
-      <div class="king" style="--kc:var(--cyan)"><p class="kn">Telestial</p><p>The sparse outer rim. Where every throne begins.</p></div>
-      <div class="king" style="--kc:var(--mag)"><p class="kn">Terrestrial</p><p>Richer worlds, more planets, moons, a signature ringed giant.</p></div>
-      <div class="king" style="--kc:var(--gold)"><p class="kn">Celestial</p><p>The gold core, binary star, comet swarm, the densest systems.</p></div>
-    </div>
-
-    <!-- 4, minting -->
-    <h2 style="margin-top:70px">Minting.</h2>
-    <p class="dim">Thrones mint at the base (Telestial). The Core 15 are the premium, one-of-one tier.</p>
-    <table class="ptab">
-      <tr><th>Tier</th><th style="text-align:right">Price</th></tr>
-      <tr><td><span class="dot" style="background:var(--cyan)"></span>Telestial throne</td><td class="price">0.01 ETH</td></tr>
-      <tr><td><span class="dot" style="background:var(--mag)"></span>Terrestrial throne</td><td class="price">0.05 ETH</td></tr>
-      <tr><td><span class="dot" style="background:var(--gold)"></span>Celestial throne</td><td class="price">0.10 ETH</td></tr>
-      <tr><td><span class="dot" style="background:#fff"></span>Core system (×12)</td><td class="price">0.20 ETH</td></tr>
-      <tr><td><span class="dot" style="background:#fff"></span>Great star (×3)</td><td class="price">0.50 ETH</td></tr>
-    </table>
-    <details class="exp"><summary>How the sale runs</summary><div class="body">
-      <p>Distribution uses the <b>Art Blocks Minter Suite</b>, fixed-price, Dutch auction, or
-      allowlist phases, collector-to-contract, non-custodial. The mint is dry-run testable today on
-      the <a href="mint.html" style="color:var(--cyan)">Mint page</a>.</p>
-    </div></details>
-
-    <!-- 5, advancing -->
-    <h2 style="margin-top:70px">Advance through the veil.</h2>
-    <p class="dim">A throne isn't frozen. Pay to move it inward, Telestial → Terrestrial →
-    Celestial, and it crosses a veil of dust in a warp-jump cinematic, emerging richer.</p>
-    <div class="steps" style="margin-top:8px">
-      <div class="step"><h3>Terrestrial</h3><p>Unlocks a signature ringed giant, a warmer palette, and more worlds.</p></div>
-      <div class="step"><h3>Celestial</h3><p>Adds a binary companion star, a comet swarm, a gold palette, the richest state.</p></div>
-    </div>
-    <p class="dim" style="margin-top:18px;font:11px/1.7 var(--mono);color:#c9a96b">⚠ Any Telestial
-    throne still on the rim at <b style="color:#e0d6c2">22 October 2026 UTC</b> drifts into
-    <b style="color:#e0d6c2">Outer Darkness</b>. The drift is <b style="color:#e0d6c2">permanent</b>,
-    the tier PMP locks at the deadline, no repentance, no return. &nbsp;
-    <a href="token.html?inv=35&od" style="color:var(--cyan);text-decoration:underline">Preview the drift ▸</a></p>
-    <details class="exp"><summary>How advancing works on-chain</summary><div class="body">
-      <p>A throne's kingdom is an on-chain <b>PostParam</b> (Art Blocks PMP) set by the token owner;
-      the artwork reads it and re-renders the new tier. PMP supports <b>lock dates</b> and min/max,
-      so the "drift to Outer Darkness" deadline is enforceable on-chain. Requires <b>Engine Flex
-      (core v3.2.5+)</b>.</p>
-    </div></details>
-
-    <!-- 6, creator mode -->
-    <h2 style="margin-top:70px">The Core 15 are authored.</h2>
+    <!-- Core 15 authorship -->
+    <h2 style="margin-top:0">The Core 15 are authored.</h2>
     <p class="dim">Holders of the fifteen don't just own a body, they shape it. Sliders for a sun's
     color, flares and rotation; an archetype swap and palette for a core system; their deity's name.
     Sealed to their token, it becomes a true 1/1.</p>
@@ -165,7 +86,7 @@
     permanent, mutually-distinct ensemble. Every piece is a true 1 of 1, by hue or by archetype,
     forever.</p>
 
-    <!-- 7, on-chain / AB fit -->
+    <!-- Built for Art Blocks -->
     <h2 style="margin-top:70px">Built for Art Blocks.</h2>
     <p class="dim">One script, no dependencies, deterministic, and small enough to live entirely
     on Ethereum.</p>
@@ -191,7 +112,7 @@
       <code>?inv=20</code> (a throne).</p>
     </div></details>
 
-    <!-- 8, Technical Spec, single-table reference for Art Blocks reviewers -->
+    <!-- Technical Spec -->
     <h2 style="margin-top:70px">Technical Spec</h2>
     <p class="dim">A single reference for Art Blocks reviewers.</p>
     <table class="ptab">
@@ -244,10 +165,9 @@
       <li><b style="color:#e0d6c2">Great Suns:</b> each sun's <code>col</code> hue is locked to its own band
         (Oleblish gold, Enish-go-on-dosh blue, Kai-e-vanrash red), so the three can never converge
         to the same colour. Saturation and lightness are free.</li>
-      <li><b style="color:#e0d6c2">Core Systems:</b> <code>archetype</code> is <em>first-come, first-serve</em> —
-        no two sealed core systems can share an archetype. Reference Solidity:
-        <a href="KolobArchetypeValidator.sol" style="color:var(--cyan);text-decoration:underline">KolobArchetypeValidator.sol ↗</a>
-        (first-come claim, atomic release, rejects writes that would duplicate).</li>
+      <li><b style="color:#e0d6c2">Core Systems:</b> <code>archetype</code> is <em>first-come, first-serve</em>
+        globally — no two sealed core systems can share an archetype. Reference Solidity:
+        <a href="contracts/KolobConfigureHook.sol" style="color:var(--cyan);text-decoration:underline">KolobConfigureHook.sol ↗</a>.</li>
     </ul>
 
     <h3 style="margin-top:34px;font-size:14px;letter-spacing:.10em;text-transform:uppercase">Hash Test Suite</h3>
@@ -279,22 +199,17 @@
 
     <p style="margin-top:64px">
       <a class="btn primary" href="kolob-pod-1d.html">ENTER THE GALAXY ▸</a>
-      <a class="btn ghost" href="mint.html">TRY THE MINT</a>
+      <a class="btn ghost" href="mint-guide.html">MINT GUIDE</a>
     </p>
   </div>
 </section>
 
 <footer class="foot">
-  <div class="links">
-    <a href="index.html">Home</a><a href="core15.html">Core 15</a>
-    <a href="collection.html">Collection</a><a href="how-it-works.html">How It Works</a>
-    <a href="mint.html">Mint</a><a href="kolob-pod-1d.html">Explore</a>
-  </div>
+  <div class="links"></div>
   KOLOB · fully on-chain generative art · built for Art Blocks Engine Flex
 </footer>
 
 <script>
-// lazy-load + pause the live example pods
 var io=new IntersectionObserver(function(es){es.forEach(function(e){var f=e.target;
   if(e.isIntersecting){ if(!f.src) f.src=f.dataset.src; try{f.contentWindow.postMessage('kolob:play','*');}catch(_){}}
   else { try{f.contentWindow.postMessage('kolob:pause','*');}catch(_){} }
