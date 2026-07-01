@@ -159,16 +159,24 @@
       Any throne still at <code>tier=2</code> at that moment is <b style="color:#e0d6c2">permanently</b>
       sealed in Outer Darkness, a silent monochrome cold-drift visual (no orbits, no sound,
       deterministic per hash). No repentance, no later overwrite, no return.</p>
-    <p class="dim" style="margin-top:14px">Two project-level constraints on top of PMP, enforced by
-      validator hooks:</p>
+    <p class="dim" style="margin-top:14px">Range, option-list, and lock-date enforcement (tier's 3 options,
+      archetype's 12 options, all six star ranges, the 22 Oct 2026 lock) are native to PMPV0, set once via
+      <code>configureProject()</code>. Four constraints PMPV0 can't express natively are enforced by a
+      custom configure hook instead:</p>
     <ul class="dim" style="margin-top:6px;padding-left:20px;font-size:13px;line-height:1.7">
+      <li><b style="color:#e0d6c2">Thrones:</b> <code>tier</code> only accepts one-directional advances
+        (Telestial → Terrestrial → Celestial); a collector can't move a throne back outward.</li>
+      <li><b style="color:#e0d6c2">Core Systems:</b> <code>archetype</code> is <em>first-come, first-serve</em>
+        globally and immutable once sealed — no two sealed core systems can ever share an archetype.</li>
+      <li><b style="color:#e0d6c2">Core 15:</b> <code>name</code> is capped at 24 bytes.</li>
       <li><b style="color:#e0d6c2">Great Suns:</b> each sun's <code>col</code> hue is locked to its own band
         (Oleblish gold, Enish-go-on-dosh blue, Kai-e-vanrash red), so the three can never converge
         to the same colour. Saturation and lightness are free.</li>
-      <li><b style="color:#e0d6c2">Core Systems:</b> <code>archetype</code> is <em>first-come, first-serve</em>
-        globally — no two sealed core systems can share an archetype. Reference Solidity:
-        <a href="contracts/KolobConfigureHook.sol" style="color:var(--cyan);text-decoration:underline">KolobConfigureHook.sol ↗</a>.</li>
     </ul>
+    <p class="dim" style="margin-top:10px">Reference Solidity:
+      <a href="contracts/KolobConfigureHook.sol" style="color:var(--cyan);text-decoration:underline">KolobConfigureHook.sol ↗</a> ·
+      native PMPV0 project config values:
+      <a href="contracts/PMPV0-project-config.md" style="color:var(--cyan);text-decoration:underline">PMPV0-project-config.md ↗</a></p>
 
     <h3 style="margin-top:34px;font-size:14px;letter-spacing:.10em;text-transform:uppercase">Hash Test Suite</h3>
     <p class="dim">Every one of the 144 invocations rendered live by the on-chain
