@@ -45,16 +45,21 @@ import {IPMPConfigureHook} from "./interfaces/IPMPConfigureHook.sol";
  *   with project-configured min/max — no custom logic needed, intentionally
  *   absent from this contract.
  *
- * ── Encoding notes (UNCONFIRMED — verify with AB team before deploy) ────────
+ * ── Encoding notes (confirmed against PMPV0.sol source, ArtBlocks/artblocks-contracts) ──
  *
- *   pmpInput.configuredValue (bytes32) decoding for Select and HexColor is
- *   NOT documented in the public skill/reference material as of this writing.
- *   This contract assumes:
- *     - Select:   uint256(pmpInput.configuredValue) == index into selectOptions
- *     - HexColor: uint256(pmpInput.configuredValue) == 0x00..RRGGBB (24-bit,
- *                 right-aligned)
- *   Both assumptions are marked below and MUST be confirmed against the real
- *   PMPV0 storage/encoding before this contract is trusted with mainnet funds.
+ *   Read directly from the deployed contract's _getPMPValue / _validatePMPInputAndAuth:
+ *     - Select:       uint256(pmpInput.configuredValue) == index into selectOptions
+ *                      (PMPV0.sol: `selectOptions.get(uint256(pmp.configuredValue))`)
+ *     - HexColor:      uint256(pmpInput.configuredValue) == 0x00..RRGGBB, 24-bit,
+ *                      right-aligned (PMPV0.sol: `_uintToHexColorString`)
+ *     - DecimalRange:  fixed-point, 10 decimal digits — a value of 0.30 is stored
+ *                      as `0.30 * 1e10 = 3_000_000_000` (PMPV0.sol: `_DECIMAL_PRECISION
+ *                      = 10 ** 10`). Not read by this contract, but needed when calling
+ *                      configureProject() — see PMPV0-project-config.md.
+ *     - String:        PMPV0 has NO native length bound on configuredValueString —
+ *                      confirmed by reading _validatePMPInputAndAuth, which only checks
+ *                      configuredValue is empty for String-type params. This is why the
+ *                      `name` check below is necessary, not just precautionary.
  *
  * ── Deployment ────────────────────────────────────────────────────────────────
  *   PMPV0    0x00000000A78E278b2d2e2935FaeBe19ee9F1FF14  (same address, all chains)
@@ -163,7 +168,7 @@ contract KolobConfigureHook is IPMPConfigureHook {
     function _checkTier(uint256 inv, uint256 tokenId, IPMPV0.PMPInput calldata pmpInput) internal view {
         if (inv < INV_THRONE_START || inv > INV_THRONE_END) revert WrongTokenKind("tier");
 
-        uint8 newTier = uint8(uint256(pmpInput.configuredValue)); // ASSUMPTION: Select index
+        uint8 newTier = uint8(uint256(pmpInput.configuredValue)); // Select index, confirmed vs. PMPV0.sol
         uint8 curTier = _currentTier(tokenId);
 
         // Advance-only: new tier must be strictly inward (lower index).
@@ -177,7 +182,7 @@ contract KolobConfigureHook is IPMPConfigureHook {
         if (inv < INV_CORE12_START || inv > INV_CORE12_END) revert WrongTokenKind("archetype");
         if (_archetypeSet[inv]) revert ArchetypeAlreadySet(inv);
 
-        uint256 idx = uint256(pmpInput.configuredValue); // ASSUMPTION: Select index
+        uint256 idx = uint256(pmpInput.configuredValue); // Select index, confirmed vs. PMPV0.sol
         if (idx >= ARCHETYPES.length) revert UnknownArchetype(idx);
 
         bytes32 ph = keccak256(bytes(ARCHETYPES[idx]));
@@ -196,7 +201,7 @@ contract KolobConfigureHook is IPMPConfigureHook {
     function _checkCol(uint256 inv, IPMPV0.PMPInput calldata pmpInput) internal pure {
         if (inv > INV_STARS_END) revert WrongTokenKind("col"); // Great Suns only: inv 0-2
 
-        // ASSUMPTION: 24-bit RGB packed right-aligned in configuredValue.
+        // 24-bit RGB packed right-aligned in configuredValue, confirmed vs. PMPV0.sol.
         uint256 packed = uint256(pmpInput.configuredValue);
         uint8 r = uint8(packed >> 16);
         uint8 g = uint8(packed >> 8);

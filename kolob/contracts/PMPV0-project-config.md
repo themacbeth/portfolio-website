@@ -10,18 +10,22 @@ either directly, through the Art Blocks Creator Dashboard, or via the AB
 
 Each row below is one `PMPInputConfig { key, PMPConfig }`.
 
+`DecimalRange` values are fixed-point with **10 decimal digits** (confirmed in
+`PMPV0.sol`: `_DECIMAL_PRECISION = 10 ** 10`) — `minRange`/`maxRange` must be
+passed as `humanValue * 1e10`, not the raw decimal. Both columns are shown below.
+
 | key | paramType | authOption | selectOptions | minRange | maxRange | pmpLockedAfterTimestamp |
 |---|---|---|---|---|---|---|
 | `tier` | `Select` | `TokenOwner` | `["0","1","2"]` (Celestial, Terrestrial, Telestial) | — | — | `1761091200` (2026-10-22T00:00:00Z) |
 | `archetype` | `Select` | `TokenOwner` | 12 profile names, see below | — | — | — |
 | `name` | `String` | `TokenOwner` | — | — | — | — |
-| `col` | `HexColor` | `TokenOwner` | — | 0x000000 | 0xFFFFFF | — |
-| `density` | `DecimalRange` | `TokenOwner` | — | 0.30 | 1.00 | — |
-| `length` | `DecimalRange` | `TokenOwner` | — | 0.40 | 2.00 | — |
-| `rot` | `DecimalRange` | `TokenOwner` | — | 0.00 | 2.00 | — |
-| `speed` | `DecimalRange` | `TokenOwner` | — | 0.20 | 2.50 | — |
-| `curl` | `DecimalRange` | `TokenOwner` | — | 1.00 | 8.00 | — |
-| `big` | `DecimalRange` | `TokenOwner` | — | 0.00 | 0.40 | — |
+| `col` | `HexColor` | `TokenOwner` | — | `0x000000` | `0xFFFFFF` | — |
+| `density` | `DecimalRange` | `TokenOwner` | — | 0.30 → `3_000_000_000` | 1.00 → `10_000_000_000` | — |
+| `length` | `DecimalRange` | `TokenOwner` | — | 0.40 → `4_000_000_000` | 2.00 → `20_000_000_000` | — |
+| `rot` | `DecimalRange` | `TokenOwner` | — | 0.00 → `0` | 2.00 → `20_000_000_000` | — |
+| `speed` | `DecimalRange` | `TokenOwner` | — | 0.20 → `2_000_000_000` | 2.50 → `25_000_000_000` | — |
+| `curl` | `DecimalRange` | `TokenOwner` | — | 1.00 → `10_000_000_000` | 8.00 → `80_000_000_000` | — |
+| `big` | `DecimalRange` | `TokenOwner` | — | 0.00 → `0` | 0.40 → `4_000_000_000` | — |
 
 `archetype` selectOptions, in index order (must match `ARCHETYPES` in
 `KolobConfigureHook.sol` exactly, since the hook decodes the Select index):
@@ -85,13 +89,24 @@ gate the `tier` write — likely either:
     that contract, or
   - a minter-suite flow that isn't part of the PMP hook system at all.
 
-## Unconfirmed before deploy
+## Encoding — confirmed against PMPV0.sol source
 
-`KolobConfigureHook.sol` assumes, but does not have confirmed from AB docs:
-  - `Select` params encode the chosen option's index as
-    `uint256(pmpInput.configuredValue)`
-  - `HexColor` params encode as a 24-bit `0xRRGGBB` right-aligned in
-    `pmpInput.configuredValue`
+Read directly from `ArtBlocks/artblocks-contracts` (`web3call/PMPV0.sol`),
+not just the docs site — all previously-assumed encodings check out:
+  - `Select`: `uint256(pmpInput.configuredValue)` is the index into
+    `selectOptions` (`selectOptions.get(uint256(pmp.configuredValue))`)
+  - `HexColor`: 24-bit `0xRRGGBB`, right-aligned in `configuredValue`
+    (`_uintToHexColorString`)
+  - `DecimalRange`: 10-decimal fixed point, see table above
+    (`_DECIMAL_PRECISION = 10 ** 10`)
+  - `String`: **no native length bound** — confirmed by reading
+    `_validatePMPInputAndAuth`, which only checks that `configuredValue` is
+    empty for String-type params. This is why `KolobConfigureHook`'s 24-byte
+    `name` check is load-bearing, not just precautionary.
+  - `tokenId = projectId * 1_000_000 + invocation` — confirmed in
+    docs.artblocks.io/developer/core-contract/.
 
-Both need a one-line confirmation from the AB team (or a look at PMPV0's
-actual storage code) before this hook goes anywhere near mainnet.
+Still open — not in the source or docs, needs an actual answer from AB:
+  - the ETH-payment gating pattern for the `tier` advance flow (see below)
+  - whether `configureProjectHooks()` accepts `address(0)` for an unused
+    augment-hook slot
