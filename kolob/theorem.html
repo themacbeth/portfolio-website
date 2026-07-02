@@ -11,23 +11,31 @@
   .mig canvas{display:block;width:100%;height:auto;background:#000}
   .mig .leg{position:absolute;left:14px;bottom:12px;font:11px/1.6 var(--mono);color:#7d818f;letter-spacing:.04em}
   .mig .leg b{color:#fff;font-weight:500}
-  .vocab{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px}
-  .vocab .v{border:1px solid #181820;border-radius:6px;padding:14px 16px;background:#08080c}
-  .vocab .v h4{margin:0 0 6px;font:13px/1.4 var(--mono);letter-spacing:.12em;color:#fff;text-transform:uppercase}
-  .vocab .v p{margin:0;font:13px/1.7 var(--mono);color:#9aa0ad}
-  .vocab .v .vs{margin-top:8px;font:10px/1.6 var(--mono);color:#5a5e6b;letter-spacing:.04em}
+  .sh{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+  .sh h2{margin:0}
+  .sicn{flex:none;width:42px;height:42px;border-radius:50%;border:1px solid currentColor;
+    display:flex;align-items:center;justify-content:center;font:19px/1 var(--mono);color:inherit}
+  .tri3{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+  .tri3 span{font:12px/1 var(--mono);letter-spacing:.06em;color:#ffecb4;
+    border:1px solid rgba(255,236,180,.28);background:rgba(255,236,180,.05);
+    padding:9px 14px;border-radius:20px}
+  .twelve{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:2px;margin-top:16px}
+  .twelve .tw{padding:11px 14px;background:#08080c;border:1px solid #181820}
+  .twelve .tw b{display:block;font:13px/1.3 var(--mono);color:#fff;letter-spacing:.02em}
+  .twelve .tw span{font:11px/1.6 var(--mono);color:#7d818f}
+  .cap{margin-top:12px;font:12px/1.7 var(--mono);color:#7d818f;letter-spacing:.02em}
   .poem{font:italic 17px/1.85 Georgia,serif;color:#cdd0d8;margin:18px 0 6px}
   .small{font:11px/1.7 var(--mono);color:#6b6f7c;letter-spacing:.04em}
 </style>
 <meta property="og:type"        content="website">
 <meta property="og:site_name"   content="KOLOB">
 <meta property="og:title"       content="Theorem · KOLOB">
-<meta property="og:description" content="One galaxy. Three kingdoms. A cosmology of light, drawn live by the chain.">
+<meta property="og:description" content="One galaxy. 3 kingdoms. A cosmology of light, drawn live by the chain.">
 <meta property="og:image"       content="https://macbeth.gallery/kolob/share.jpg">
 <meta property="og:url"         content="https://macbeth.gallery/kolob/theorem.html">
 <meta name="twitter:card"       content="summary_large_image">
 <meta name="twitter:title"      content="Theorem · KOLOB">
-<meta name="twitter:description" content="One galaxy. Three kingdoms. A cosmology of light, drawn live by the chain.">
+<meta name="twitter:description" content="One galaxy. 3 kingdoms. A cosmology of light, drawn live by the chain.">
 <meta name="twitter:image"      content="https://macbeth.gallery/kolob/share.jpg">
 
 </head>
@@ -46,92 +54,67 @@
 <section class="wrap" style="padding-top:150px;padding-bottom:18px">
   <div class="article">
     <p class="eyebrow">The Theorem</p>
-    <h1 style="font-size:clamp(40px,7vw,80px)">One galaxy.<br>Three kingdoms.</h1>
-    <p class="lede" style="margin-top:26px">A cosmology of light, drawn live by the chain.
-    Every piece a system; every system a place in the order. The galaxy is fixed in shape and shifting in
-    breath, and a hash is enough to find your way home.</p>
+    <h1 style="font-size:clamp(40px,7vw,80px)">One galaxy<br>3 kingdoms</h1>
+
   </div>
 </section>
 
 <section class="wrap" style="padding-top:18px">
   <div class="article">
 
-    <h2>The Axis · Kolob</h2>
-    <p>At the very centre, a single tight cluster of white particles: Kolob. Neither star
-    nor throne, but the axis upon which the galaxy turns. A black-hole well wraps it, and
-    it swallows spent worlds and casts new ones outward. It is not minted. It is what
-    everything else is measured against, and the whole galaxy takes its name from this
-    place. The project is KOLOB; the centre is Kolob; and the two are one.</p>
-
-    <h2>The Triangle</h2>
-    <p>Three great suns surround the axis in perfect equilateral relation, holding the inner
-    order: <b>Oleblish</b>, <b>Enish-go-on-dosh</b>, <b>Kai-e-vanrash</b>. They turn together as
-    a rigid figure, a measure of the noble Intelligences from before the foundation of light.</p>
-
-    <h2>The Twelve</h2>
-    <p>Beyond the triangle, twelve governing systems, Lindi, Zip, Vusel, Vauiste, Waine,
-    Way-ho-ox-oan, Oansli, Kible, Shineflis, Flis, Os, Ondi, each bearing a single
-    distinguishing Affinity: a ringed dynasty, a moon swarm, an asteroid empire, a comet
-    storm, an embryo nursery, an eccentric chaos, a binary heart, a resonance cathedral,
-    a frozen kuiper, a hot-jupiter forge, a mega-ring world, trojan swarms. They turn as
-    one icosahedral solid. Together with the triangle they make the <b>Core 15</b>, sealed
-    in identity, authored by those who hold them.</p>
-
-    <h2>The Three Glories</h2>
-    <p>Beyond the Core, every throne lives in one of three concentric kingdoms. Further in
-    is rarer, denser, the light more elaborate.</p>
-    <p><span class="chip t-cel">Celestial</span> &nbsp;the gold inner ring, binary stars, comet swarms</p>
-    <p><span class="chip t-ter">Terrestrial</span> &nbsp;the richer middle, ringed giants, warmer worlds</p>
-    <p><span class="chip t-tel">Telestial</span> &nbsp;the cold outer rim, every throne begins here</p>
-
-    <h2>The Veils</h2>
-    <p>Between the kingdoms hang two veils, thin shimmering bands of dust. To move inward,
-    a throne must pass through, and the passage is ceremonial: the worlds dim, dust pulls
-    inward and swallows everything, the music drops to silence at the threshold, and the
-    soul emerges into a richer palette. The crossing cannot be undone. It cannot be hurried.</p>
-
-    <h2>The Migration</h2>
-    <p class="poem">One world is alive in the chart. Born at the core, cast to the rim,
-    drawn home again.</p>
-    <p class="small">A single throne is highlighted below. Watch it ascend through the veils,
-    return to the rim, and begin again, a complete migratory cycle, deterministic and silent.</p>
+    <p class="small">Born at the core, cast to the rim, drawn home again.</p>
     <div class="mig">
       <canvas id="mig" width="900" height="540"></canvas>
       <div class="leg"><b>·</b> migrating throne &nbsp; <b>○</b> veils &nbsp; <b>✦</b> Core 15</div>
     </div>
 
-    <h2>The Trait Vocabulary</h2>
-    <p>Every minted piece carries four cosmological measurements, deterministic from its
-    hash. They are the language collectors use to speak about the worlds beyond the names.</p>
-    <div class="vocab">
-      <div class="v"><h4>Intelligence</h4>
-        <p>The density and order of a system's particles, its inward fire. A measure of what
-        the world remembers from before its formation.</p>
-        <div class="vs">Noble · Quickening · Veiled · Encircled · Witnessing · Risen · Wrought · Foreseen</div></div>
-      <div class="v"><h4>Affinity</h4>
-        <p>The orbital signature: how the worlds chord with one another. Whether they ring in
-        whole-number resonance, fall in cascades, or hold one another bound.</p>
-        <div class="vs">Resonant · Concordant · Cascading · Inverted · Eccentric · Tessellated · Linear · Bound</div></div>
-      <div class="v"><h4>Dispensation</h4>
-        <p>The era of emission. KOLOB casts worlds outward in waves; a Dispensation marks which
-        wave a piece belongs to.</p>
-        <div class="vs">First · Second · Third · Fourth · Fifth · Sixth · Seventh · Eighth · Ninth · Tenth</div></div>
-      <div class="v"><h4>Glory</h4>
-        <p>The kingdom a piece presently inhabits. Glory advances with the veil crossing;
-        it can also be lost.</p>
-        <div class="vs">Celestial · Terrestrial · Telestial · Outer</div></div>
-    </div>
+    <div class="sh" style="color:#cdd0d8;margin-top:50px"><span class="sicn">⊙</span><h2>KOLOB (koh-lob)</h2></div>
+    <p>At the very center, not a star, not a throne, not minted. The first creation that everything revolves around.</p>
 
-    <h2 style="margin-top:60px">Outer Darkness</h2>
-    <p>Beyond the last veil there is no light, no heat, no stars. A throne that holds too
-    long at the Telestial rim drifts outward into Outer Darkness, and the chain remembers
-    the drift. The crossing is <b>permanent</b>: there is no repentance and no return.
-    To advance is to hold a place in the light. To wait is to slip from it, forever.</p>
+    <div class="sh" style="color:var(--gold);margin-top:50px"><span class="sicn">△</span><h2>The Triangle</h2></div>
+    <div class="tri3">
+      <span>Oleblish</span><span>Enish-go-on-dosh</span><span>Kai-e-vanrash</span>
+    </div>
+    <p class="cap">Three great suns, locked in equilateral orbit around the axis.</p>
+
+    <div class="sh" style="color:var(--gold);margin-top:50px"><span class="sicn">⬡</span><h2>The Twelve</h2></div>
+    <div class="twelve">
+      <div class="tw"><b>Lindi</b><span>Ringed Dynasty</span></div>
+      <div class="tw"><b>Zip</b><span>Moon Swarm</span></div>
+      <div class="tw"><b>Vusel</b><span>Asteroid Empire</span></div>
+      <div class="tw"><b>Vauiste</b><span>Comet Storm</span></div>
+      <div class="tw"><b>Waine</b><span>Embryo Nursery</span></div>
+      <div class="tw"><b>Way-ho-ox-oan</b><span>Eccentric Chaos</span></div>
+      <div class="tw"><b>Oansli</b><span>Binary Heart</span></div>
+      <div class="tw"><b>Kible</b><span>Resonance Cathedral</span></div>
+      <div class="tw"><b>Shineflis</b><span>Frozen Kuiper</span></div>
+      <div class="tw"><b>Flis</b><span>Hot-Jupiter Forge</span></div>
+      <div class="tw"><b>Os</b><span>Mega-Ring World</span></div>
+      <div class="tw"><b>Ondi</b><span>Trojan Swarms</span></div>
+    </div>
+    <p class="cap">Twelve governing systems, one fixed identity each. With the triangle: the
+      <b style="color:#e0d6c2">Core 15</b>, sealed and authored by their holders.</p>
+
+    <div class="sh" style="color:#cdd0d8;margin-top:50px"><span class="sicn">◎</span><h2>The Three Glories</h2></div>
+    <p class="cap" style="margin-top:0">Every throne lives in one kingdom. Further in is rarer, denser.</p>
+    <p style="margin-top:14px"><span class="chip t-cel">Celestial</span> &nbsp;gold core, binary stars</p>
+    <p><span class="chip t-ter">Terrestrial</span> &nbsp;ringed giants, warmer worlds</p>
+    <p><span class="chip t-tel">Telestial</span> &nbsp;the cold rim, where every throne begins</p>
+
+    <div class="sh" style="color:var(--cyan);margin-top:50px"><span class="sicn">║</span><h2>The Veils</h2></div>
+    <p>Two veils of dust hang between the kingdoms. The crossing is silent and permanent:
+    light dims, sound falls away, and there is no return.</p>
+
+    <div class="sh" style="color:#c9a96b;margin-top:50px"><span class="sicn">●</span><h2>Outer Darkness</h2></div>
+    <p>Beyond the last veil: no light, no heat, no stars. A throne that holds too long at
+    the Telestial rim drifts there, and the chain remembers. The crossing is
+    <b>permanent</b>. No repentance, no return.</p>
     <p style="margin-top:14px;font:11px/1.8 var(--mono);color:#c9a96b;letter-spacing:.08em;
       border:1px solid #1a1410;background:#0a0809;padding:12px 16px;display:inline-block">
       T-minus <b class="odDays" style="color:#e0d6c2">…</b> days until the drift.
       Deadline <b style="color:#e0d6c2">22 October 2026 UTC</b> · permanent at the seal. &nbsp;
-      <a href="kolob-pod-1d.html#throne=20&od" style="color:var(--cyan);text-decoration:underline">Preview the drift ▸</a>
+      <a href="kolob-pod-1d.html#throne=20&od" style="color:var(--cyan);text-decoration:underline">Preview the drift ▸</a> &nbsp;
+      <a href="fallen.html" style="color:#c9a96b;text-decoration:underline">The Book of the Fallen ▸</a>
     </p>
 
     <p style="margin-top:64px">

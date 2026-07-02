@@ -47,6 +47,7 @@
   <span id="status">Idle</span>
   <div class="progress"><span id="bar"></span></div>
   <button id="download">Download grid</button>
+  <button id="ogexport" title="1200×630 per-token share images → kolob/share/og-NNN.jpg">Export OG JPGs</button>
 </div>
 <div class="grid" id="grid"></div>
 <iframe id="cap" class="cap" title="capture"></iframe>
@@ -139,6 +140,54 @@ document.getElementById('download').addEventListener('click',function(){
       img.src=captures[idx];
     })(i);
   }
+});
+
+/* ── per-token OG share images: 1200×630 JPG per captured invocation ──
+   Run a capture pass first, then export. Drop the files into kolob/share/
+   so the s/NNN.html stub pages can reference them. */
+var NAMES=["Oleblish","Enish-go-on-dosh","Kai-e-vanrash","Lindi","Zip","Vusel",
+ "Vauiste","Waine","Way-ho-ox-oan","Oansli","Kible","Shineflis","Flis","Os","Ondi"];
+function ogLabel(inv){
+  if(inv<3)  return {name:NAMES[inv].toUpperCase(),kind:'GREAT STAR · '+pad(inv)};
+  if(inv<15) return {name:NAMES[inv].toUpperCase(),kind:'CORE SYSTEM · '+pad(inv)};
+  return {name:'THRONE '+pad(inv-15),kind:'ONE OF 129 · INV '+pad(inv)};
+}
+function ogCompose(inv,dataUrl){
+  return new Promise(function(resolve){
+    var img=new Image();
+    img.onload=function(){
+      var out=document.createElement('canvas');out.width=1200;out.height=630;
+      var c=out.getContext('2d');
+      c.fillStyle='#000';c.fillRect(0,0,1200,630);
+      c.drawImage(img,285,0,630,630);
+      var L=ogLabel(inv);
+      c.fillStyle='#fff';c.font='300 30px ui-monospace,Menlo,monospace';
+      c.fillText('K O L O B',40,72);
+      c.fillStyle='#e0d6c2';c.font='16px ui-monospace,Menlo,monospace';
+      c.fillText(L.name,40,540);
+      c.fillStyle='#9aa0ad';c.font='12px ui-monospace,Menlo,monospace';
+      c.fillText(L.kind,40,564);
+      c.textAlign='right';
+      c.fillText('macbeth.gallery/kolob',1160,564);
+      c.textAlign='left';
+      resolve(out.toDataURL('image/jpeg',0.85));
+    };
+    img.src=dataUrl;
+  });
+}
+document.getElementById('ogexport').addEventListener('click', async function(){
+  var idxs=[];for(var i=0;i<N;i++) if(captures[i]) idxs.push(i);
+  if(!idxs.length){alert('Run a capture pass first');return;}
+  $status.textContent='Exporting '+idxs.length+' OG images…';
+  for(var k=0;k<idxs.length;k++){
+    var inv=idxs[k];
+    var jpg=await ogCompose(inv,captures[inv]);
+    var a=document.createElement('a');
+    a.download='og-'+pad(inv)+'.jpg'; a.href=jpg; a.click();
+    $bar.style.width=((k+1)/idxs.length*100).toFixed(1)+'%';
+    await new Promise(function(r){setTimeout(r,220);});   // spare the download queue
+  }
+  $status.textContent='OG export done · move the files into kolob/share/';
 });
 </script>
 </body>

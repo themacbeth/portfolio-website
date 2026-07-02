@@ -707,14 +707,73 @@ if(INV<3){
 }
 window.$features=feat;
 
+/* ── resonance audio: the system's orbital ratios sounded as a chord ──
+   Each planet's integer rev (mean-motion resonance) becomes a partial at
+   root*rev/revMin, folded into two octaves — just intonation drawn from the
+   same numbers that drive the orbits. Deterministic from seed. Opt-in
+   (♪ button / S key). Outer Darkness is silent. Vanilla WebAudio, no deps. */
+var _ac=null,_amg=null,_audioOn=false,_abtn=null;
+function _voice(f,amp,lfoHz,det){
+  var o1=_ac.createOscillator(),o2=_ac.createOscillator(),g=_ac.createGain(),
+      lf=_ac.createOscillator(),lg=_ac.createGain();
+  o1.type='sine';o2.type='sine';
+  o1.frequency.value=f;o2.frequency.value=f;o2.detune.value=det;
+  g.gain.value=amp;
+  lf.type='sine';lf.frequency.value=lfoHz;lg.gain.value=amp*0.8;
+  lf.connect(lg);lg.connect(g.gain);
+  o1.connect(g);o2.connect(g);g.connect(_amg);
+  o1.start();o2.start();lf.start();}
+function _audioBuild(){
+  _ac=new (window.AudioContext||window.webkitAudioContext)();
+  _amg=_ac.createGain();_amg.gain.value=0;
+  var lp=_ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1200;lp.Q.value=0.5;
+  _amg.connect(lp);lp.connect(_ac.destination);
+  var aseed=(mode==='star'?CORE_SEEDS[INV]:system.seed)>>>0;
+  var ar=mk((aseed^0x50AD10)>>>0);
+  var root=55*Math.pow(2,ar.int(0,11)/12);          // seeded semitone on A1
+  var i;
+  if(mode==='star'){
+    var HR=[1,1.5,2,2.5,3,4],n=3+Math.round((SUN.density||0.7)*3);
+    for(i=0;i<n&&i<HR.length;i++)
+      _voice(root*HR[i],0.22/(i+1),0.02+(SUN.speed||1)*0.02*(i+1),(SUN.curl||4)*1.5);
+  }else{
+    var pls=system.planets,rmin=1e9;
+    for(i=0;i<pls.length;i++) if(pls[i].rev<rmin) rmin=pls[i].rev;
+    var nv=Math.min(7,pls.length);
+    _voice(root*0.5,0.20,0.013,3);                  // the star, a deep sub
+    if(system.binary)_voice(root*0.75,0.10,0.017,5);
+    for(i=0;i<nv;i++){var f=root*pls[i].rev/rmin;
+      while(f>root*3.98)f*=0.5;                     // fold into two octaves
+      _voice(f,0.16/Math.sqrt(nv),0.02+pls[i].rev*0.006,3+i*2.5);}
+  }}
+function _audioSet(on){
+  _audioOn=on;
+  if(_ac)_amg.gain.setTargetAtTime(on?0.5:0,_ac.currentTime,0.9);
+  if(_abtn)_abtn.style.opacity=on?'0.85':'0.28';}
+function _audioToggle(){
+  if(system&&system._od)return;                     // Outer Darkness is silent
+  if(!_ac)_audioBuild();
+  if(_ac.state==='suspended')_ac.resume();
+  _audioSet(!_audioOn);}
+if(!LITE){
+  _abtn=document.createElement('div');_abtn.textContent='♪';
+  _abtn.title=(system&&system._od)?'Outer Darkness is silent':'orbital resonance, sounded (S)';
+  _abtn.style.cssText='position:fixed;right:12px;bottom:10px;z-index:40;cursor:pointer;'+
+    'font:16px/1 ui-monospace,monospace;color:#fff;padding:8px;user-select:none;'+
+    'opacity:'+((system&&system._od)?'0.10':'0.28');
+  _abtn.addEventListener('click',_audioToggle);
+  document.body.appendChild(_abtn);}
+
 /* ── loop ── */
 var renderPaused=false;   // embeds pause when scrolled off-screen (no effect on AB)
 var _tspd=0.15;           // orbit speed; [ ] keys adjust at runtime
 addEventListener('message',function(e){var d=e&&e.data;
-  if(d==='kolob:pause')renderPaused=true; else if(d==='kolob:play')renderPaused=false;});
+  if(d==='kolob:pause'){renderPaused=true; if(_ac&&_audioOn)_ac.suspend();}
+  else if(d==='kolob:play'){renderPaused=false; if(_ac&&_audioOn)_ac.resume();}});
 addEventListener('keydown',function(e){
   if(e.key===']') _tspd=Math.min(1.2,_tspd*1.5);
   else if(e.key==='[') _tspd=Math.max(0.03,_tspd/1.5);
+  else if(e.key==='s'||e.key==='S') _audioToggle();
 });
 function loop(){ if(renderPaused){requestAnimationFrame(loop);return;}
   clock+=_tspd; if(mode==='star') renderStar(); else renderSystem(); requestAnimationFrame(loop);}

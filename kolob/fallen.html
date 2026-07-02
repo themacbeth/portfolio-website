@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Book of the Fallen — KOLOB</title>
+<link rel="stylesheet" href="site.css">
+<script defer src="site.js"></script>
+<style>
+  /* cold-drift particle field behind the hero */
+  #driftbg{position:fixed;inset:0;z-index:-1;opacity:.55}
+  .book-hero h1{color:#cfd4de}
+  .seal{display:inline-block;margin-top:22px;font:11px/1.8 var(--mono);color:#c9a96b;
+    letter-spacing:.08em;border:1px solid #1a1410;background:#0a0809;padding:12px 16px}
+  .seal b{color:#e0d6c2}
+  .bookgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:6px;margin-top:26px}
+  .bk{aspect-ratio:1;position:relative;display:block;background:#050507;border:1px solid #14141a;
+    text-decoration:none;transition:border-color .2s}
+  .bk:hover{border-color:#3a3e4a}
+  .bk .dot{position:absolute;left:50%;top:44%;width:7px;height:7px;border-radius:50%;
+    transform:translate(-50%,-50%);background:#7fc8ff;box-shadow:0 0 9px 1px rgba(127,200,255,.5)}
+  .bk .id{position:absolute;bottom:5px;left:6px;font:9px/1 var(--mono);color:#5a5e6b}
+  .bk.fallen{filter:grayscale(1)}
+  .bk.fallen .dot{background:#7a8294;box-shadow:none;opacity:.45}
+  .bk.fallen::after{content:'';position:absolute;inset:0;background:rgba(0,0,0,.35)}
+  .bk.safe{opacity:.22;pointer-events:none}
+  .bk.safe .dot{background:#3a3e4a;box-shadow:none}
+  .bookstats{display:flex;gap:2px;margin-top:30px;flex-wrap:wrap}
+  .bs{flex:1;min-width:150px;padding:20px 18px;background:rgba(255,255,255,.03)}
+  .bs .n{font:700 34px/1 var(--mono);color:#e0d6c2}
+  .bs .l{margin-top:8px;font:9px/1.5 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:#7d818f}
+  .bs.dark{background:#060405;border:1px solid #1a1410}
+</style>
+<meta property="og:type"        content="website">
+<meta property="og:site_name"   content="KOLOB">
+<meta property="og:title"       content="The Book of the Fallen · KOLOB">
+<meta property="og:description" content="Every throne that drifts into Outer Darkness is recorded here. Permanently.">
+<meta property="og:image"       content="https://macbeth.gallery/kolob/share.jpg">
+<meta property="og:url"         content="https://macbeth.gallery/kolob/fallen.html">
+<meta name="twitter:card"       content="summary_large_image">
+<meta name="twitter:title"      content="The Book of the Fallen · KOLOB">
+<meta name="twitter:description" content="Every throne that drifts into Outer Darkness is recorded here. Permanently.">
+<meta name="twitter:image"      content="https://macbeth.gallery/kolob/share.jpg">
+</head>
+<body>
+
+<canvas id="driftbg"></canvas>
+
+<nav class="nav">
+  <a class="brand" href="index.html">KOLOB</a>
+  <a href="theorem.html">THEOREM</a>
+  <a href="core15.html">CORE 15</a>
+  <a href="collection.html">COLLECTION</a>
+  <a href="how-it-works.html">HOW IT WORKS</a>
+  <a href="mint.html">MINT</a>
+  <a class="enter" href="kolob-pod-1d.html">ENTER ▸</a>
+</nav>
+
+<section class="wrap book-hero" style="padding-top:150px;padding-bottom:20px">
+  <p class="eyebrow">The record of the drift</p>
+  <h1 style="font-size:clamp(40px,7vw,78px)">The Book<br>of the Fallen</h1>
+  <p class="lede" style="margin-top:24px;max-width:560px" id="bookLede"></p>
+  <p class="seal" id="sealBox"></p>
+</section>
+
+<section class="wrap" style="padding-top:26px">
+  <div class="bookstats" id="stats"></div>
+  <div class="bookgrid" id="book"></div>
+  <p class="dim" style="margin-top:22px;font:11px/1.7 var(--mono);color:#6b6f7c;letter-spacing:.04em"
+     id="bookNote"></p>
+  <p style="margin-top:44px">
+    <a class="btn primary" href="mint.html" id="ctaBtn">ADVANCE A THRONE ▸</a>
+    <a class="btn ghost" href="token.html?inv=35&od">PREVIEW THE DRIFT</a>
+  </p>
+</section>
+
+<footer class="foot">
+  <div class="links"></div>
+  KOLOB · the chain remembers
+</footer>
+
+<script>
+"use strict";
+/* ── same throne derivation as collection.html / the pod ── */
+var HASH="0x4b4f4c42a17f0c3e9d5b8e2160f47a93c8d1e0b6452f9a3c7e1d80b54f2a69c3";
+function tierOf(i){var v=null;try{v=localStorage.getItem('kolob:'+HASH.slice(2,10)+':'+i);}catch(e){}
+  return v===null?2:Math.max(0,Math.min(2,+v));}
+var DEADLINE=Date.UTC(2026,9,22);
+var sealed=Date.now()>=DEADLINE;
+
+function build(){
+  var atRim=0,advanced=0,html='';
+  for(var i=0;i<129;i++){
+    var t=tierOf(i);
+    if(t===2){atRim++;
+      var cls=sealed?' fallen':'';
+      html+='<a class="bk'+cls+'" href="token.html?inv='+(15+i)+(sealed?'&od':'&tier=2')+'"'+
+        ' title="Throne '+i+(sealed?' · fallen into Outer Darkness':' · at the Telestial rim')+'">'+
+        '<span class="dot"></span><span class="id">'+("00"+i).slice(-3)+'</span></a>';
+    }else{advanced++;
+      html+='<a class="bk safe" href="#" title="Throne '+i+' · advanced, safe">'+
+        '<span class="dot"></span><span class="id">'+("00"+i).slice(-3)+'</span></a>';
+    }
+  }
+  document.getElementById('book').innerHTML=html;
+
+  var lede=document.getElementById('bookLede'),
+      seal=document.getElementById('sealBox'),
+      note=document.getElementById('bookNote'),
+      stats=document.getElementById('stats');
+  if(sealed){
+    lede.textContent='The seal has passed. Every throne recorded here fell at the rim and drifted into Outer Darkness. This page does not change again.';
+    seal.innerHTML='The book is <b>sealed</b> · 22 October 2026 UTC has passed.';
+    note.textContent='Faded cells advanced in time and are not part of the record. The chain remembers the rest.';
+    document.getElementById('ctaBtn').style.display='none';
+    stats.innerHTML=
+      '<div class="bs dark"><div class="n">'+atRim+'</div><div class="l">Fallen · permanent</div></div>'+
+      '<div class="bs"><div class="n">'+advanced+'</div><div class="l">Advanced in time</div></div>';
+  }else{
+    lede.textContent='When the seal passes, every throne still at the Telestial rim is recorded here, permanently. The book is open. It does not have to include you.';
+    seal.innerHTML='The book is <b>open</b> · seals in <b class="odDays">…</b> days · <b>22 October 2026 UTC</b>';
+    note.textContent='Bright cells stand at the rim today. Faded cells have advanced and are safe. Click any rim throne to preview its drift.';
+    stats.innerHTML=
+      '<div class="bs dark"><div class="n">'+atRim+'</div><div class="l">At the rim · at risk</div></div>'+
+      '<div class="bs"><div class="n">'+advanced+'</div><div class="l">Advanced · safe</div></div>'+
+      '<div class="bs"><div class="n odDays">…</div><div class="l">Days until the seal</div></div>';
+  }
+}
+build();
+addEventListener('storage',build);   // live: advancing in another tab updates the book
+
+/* ── cold-drift background field ── */
+(function(){
+  var cv=document.getElementById('driftbg'),ctx=cv.getContext('2d'),W,H,pts=[];
+  var DPR=Math.min(2,window.devicePixelRatio||1);
+  function fit(){W=cv.width=innerWidth*DPR;H=cv.height=innerHeight*DPR;
+    cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';}
+  fit();addEventListener('resize',fit);
+  for(var i=0;i<420;i++)pts.push({x:Math.random(),y:Math.random(),
+    vx:(0.12+Math.random()*0.3),vy:(Math.random()*0.14-0.07),
+    sz:Math.random()<0.1?2:1,bri:0.12+Math.random()*0.30});
+  (function draw(){
+    ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+    for(var i=0;i<pts.length;i++){var p=pts[i];
+      p.x+=p.vx/1800;p.y+=p.vy/1800;
+      if(p.x>1.01)p.x=-0.01;if(p.y>1.01)p.y=-0.01;if(p.y<-0.01)p.y=1.01;
+      ctx.fillStyle='rgba(160,180,210,'+p.bri.toFixed(2)+')';
+      ctx.fillRect((p.x*W)|0,(p.y*H)|0,p.sz*DPR,p.sz*DPR);}
+    requestAnimationFrame(draw);
+  })();
+})();
+</script>
+</body>
+</html>
