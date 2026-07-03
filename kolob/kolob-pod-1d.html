@@ -164,6 +164,7 @@
   body.screensaver #hud,body.screensaver #controls,body.screensaver #mintInfo,
   body.screensaver #slideshowUI,body.screensaver #menuToggle,body.screensaver #menuPanel,
   body.screensaver #galaxyTools,body.screensaver #back,body.screensaver #advanceBtn,
+  body.screensaver #keymap,
   body.screensaver #reward{
     opacity:0 !important;pointer-events:none !important;transition:opacity 1.6s ease}
   body.screensaver #c{cursor:none}
@@ -174,7 +175,7 @@
   /* hero embed (index background): galaxy loop only, zero chrome */
   body.hero #hud,body.hero #mintInfo,body.hero #controls,body.hero #galaxyTools,
   body.hero #menuToggle,body.hero #menuPanel,body.hero #back,body.hero #advanceBtn,
-  body.hero #reward,body.hero #slideshowUI{display:none!important}
+  body.hero #reward,body.hero #slideshowUI,body.hero #keymap{display:none!important}
 </style>
 <div id="back">← BACK</div>
 <button id="advanceBtn">ADVANCE ▸</button>
@@ -299,7 +300,8 @@
   #reward.show{opacity:1;transform:translateX(-50%) translateY(0)}
   /* hide all chrome while the veil cinematic plays */
   body.veil #hud,body.veil #galaxyTools,body.veil #advanceBtn,body.veil #back,
-  body.veil #controls,body.veil #menuToggle,body.veil #menuPanel,body.veil #slideshowUI{
+  body.veil #controls,body.veil #menuToggle,body.veil #menuPanel,body.veil #slideshowUI,
+  body.veil #keymap{
     opacity:0!important;pointer-events:none!important;transition:opacity .3s}
   @media(max-width:600px){#advanceBtn{bottom:62px;font-size:9px;padding:11px 18px}
     #reward{bottom:106px}}
@@ -1211,8 +1213,35 @@ addEventListener('keydown',function(e){var k=e.key.toLowerCase();
     a.href=cv.toDataURL('image/png');a.click();}
   else if(k==="enter"&&keySel>=0&&mode==="galaxy"){goSystem(keySel);}
   else if(k==='f'){toggleFs();}
+  else if(k==='m'){_monoV=!_monoV;cv.style.filter=_monoV?'grayscale(1) contrast(1.12)':'';}
+  else if(k==='k'||k==='?'){toggleKeymap();}
   // palette lock, cool palette only
 });
+
+// M, pure white-on-black lens · K, the key of shortcuts
+var _monoV=false,_kmapEl=null;
+function toggleKeymap(){
+  if(!_kmapEl){
+    _kmapEl=document.createElement('div');_kmapEl.id='keymap';
+    _kmapEl.style.cssText='position:fixed;left:16px;bottom:16px;z-index:135;'+
+      'font:10px/2 ui-monospace,monospace;color:#9aa0ad;letter-spacing:.06em;'+
+      'background:rgba(0,0,0,.6);padding:12px 18px;border:1px solid rgba(255,255,255,.12);'+
+      'user-select:none';
+    _kmapEl.innerHTML=
+      '<b style="color:#fff">G / Esc</b> &nbsp;return to the galaxy<br>'+
+      '<b style="color:#fff">← →</b> step thrones · <b style="color:#fff">Enter</b> enter one<br>'+
+      '<b style="color:#fff">↑ ↓</b> &nbsp;orbit the galaxy<br>'+
+      '<b style="color:#fff">1–9 / 0</b> camera presets / reset<br>'+
+      '<b style="color:#fff">Space</b> pause<br>'+
+      '<b style="color:#fff">[ ]</b> &nbsp;display speed<br>'+
+      '<b style="color:#fff">C</b> &nbsp;cinematic slideshow<br>'+
+      '<b style="color:#fff">H</b> &nbsp;hud<br>'+
+      '<b style="color:#fff">M</b> &nbsp;monochrome<br>'+
+      '<b style="color:#fff">S</b> &nbsp;save a still<br>'+
+      '<b style="color:#fff">F</b> &nbsp;fullscreen<br>'+
+      '<b style="color:#fff">K</b> &nbsp;close this key';
+    document.body.appendChild(_kmapEl);
+  } else _kmapEl.style.display=(_kmapEl.style.display==='none')?'block':'none';}
 
 // Render primitives
 function project(x,y,z,cosP,sinP,scale){

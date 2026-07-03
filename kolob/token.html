@@ -712,39 +712,64 @@ window.$features=feat;
    root*rev/revMin, folded into two octaves — just intonation drawn from the
    same numbers that drive the orbits. Deterministic from seed. Opt-in
    (♪ button / S key). Outer Darkness is silent. Vanilla WebAudio, no deps. */
-var _ac=null,_amg=null,_audioOn=false,_abtn=null;
+var _ac=null,_amg=null,_audioOn=false,_abtn=null,_aused=[];
 function _voice(f,amp,lfoHz,det){
+  amp*=Math.pow(220/Math.max(f,55),0.35);           // gentle high-frequency roll-off
   var o1=_ac.createOscillator(),o2=_ac.createOscillator(),g=_ac.createGain(),
       lf=_ac.createOscillator(),lg=_ac.createGain();
   o1.type='sine';o2.type='sine';
   o1.frequency.value=f;o2.frequency.value=f;o2.detune.value=det;
   g.gain.value=amp;
-  lf.type='sine';lf.frequency.value=lfoHz;lg.gain.value=amp*0.8;
+  lf.type='sine';lf.frequency.value=Math.min(0.11,lfoHz);lg.gain.value=amp*0.3;
   lf.connect(lg);lg.connect(g.gain);
   o1.connect(g);o2.connect(g);g.connect(_amg);
   o1.start();o2.start();lf.start();}
+function _addF(f){                                  // skip near-duplicate partials —
+  for(var q=0;q<_aused.length;q++)                  // close-but-unequal pairs beat harshly
+    if(Math.abs(f/_aused[q]-1)<0.06) return false;
+  _aused.push(f);return true;}
 function _audioBuild(){
-  _ac=new (window.AudioContext||window.webkitAudioContext)();
+  _ac=new (window.AudioContext||window.webkitAudioContext)({latencyHint:'playback'});
   _amg=_ac.createGain();_amg.gain.value=0;
-  var lp=_ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1200;lp.Q.value=0.5;
-  _amg.connect(lp);lp.connect(_ac.destination);
+  var lp=_ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=900;lp.Q.value=0.4;
+  var cp=_ac.createDynamicsCompressor();            // absorbs summation transients
+  cp.threshold.value=-20;cp.knee.value=18;cp.ratio.value=5;
+  cp.attack.value=0.012;cp.release.value=0.28;
   var aseed=(mode==='star'?CORE_SEEDS[INV]:system.seed)>>>0;
   var ar=mk((aseed^0x50AD10)>>>0);
-  var root=55*Math.pow(2,ar.int(0,11)/12);          // seeded semitone on A1
-  var i;
+  // ambient wash: two cross-fed delay lines (a convolver is too CPU-heavy
+  // next to the render loop and causes audio underruns — this is ~free)
+  var d1=_ac.createDelay(1),d2=_ac.createDelay(1),
+      fb1=_ac.createGain(),fb2=_ac.createGain(),
+      dl=_ac.createBiquadFilter();
+  d1.delayTime.value=0.26+ar()*0.10;                // seeded, mutually prime-ish
+  d2.delayTime.value=0.40+ar()*0.12;
+  fb1.gain.value=0.42;fb2.gain.value=0.42;
+  dl.type='lowpass';dl.frequency.value=700;
+  d1.connect(fb1);fb1.connect(d2);d2.connect(fb2);fb2.connect(dl);dl.connect(d1);
+  var dry=_ac.createGain();dry.gain.value=0.6;
+  var wet=_ac.createGain();wet.gain.value=0.45;
+  _amg.connect(lp);
+  lp.connect(dry);dry.connect(cp);
+  lp.connect(d1);d1.connect(wet);d2.connect(wet);wet.connect(cp);
+  cp.connect(_ac.destination);
+  var root=110*Math.pow(2,ar.int(0,11)/12);         // seeded semitone on A2
+  var i;_aused=[];
   if(mode==='star'){
-    var HR=[1,1.5,2,2.5,3,4],n=3+Math.round((SUN.density||0.7)*3);
+    var HR=[1,1.5,2,3,4,6],n=3+Math.round((SUN.density||0.7)*3);
     for(i=0;i<n&&i<HR.length;i++)
-      _voice(root*HR[i],0.22/(i+1),0.02+(SUN.speed||1)*0.02*(i+1),(SUN.curl||4)*1.5);
+      _voice(root*HR[i],0.20/(i+1),0.02+(SUN.speed||1)*0.012*(i+1),(SUN.curl||4)*1.2);
   }else{
     var pls=system.planets,rmin=1e9;
     for(i=0;i<pls.length;i++) if(pls[i].rev<rmin) rmin=pls[i].rev;
     var nv=Math.min(7,pls.length);
-    _voice(root*0.5,0.20,0.013,3);                  // the star, a deep sub
-    if(system.binary)_voice(root*0.75,0.10,0.017,5);
+    _aused.push(root*0.5);
+    _voice(root*0.5,0.18,0.013,2);                  // the star, a deep drone
+    if(system.binary&&_addF(root*0.75))_voice(root*0.75,0.09,0.017,3);
     for(i=0;i<nv;i++){var f=root*pls[i].rev/rmin;
       while(f>root*3.98)f*=0.5;                     // fold into two octaves
-      _voice(f,0.16/Math.sqrt(nv),0.02+pls[i].rev*0.006,3+i*2.5);}
+      if(!_addF(f))continue;                        // resonance already sounded
+      _voice(f,0.15/Math.sqrt(nv),0.02+pls[i].rev*0.004,2+i*1.5);}
   }}
 function _audioSet(on){
   _audioOn=on;
@@ -757,12 +782,47 @@ function _audioToggle(){
   _audioSet(!_audioOn);}
 if(!LITE){
   _abtn=document.createElement('div');_abtn.textContent='♪';
-  _abtn.title=(system&&system._od)?'Outer Darkness is silent':'orbital resonance, sounded (S)';
+  _abtn.title=(system&&system._od)?'Outer Darkness is silent':'orbital resonance, sounded (A)';
   _abtn.style.cssText='position:fixed;right:12px;bottom:10px;z-index:40;cursor:pointer;'+
     'font:16px/1 ui-monospace,monospace;color:#fff;padding:8px;user-select:none;'+
-    'opacity:'+((system&&system._od)?'0.10':'0.28');
+    'transition:opacity .9s;opacity:'+((system&&system._od)?'0.10':'0.28');
   _abtn.addEventListener('click',_audioToggle);
   document.body.appendChild(_abtn);}
+
+/* ── view keys: S save still · M monochrome · K shortcut key ── */
+var _mono=false,_kmap=null;
+function _saveStill(){var a=document.createElement('a');
+  a.download='kolob_inv'+('00'+INV).slice(-3)+(_mono?'_mono':'')+'.png';
+  a.href=cv.toDataURL('image/png');a.click();}
+function _monoToggle(){_mono=!_mono;
+  cv.style.filter=_mono?'grayscale(1) contrast(1.12)':'';}
+function _kmapToggle(){
+  if(LITE)return;
+  if(!_kmap){
+    _kmap=document.createElement('div');
+    _kmap.style.cssText='position:fixed;left:14px;bottom:12px;z-index:41;'+
+      'font:10px/2 ui-monospace,monospace;color:#9aa0ad;letter-spacing:.06em;'+
+      'background:rgba(0,0,0,.55);padding:10px 16px;border:1px solid rgba(255,255,255,.12);'+
+      'transition:opacity .9s;user-select:none';
+    _kmap.innerHTML=
+      '<b style="color:#fff">A</b> &nbsp;sound · orbital resonance<br>'+
+      '<b style="color:#fff">M</b> &nbsp;monochrome<br>'+
+      '<b style="color:#fff">S</b> &nbsp;save a still<br>'+
+      '<b style="color:#fff">[ ]</b> orbit speed<br>'+
+      '<b style="color:#fff">drag</b> rotate<br>'+
+      '<b style="color:#fff">K</b> &nbsp;close this key';
+    document.body.appendChild(_kmap);
+  } else _kmap.style.display=(_kmap.style.display==='none')?'block':'none';}
+/* idle: the chrome fades away, any movement brings it back */
+var _idleT=null;
+function _chromeFade(hide){
+  if(_abtn)_abtn.style.opacity=hide?'0':((system&&system._od)?'0.10':(_audioOn?'0.85':'0.28'));
+  if(_kmap)_kmap.style.opacity=hide?'0':'1';}
+function _poke(){_chromeFade(false);clearTimeout(_idleT);
+  _idleT=setTimeout(function(){_chromeFade(true);},9000);}
+if(!LITE){
+  addEventListener('pointermove',_poke);addEventListener('pointerdown',_poke);
+  addEventListener('keydown',_poke);_poke();}
 
 /* ── loop ── */
 var renderPaused=false;   // embeds pause when scrolled off-screen (no effect on AB)
@@ -773,7 +833,10 @@ addEventListener('message',function(e){var d=e&&e.data;
 addEventListener('keydown',function(e){
   if(e.key===']') _tspd=Math.min(1.2,_tspd*1.5);
   else if(e.key==='[') _tspd=Math.max(0.03,_tspd/1.5);
-  else if(e.key==='s'||e.key==='S') _audioToggle();
+  else if(e.key==='a'||e.key==='A') _audioToggle();
+  else if(e.key==='m'||e.key==='M') _monoToggle();
+  else if(e.key==='s'||e.key==='S') _saveStill();
+  else if(e.key==='k'||e.key==='K'||e.key==='?') _kmapToggle();
 });
 function loop(){ if(renderPaused){requestAnimationFrame(loop);return;}
   clock+=_tspd; if(mode==='star') renderStar(); else renderSystem(); requestAnimationFrame(loop);}

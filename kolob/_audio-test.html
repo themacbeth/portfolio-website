@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Audio Diagnostic · KOLOB</title>
+<style>
+  body{margin:0;background:#0a0a0e;color:#eaf0f7;font:13px/1.7 ui-monospace,Menlo,monospace;padding:40px}
+  h1{font-size:15px;letter-spacing:.18em;text-transform:uppercase}
+  .row{margin:10px 0}
+  button{background:#fff;color:#000;border:0;padding:10px 22px;cursor:pointer;
+    font:12px/1 ui-monospace,monospace;letter-spacing:.14em;margin-right:10px}
+  button.off{background:rgba(255,255,255,.12);color:#fff}
+  label{display:block;padding:4px 0;cursor:pointer;color:#9aa0ad}
+  label input{margin-right:10px}
+  select{background:#000;color:#fff;border:1px solid #333;padding:6px 10px;font:12px ui-monospace,monospace}
+  #info{margin-top:22px;color:#6b6f7c;font-size:11px;white-space:pre-line}
+  .hint{margin-top:26px;color:#c9a96b;font-size:12px;max-width:560px}
+</style>
+</head>
+<body>
+<h1>KOLOB audio diagnostic</h1>
+<p style="color:#9aa0ad;max-width:560px">Same synthesis as token.html, no rendering.
+Press play, then toggle pieces off one at a time. When the click disappears, the last
+thing you turned off is the culprit. Report which one.</p>
+
+<div class="row">
+  <button id="play">▶ PLAY</button>
+  <select id="preset">
+    <option value="system">system chord (8 voices)</option>
+    <option value="star">star harmonics (6 voices)</option>
+    <option value="single">single 220 Hz sine, nothing else</option>
+  </select>
+</div>
+
+<div class="row" id="toggles">
+  <label><input type="checkbox" id="tPair" checked> detuned oscillator pairs (2 osc per voice)</label>
+  <label><input type="checkbox" id="tLfo" checked> tremolo LFOs (slow gain modulation)</label>
+  <label><input type="checkbox" id="tDelay" checked> delay wash (cross-fed echo)</label>
+  <label><input type="checkbox" id="tComp" checked> compressor</label>
+  <label><input type="checkbox" id="tLp" checked> lowpass filter</label>
+  <label><input type="checkbox" id="tLat" checked> latencyHint: playback (big buffer)</label>
+</div>
+
+<div id="info"></div>
+
+<div class="hint">Also worth checking while it plays:<br>
+· switch to another tab for 10s — does the click continue? (this page renders nothing, so it should)<br>
+· headphones vs speakers — bluetooth audio adds its own periodic clicks<br>
+· is the click steady like a metronome, or random?</div>
+
+<script>
+"use strict";
+var TAU=6.28318530718;
+function PRNG(seed){var a=seed^0x9e3779b9,b=seed^0x243f6a88,c=seed^0xb7e15162,d=1;
+  return function(){a|=0;b|=0;c|=0;d|=0;var t=(a+b|0)+d|0;d=d+1|0;
+    a=b^b>>>9;b=c+(c<<3)|0;c=(c<<21|c>>>11);c=c+t|0;return (t>>>0)/4294967296;};}
+function mk(seed){var r=PRNG(seed>>>0);
+  r.int=function(a,b){return a+((r()*(b-a+1))|0);};return r;}
+
+var ac=null,amg=null,playing=false;
+function opt(id){return document.getElementById(id).checked;}
+
+function build(){
+  var latOpts=opt('tLat')?{latencyHint:'playback'}:{};
+  ac=new (window.AudioContext||window.webkitAudioContext)(latOpts);
+  amg=ac.createGain();amg.gain.value=0;
+  var head=amg,node;
+
+  if(opt('tLp')){node=ac.createBiquadFilter();node.type='lowpass';
+    node.frequency.value=900;node.Q.value=0.4;head.connect(node);head=node;}
+
+  var tail=ac.destination;
+  if(opt('tComp')){var cp=ac.createDynamicsCompressor();
+    cp.threshold.value=-20;cp.knee.value=18;cp.ratio.value=5;
+    cp.attack.value=0.012;cp.release.value=0.28;cp.connect(ac.destination);tail=cp;}
+
+  if(opt('tDelay')){
+    var ar0=mk(0xBEEF);
+    var d1=ac.createDelay(1),d2=ac.createDelay(1),
+        fb1=ac.createGain(),fb2=ac.createGain(),dl=ac.createBiquadFilter();
+    d1.delayTime.value=0.26+ar0()*0.10;d2.delayTime.value=0.40+ar0()*0.12;
+    fb1.gain.value=0.42;fb2.gain.value=0.42;
+    dl.type='lowpass';dl.frequency.value=700;
+    d1.connect(fb1);fb1.connect(d2);d2.connect(fb2);fb2.connect(dl);dl.connect(d1);
+    var dry=ac.createGain();dry.gain.value=0.6;
+    var wet=ac.createGain();wet.gain.value=0.45;
+    head.connect(dry);dry.connect(tail);
+    head.connect(d1);d1.connect(wet);d2.connect(wet);wet.connect(tail);
+  } else head.connect(tail);
+
+  function voice(f,amp,lfoHz,det){
+    amp*=Math.pow(220/Math.max(f,55),0.35);
+    var g=ac.createGain();g.gain.value=amp;
+    var o1=ac.createOscillator();o1.type='sine';o1.frequency.value=f;
+    o1.connect(g);o1.start();
+    if(opt('tPair')){var o2=ac.createOscillator();o2.type='sine';
+      o2.frequency.value=f;o2.detune.value=det;o2.connect(g);o2.start();}
+    if(opt('tLfo')){var lf=ac.createOscillator(),lg=ac.createGain();
+      lf.type='sine';lf.frequency.value=Math.min(0.11,lfoHz);lg.gain.value=amp*0.3;
+      lf.connect(lg);lg.connect(g.gain);lf.start();}
+    g.connect(amg);
+  }
+
+  var preset=document.getElementById('preset').value;
+  var ar=mk(0x50AD10);
+  var root=110*Math.pow(2,ar.int(0,11)/12);
+  if(preset==='single'){
+    voice(220,0.3,0.05,0);
+  }else if(preset==='star'){
+    var HR=[1,1.5,2,3,4,6];
+    for(var i=0;i<6;i++) voice(root*HR[i],0.20/(i+1),0.02+0.012*(i+1),4.8);
+  }else{
+    var revs=[1,2,3,5,8,13,21],used=[root*0.5];
+    voice(root*0.5,0.18,0.013,2);
+    for(var j=0;j<revs.length;j++){var f=root*revs[j];
+      while(f>root*3.98)f*=0.5;
+      var dup=false;for(var q=0;q<used.length;q++) if(Math.abs(f/used[q]-1)<0.06)dup=true;
+      if(dup)continue;used.push(f);
+      voice(f,0.15/Math.sqrt(7),0.02+revs[j]*0.004,2+j*1.5);}
+  }
+  amg.gain.setTargetAtTime(0.5,ac.currentTime,0.9);
+  document.getElementById('info').textContent=
+    'sampleRate: '+ac.sampleRate+'\n'+
+    'baseLatency: '+(ac.baseLatency!=null?(ac.baseLatency*1000).toFixed(1)+' ms':'n/a')+'\n'+
+    'outputLatency: '+(ac.outputLatency!=null?(ac.outputLatency*1000).toFixed(1)+' ms':'n/a')+'\n'+
+    'state: '+ac.state;
+}
+function teardown(){if(ac){try{ac.close();}catch(e){}ac=null;}}
+function restart(){teardown();if(playing)build();}
+
+document.getElementById('play').addEventListener('click',function(){
+  playing=!playing;
+  this.textContent=playing?'■ STOP':'▶ PLAY';
+  this.classList.toggle('off',!playing);
+  if(playing)build();else teardown();
+});
+document.querySelectorAll('#toggles input, #preset').forEach(function(el){
+  el.addEventListener('change',restart);
+});
+</script>
+</body>
+</html>
