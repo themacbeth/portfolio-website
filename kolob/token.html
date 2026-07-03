@@ -753,15 +753,23 @@ function _audioBuild(){
   lp.connect(dry);dry.connect(cp);
   lp.connect(d1);d1.connect(wet);d2.connect(wet);wet.connect(cp);
   cp.connect(_ac.destination);
-  // tuning: seeded between 432 Hz (nature's frequency) and 528 Hz (the
-  // miracle tone); dropped two octaves so it sits as a drone root
-  var BASE=ar()<0.5?432:528;
-  var root=BASE/4;                                  // 108 or 132 Hz
-  // alpha layer: L/R pair detuned by a seeded 8–14 Hz (Alpha brainwave
-  // band) — the beat is perceived between the ears, not in either channel.
-  // Bypasses the delay wash so the beat stays clean; best on headphones.
+  // tuning: seeded from the solfeggio / healing set —
+  //   396 release · 432 nature · 528 miracle · 963 awakening
+  // octave-dropped so it sits as a drone root (~99–133 Hz)
+  var SOLF=[396,432,528,963];
+  var BASE=SOLF[ar.int(0,3)];
+  var root=BASE; while(root>150) root/=2;
+  // brainwave layer: L/R pair detuned by a seeded beat from one of the
+  // four bands — Delta 1–4 (deep sleep) · Theta 4–8 (meditation) ·
+  // Alpha 8–14 (relaxed focus) · Beta 14–30 (concentration).
+  // The beat is perceived between the ears, not in either channel;
+  // bypasses the delay wash so it stays clean. Best on headphones.
   if(_ac.createStereoPanner){
-    var alpha=8+ar()*6,bf=BASE/2,
+    var BANDS=[[1,4],[4,8],[8,14],[14,30]];
+    var bd=BANDS[ar.int(0,3)];
+    var alpha=bd[0]+ar()*(bd[1]-bd[0]);
+    var bf=BASE; while(bf>300) bf/=2;
+    var
         pL=_ac.createStereoPanner(),pR=_ac.createStereoPanner(),
         oL=_ac.createOscillator(),oR=_ac.createOscillator();
     _abg=_ac.createGain();_abg.gain.value=0;      // fades with the master toggle
@@ -856,13 +864,14 @@ addEventListener('keydown',function(e){
   else if(e.key==='v'||e.key==='V') _cine=!_cine;
   else if(e.key==='k'||e.key==='K'||e.key==='?') _kmapToggle();
 });
-var _cine=false;   // V: slideshow — a slow cinematic camera drift
+var _cine=false,_cineT=0;   // V: slideshow — a slow cinematic camera drift
 function loop(){ if(renderPaused){requestAnimationFrame(loop);return;}
   clock+=_tspd;
   if(_cine&&!drag){
-    az+=0.0011;
-    tilt=0.30+0.26*(0.5+0.5*Math.sin(clock*0.0013));
-    zoom=1+0.10*Math.sin(clock*0.0009);}
+    _cineT+=1/60;                                   // real time, not orbit clock
+    az+=0.0035;                                     // full circle ~30s
+    tilt=0.24+0.34*(0.5+0.5*Math.sin(_cineT*0.10)); // breathe over ~60s
+    zoom=1+0.22*Math.sin(_cineT*0.07);}             // swell over ~90s
   if(mode==='star') renderStar(); else renderSystem(); requestAnimationFrame(loop);}
 loop();
 </script>
