@@ -122,6 +122,7 @@
   <button class="menuItem" data-goto="home"><span style="opacity:.6">⌂</span> INDEX</button>
   <button class="menuItem" data-goto="mint"><span style="opacity:.6">◆</span> MINT</button>
   <button class="menuItem" data-goto="cinema"><span style="opacity:.6">▶</span> CINEMATIC</button>
+  <button class="menuItem" data-goto="veil"><span style="opacity:.6">║</span> CROSS THE VEIL</button>
   <div class="menuHead">Camera change</div>
   <button class="menuItem cfreq" data-f="5">Every 5s</button>
   <button class="menuItem cfreq on" data-f="10">Every 10s</button>
@@ -566,10 +567,15 @@ addEventListener('storage',function(e){
       FLARES.push({i:+mm[1],t0:performance.now(),col:TIER_COL[tv]});}
   }
 });
+// tier bands: advancing pulls a throne physically inward, toward Kolob
+var TIER_BAND=[[0.16,0.36],[0.36,0.58],[0.58,0.91]];   // cel · ter · tel
+function tierRad(u,tv){var b=TIER_BAND[tv];return b[0]+u*(b[1]-b[0]);}
 for(i=0;i<129;i++){
   var nr=mk(hashSeed(tokenData.hash)+(i+1)*8675309);
   var arm=nr.int(0,ARMS-1),rad=0.15+Math.pow(nr(),0.7)*0.76;
-  NODES.push({r:rad,a:arm*TAU/ARMS+WIND*TAU*rad+nr.g()*0.06,
+  var u0=(rad-0.15)/0.76;
+  NODES.push({r:rad,u:u0,dr:tierRad(u0,tierOf(i)),
+    a:arm*TAU/ARMS+WIND*TAU*rad+nr.g()*0.06,
     z:nr.g()*0.05,rev:Math.max(1,Math.min(14,Math.round(0.42*Math.pow(rad,-1.5)))),star:pickStar(nr),
     seed:(hashSeed(tokenData.hash)^Math.imul(i+1,2654435761))>>>0,
     spin:nr()*TAU,sx:0,sy:0});
@@ -891,6 +897,13 @@ document.querySelectorAll('.menuItem').forEach(function(item){
     if(goto==='home') location.href='index.html';
     else if(goto==='mint') location.href='mint.html';
     else if(goto==='cinema'){ if(!cinematic) enterCinematic(); }
+    else if(goto==='veil'){
+      // demo the veil crossing: current throne if it can still advance,
+      // otherwise the first throne still at the rim
+      var vi=(mode==='system'&&coreView<0&&tierOf(curNode)>0)?curNode:-1;
+      if(vi<0){for(var vq=0;vq<129;vq++){if(tierOf(vq)===2){vi=vq;break;}}}
+      if(vi>=0){goSystem(vi);setTimeout(doAdvance,600);}
+    }
     $menuPanel.style.display='none';
   });
 });
@@ -1396,11 +1409,13 @@ function renderGalaxy(){
 
   // 100 thrones with tier-colored halos
   for(i=0;i<NODES.length;i++){var nd=NODES[i];
+    var tv=tierOf(i);
+    nd.dr+=(tierRad(nd.u,tv)-nd.dr)*0.02;   // advancing drifts the throne inward
     var ang=nd.a+nd.rev*TAU*t;     // thrones orbit counter-clockwise
-    var sp=project(nd.r*Math.cos(ang),nd.r*Math.sin(ang),nd.z,cosP,sinP,scale);
+    var sp=project(nd.dr*Math.cos(ang),nd.dr*Math.sin(ang),nd.z,cosP,sinP,scale);
     nd.sx=sp[0];nd.sy=sp[1];
     var col=STAR[nd.star].col,gr=PX*(i===hover?3.4:i===keySel?2.8:2.4);
-    var tc=TIER_COL[tierOf(i)];
+    var tc=TIER_COL[tv];
     var bcol=mix(col,tc,0.6);            // tier-tinted body, cores still read white
     if(i===hover || i===keySel){
       var glowR=gr*(i===keySel?2.0:2.2);
