@@ -175,19 +175,35 @@ function ogCompose(inv,dataUrl){
     img.src=dataUrl;
   });
 }
+function dataUrlToBlob(u){
+  var parts=u.split(','),bin=atob(parts[1]),arr=new Uint8Array(bin.length);
+  for(var i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+  return new Blob([arr],{type:'image/jpeg'});
+}
 document.getElementById('ogexport').addEventListener('click', async function(){
   var idxs=[];for(var i=0;i<N;i++) if(captures[i]) idxs.push(i);
   if(!idxs.length){alert('Run a capture pass first');return;}
-  $status.textContent='Exporting '+idxs.length+' OG images…';
+  // Preferred: write straight into a folder (pick kolob/share/).
+  var dir=null;
+  if(window.showDirectoryPicker){
+    try{dir=await showDirectoryPicker({mode:'readwrite'});}catch(e){/*cancelled → fall back*/}
+  }
+  $status.textContent='Exporting '+idxs.length+' OG images'+(dir?' → '+dir.name+'/':'…');
   for(var k=0;k<idxs.length;k++){
     var inv=idxs[k];
     var jpg=await ogCompose(inv,captures[inv]);
-    var a=document.createElement('a');
-    a.download='og-'+pad(inv)+'.jpg'; a.href=jpg; a.click();
+    if(dir){
+      var fh=await dir.getFileHandle('og-'+pad(inv)+'.jpg',{create:true});
+      var w=await fh.createWritable();
+      await w.write(dataUrlToBlob(jpg)); await w.close();
+    }else{
+      var a=document.createElement('a');
+      a.download='og-'+pad(inv)+'.jpg'; a.href=jpg; a.click();
+      await new Promise(function(r){setTimeout(r,220);});  // spare the download queue
+    }
     $bar.style.width=((k+1)/idxs.length*100).toFixed(1)+'%';
-    await new Promise(function(r){setTimeout(r,220);});   // spare the download queue
   }
-  $status.textContent='OG export done · move the files into kolob/share/';
+  $status.textContent='OG export done'+(dir?' · written to '+dir.name+'/':' · move the files into kolob/share/');
 });
 </script>
 </body>
