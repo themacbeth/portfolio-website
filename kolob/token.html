@@ -857,7 +857,7 @@ addEventListener('message',function(e){var d=e&&e.data;
   else if(d==='kolob:play'){renderPaused=false; if(_ac&&_audioOn)_ac.resume();}});
 addEventListener('keydown',function(e){
   if(e.key===']') _tspd=Math.min(1.2,_tspd*1.5);
-  else if(e.key==='[') _tspd=Math.max(0.03,_tspd/1.5);
+  else if(e.key==='[') _tspd=Math.max(0.002,_tspd/1.5);
   else if(e.key==='a'||e.key==='A') _audioToggle();
   else if(e.key==='m'||e.key==='M') _monoToggle();
   else if(e.key==='s'||e.key==='S') _saveStill();
@@ -868,8 +868,9 @@ var _cine=false,_cineT=0;   // V: slideshow — a slow cinematic camera drift
 function loop(){ if(renderPaused){requestAnimationFrame(loop);return;}
   clock+=_tspd;
   if(_cine&&!drag){
-    _cineT+=1/60;                                   // real time, not orbit clock
-    az+=0.0035;                                     // full circle ~30s
+    var _cs=_tspd/0.15;                             // brackets scale the drift too
+    _cineT+=_cs/60;                                 // real time, not orbit clock
+    az+=0.0035*_cs;                                 // full circle ~30s at 1×
     tilt=0.24+0.34*(0.5+0.5*Math.sin(_cineT*0.10)); // breathe over ~60s
     zoom=1+0.22*Math.sin(_cineT*0.07);}             // swell over ~90s
   if(mode==='star') renderStar(); else renderSystem(); requestAnimationFrame(loop);}

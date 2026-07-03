@@ -1183,7 +1183,7 @@ addEventListener('keydown',function(e){var k=e.key.toLowerCase();
   else if(k===" "){e.preventDefault();paused=!paused;}
   else if(k==="h"){hud=!hud;}
   else if(k==="]"){_dspd=Math.min(4,_dspd*1.5);}
-  else if(k==="["){_dspd=Math.max(0.04,_dspd/1.5);}
+  else if(k==="["){_dspd=Math.max(0.005,_dspd/1.5);}
   // ←/→ step through thrones · ↑/↓ orbit around the galaxy
   else if(k==="arrowleft"||k==="arrowright"){
     var step=(k==="arrowright")?1:-1;
