@@ -857,7 +857,7 @@ addEventListener('message',function(e){var d=e&&e.data;
   else if(d==='kolob:play'){renderPaused=false; if(_ac&&_audioOn)_ac.resume();}});
 addEventListener('keydown',function(e){
   if(e.key===']') _tspd=Math.min(1.2,_tspd*1.5);
-  else if(e.key==='[') _tspd=Math.max(0.002,_tspd/1.5);
+  else if(e.key==='[') _tspd=Math.max(0.009,_tspd/1.5);
   else if(e.key==='a'||e.key==='A') _audioToggle();
   else if(e.key==='m'||e.key==='M') _monoToggle();
   else if(e.key==='s'||e.key==='S') _saveStill();

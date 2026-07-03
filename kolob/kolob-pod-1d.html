@@ -122,7 +122,6 @@
   <button class="menuItem" data-goto="home"><span style="opacity:.6">⌂</span> INDEX</button>
   <button class="menuItem" data-goto="mint"><span style="opacity:.6">◆</span> MINT</button>
   <button class="menuItem" data-goto="cinema"><span style="opacity:.6">▶</span> CINEMATIC</button>
-  <button class="menuItem" data-goto="veil"><span style="opacity:.6">║</span> CROSS THE VEIL</button>
   <div class="menuHead">Camera change</div>
   <button class="menuItem cfreq" data-f="5">Every 5s</button>
   <button class="menuItem cfreq on" data-f="10">Every 10s</button>
@@ -897,13 +896,6 @@ document.querySelectorAll('.menuItem').forEach(function(item){
     if(goto==='home') location.href='index.html';
     else if(goto==='mint') location.href='mint.html';
     else if(goto==='cinema'){ if(!cinematic) enterCinematic(); }
-    else if(goto==='veil'){
-      // demo the veil crossing: current throne if it can still advance,
-      // otherwise the first throne still at the rim
-      var vi=(mode==='system'&&coreView<0&&tierOf(curNode)>0)?curNode:-1;
-      if(vi<0){for(var vq=0;vq<129;vq++){if(tierOf(vq)===2){vi=vq;break;}}}
-      if(vi>=0){goSystem(vi);setTimeout(doAdvance,600);}
-    }
     $menuPanel.style.display='none';
   });
 });
@@ -1206,7 +1198,7 @@ addEventListener('keydown',function(e){var k=e.key.toLowerCase();
   else if(k===" "){e.preventDefault();paused=!paused;}
   else if(k==="h"){hud=!hud;}
   else if(k==="]"){_dspd=Math.min(4,_dspd*1.5);}
-  else if(k==="["){_dspd=Math.max(0.005,_dspd/1.5);}
+  else if(k==="["){_dspd=Math.max(0.009,_dspd/1.5);}
   // ←/→ step through thrones · ↑/↓ orbit around the galaxy
   else if(k==="arrowleft"||k==="arrowright"){
     var step=(k==="arrowright")?1:-1;
