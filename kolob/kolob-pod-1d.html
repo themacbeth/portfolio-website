@@ -461,7 +461,7 @@ if(!EMBED) for(var i=0;i<gpuN;i++){
   }else if(i<N*0.90){
     var arm=GRND.int(0,ARMS-1);
     r=Math.pow(GRND(),0.70)*1.05;
-    th=arm*TAU/ARMS + WIND*TAU*r + GRND.g()*(0.035+0.035*r);
+    th=arm*TAU/ARMS - WIND*TAU*r + GRND.g()*(0.035+0.035*r);   // trailing arms: matches +angle rotation, reads as inward flow
   }else{ r=Math.pow(GRND(),0.4)*1.12; th=GRND()*TAU; }
   if(r<0.004)r=0.004;
   gR[i]=r; gA[i]=th; gZ[i]=GRND.g()*0.05*(0.4+r);
@@ -575,7 +575,7 @@ for(i=0;i<129;i++){
   var arm=nr.int(0,ARMS-1),rad=0.15+Math.pow(nr(),0.7)*0.76;
   var u0=(rad-0.15)/0.76;
   NODES.push({r:rad,u:u0,dr:tierRad(u0,tierOf(i)),
-    a:arm*TAU/ARMS+WIND*TAU*rad+nr.g()*0.06,
+    a:arm*TAU/ARMS-WIND*TAU*rad+nr.g()*0.06,   // trailing arms, matches the field-star spiral
     z:nr.g()*0.05,rev:Math.max(1,Math.min(14,Math.round(0.42*Math.pow(rad,-1.5)))),star:pickStar(nr),
     seed:(hashSeed(tokenData.hash)^Math.imul(i+1,2654435761))>>>0,
     spin:nr()*TAU,sx:0,sy:0});
@@ -1000,20 +1000,30 @@ function renderVeil(){
   var memW =Math.max(0,Math.min(1,(t-0.18)/0.18))*Math.max(0,1-(t-0.46)/0.10);
   var darkW=Math.max(0,Math.min(1,(t-0.42)/0.06))*Math.max(0,1-(t-0.55)/0.06);
   var emrgW=Math.max(0,Math.min(1,(t-0.55)/0.22));
-  // ── dust cloud: drifts inward then re-expands outward, slow ──
+  // ── warp streaks: a solar system punching through the galaxy, fine and fast ──
   ctx.globalCompositeOperation='lighter';
-  var dotSz=Math.max(1,Math.round(minD/520))*dpr;
-  for(i=0;i<veilPts.length;i++){var p=veilPts[i];
-    var phase=t<0.5?-p.sp*t*0.75:p.sp*(t-0.5)*0.85;
+  var dotSz=Math.max(1,Math.round(minD/1100))*dpr;         // fine grain, not blocky dust
+  function veilPos(p,tt){
+    var phase=tt<0.5?-p.sp*tt*0.75:p.sp*(tt-0.5)*0.85;
     var rad=Math.max(0.02,p.r0+phase);
-    var ang=p.a+Math.sin(t*1.6+p.sw)*0.14+(t<0.5?-t*0.55:(t-0.5)*0.55);
-    var x=cx+Math.cos(ang)*rad*minD*0.55, y=cy+Math.sin(ang)*rad*minD*0.55;
+    var ang=p.a+Math.sin(tt*1.6+p.sw)*0.14+(tt<0.5?-tt*0.55:(tt-0.5)*0.55);
+    return [cx+Math.cos(ang)*rad*minD*0.55, cy+Math.sin(ang)*rad*minD*0.55];}
+  var warpK=Math.min(1,withW*1.15+emrgW*0.95);              // near 0 at rest/darkness, ~1 in transit
+  var tailDT=0.012+0.05*warpK;                              // streak stretches hard mid-transit
+  for(i=0;i<veilPts.length;i++){var p=veilPts[i];
     var dustA=(withW*0.45+emrgW*0.65)*p.bri*(1-darkW);     // suppressed during black
     if(dustA<0.02)continue;
+    var head=veilPos(p,t), tail=veilPos(p,Math.max(0,t-tailDT));
     var srcCol=t<0.5?veilFrom:veilTo;
     var dCol=mix([170,170,195],srcCol,t<0.5?0.30:0.62);
-    ctx.fillStyle='rgba('+(dCol[0]|0)+','+(dCol[1]|0)+','+(dCol[2]|0)+','+dustA.toFixed(2)+')';
-    ctx.fillRect(x|0,y|0,p.sz*dotSz|0,p.sz*dotSz|0);}
+    var rgb=(dCol[0]|0)+','+(dCol[1]|0)+','+(dCol[2]|0);
+    // three stamps from tail to head, brightening toward the head — a cheap streak
+    ctx.fillStyle='rgba('+rgb+','+(dustA*0.25).toFixed(2)+')';
+    ctx.fillRect((tail[0])|0,(tail[1])|0,p.sz*dotSz|0,p.sz*dotSz|0);
+    ctx.fillStyle='rgba('+rgb+','+(dustA*0.55).toFixed(2)+')';
+    ctx.fillRect(((tail[0]+head[0])*0.5)|0,((tail[1]+head[1])*0.5)|0,p.sz*dotSz|0,p.sz*dotSz|0);
+    ctx.fillStyle='rgba('+rgb+','+dustA.toFixed(2)+')';
+    ctx.fillRect((head[0])|0,(head[1])|0,p.sz*dotSz|0,p.sz*dotSz|0);}
   // ── veil membrane: shimmering thin curtain ──
   if(memW>0.05){var vR=minD*(0.20+0.04*Math.sin(t*3.5));
     for(i=0;i<warpStars.length;i++){var s=warpStars[i];
