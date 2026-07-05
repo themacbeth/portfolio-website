@@ -230,7 +230,7 @@ function syncPx(){var s=FIELD*(dpr||1);
   FW=Math.max(1,Math.min(4,Math.ceil(s)));FI=(s/FW)*(s/FW);}
 function resize(){
   dpr=Math.min(window.devicePixelRatio||1,2);
-  W=cv.width=Math.floor(innerWidth*dpr);H=cv.height=Math.floor(innerHeight*dpr);
+  W=cv.width=Math.max(1,Math.floor(innerWidth*dpr));H=cv.height=Math.max(1,Math.floor(innerHeight*dpr));
   cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';
   CX=W/2;CY=H/2;
   U=Math.max(2,Math.round(Math.min(W,H)/470));     // size unit for bodies

@@ -1195,32 +1195,8 @@ addEventListener('keydown',function(e){var k=e.key.toLowerCase();
   if(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'))return;
   if(cinematic){ exitCinematic(); return; }   // any key ends the cinematic
   if(k==="escape"||(k==="g"&&mode!=="galaxy")){if(cinematic)exitCinematic();goGalaxy();keySel=-1;}
-  else if(k===" "){e.preventDefault();paused=!paused;}
-  else if(k==="h"){hud=!hud;}
   else if(k==="]"){_dspd=Math.min(4,_dspd*1.5);}
   else if(k==="["){_dspd=Math.max(0.009,_dspd/1.5);}
-  // ←/→ step through thrones · ↑/↓ orbit around the galaxy
-  else if(k==="arrowleft"||k==="arrowright"){
-    var step=(k==="arrowright")?1:-1;
-    keySel=(keySel<0)?0:Math.max(0,Math.min(128,keySel+step));
-    hover=keySel;keyHeld=true;e.preventDefault();   // same state as mouse hover
-  }
-  else if(k==="arrowup"||k==="arrowdown"){
-    az+=(k==="arrowup")?-0.18:0.18;
-    e.preventDefault();
-  }
-  // 1-9, camera presets (0 resets)
-  else if(k>="1"&&k<="9"){
-    var cam=parseInt(k)-1;
-    var prs=[
-      {z:0.95,a:0.00,t:0.62},{z:0.85,a:0.62,t:0.55},{z:1.05,a:1.22,t:0.60},
-      {z:0.75,a:1.85,t:0.50},{z:1.10,a:2.45,t:0.60},{z:0.80,a:3.10,t:0.52},
-      {z:1.00,a:3.75,t:0.58},{z:0.88,a:4.30,t:0.55},{z:0.92,a:5.00,t:0.60}];
-    zoom=prs[cam].z;az=prs[cam].a;tilt=prs[cam].t;
-    if(mode!=="galaxy")goGalaxy();keySel=-1;
-    e.preventDefault();
-  }
-  else if(k==="0"){zoom=1;az=0;tilt=0.52;keySel=-1;}
   else if(k==="c"){if(cinematic){exitCinematic();stopSlideshow();keySel=-1;}
     else{stopSlideshow();enterCinematic();}}
   else if(k==="s"){var a=document.createElement('a');
@@ -1244,13 +1220,8 @@ function toggleKeymap(){
       'user-select:none';
     _kmapEl.innerHTML=
       '<b style="color:#fff">G / Esc</b> &nbsp;return to the galaxy<br>'+
-      '<b style="color:#fff">← →</b> step thrones · <b style="color:#fff">Enter</b> enter one<br>'+
-      '<b style="color:#fff">↑ ↓</b> &nbsp;orbit the galaxy<br>'+
-      '<b style="color:#fff">1–9 / 0</b> camera presets / reset<br>'+
-      '<b style="color:#fff">Space</b> pause<br>'+
       '<b style="color:#fff">[ ]</b> &nbsp;display speed<br>'+
       '<b style="color:#fff">C</b> &nbsp;cinematic slideshow<br>'+
-      '<b style="color:#fff">H</b> &nbsp;hud<br>'+
       '<b style="color:#fff">M</b> &nbsp;monochrome<br>'+
       '<b style="color:#fff">S</b> &nbsp;save a still<br>'+
       '<b style="color:#fff">F</b> &nbsp;fullscreen<br>'+
