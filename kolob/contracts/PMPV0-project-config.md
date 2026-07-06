@@ -16,7 +16,7 @@ passed as `humanValue * 1e10`, not the raw decimal. Both columns are shown below
 
 | key | paramType | authOption | selectOptions | minRange | maxRange | pmpLockedAfterTimestamp |
 |---|---|---|---|---|---|---|
-| `tier` | `Select` | `TokenOwner` | `["0","1","2"]` (Celestial, Terrestrial, Telestial) | — | — | `1761091200` (2026-10-22T00:00:00Z) |
+| `tier` | `Select` | `TokenOwner` | `["0","1","2"]` (Celestial, Terrestrial, Telestial) | — | — | `1792627200` (2026-10-22T00:00:00Z) |
 | `archetype` | `Select` | `TokenOwner` | 12 profile names, see below | — | — | — |
 | `name` | `String` | `TokenOwner` | — | — | — | — |
 | `col` | `HexColor` | `TokenOwner` | — | `0x000000` | `0xFFFFFF` | — |

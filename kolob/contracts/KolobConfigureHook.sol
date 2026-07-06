@@ -70,13 +70,21 @@ contract KolobConfigureHook is IPMPConfigureHook {
     address public immutable pmpV0;
     address public immutable coreContract;   // KOLOB's Art Blocks core contract
     uint256 public immutable projectId;
-    uint256 public immutable deadline;       // 1761091200 = 2026-10-22T00:00:00Z
+    uint256 public immutable deadline;       // 1792627200 = 2026-10-22T00:00:00Z
 
     // ── archetype state ────────────────────────────────────────────────────────
     // Global first-come claim registry + per-token immutability flag. Neither
     // is ever cleared, matching "no two sealed cores can ever share an archetype".
     mapping(bytes32 => bool) private _profileClaimed;   // keccak256(profileName) -> claimed
     mapping(uint256 => bool) private _archetypeSet;      // invocation -> sealed
+
+    // ── tier state ─────────────────────────────────────────────────────────────
+    // We track each throne's last-sealed tier ourselves rather than reading it
+    // back from PMPV0. The configure hook fires AFTER the new value is already
+    // stored, so getTokenParams() would return the incoming value, not the prior
+    // one — every advance would then compare a value against itself and revert.
+    mapping(uint256 => uint8) private _tier;      // invocation -> last-sealed tier index
+    mapping(uint256 => bool)  private _tierSet;   // invocation -> has advanced at least once
 
     // ── constants ──────────────────────────────────────────────────────────────
     // Hue centers in degrees (from kolob-pod-1d.html SUN_HUES): gold, blue, red
@@ -105,6 +113,7 @@ contract KolobConfigureHook is IPMPConfigureHook {
     error ArchetypeAlreadySet(uint256 invocation);
     error NameTooLong(uint256 byteLen);
     error HueBandViolation(uint256 starIdx, uint16 hue, uint16 center);
+    error AchromaticColor(uint256 starIdx);
 
     // The 12 profiles from CORE_PROFILES in kolob-pod-1d.html, in Select option order.
     // Confirm this matches the actual selectOptions[] passed to configureProject().
@@ -155,7 +164,7 @@ contract KolobConfigureHook is IPMPConfigureHook {
         uint256 inv = tokenId % 1_000_000; // AB V3: tokenId = projectId*1e6 + invocation
         bytes32 keyHash = keccak256(bytes(pmpInput.key));
 
-        if (keyHash == keccak256("tier"))      { _checkTier(inv, tokenId, pmpInput);      return; }
+        if (keyHash == keccak256("tier"))      { _checkTier(inv, pmpInput);               return; }
         if (keyHash == keccak256("archetype")) { _checkArchetype(inv, pmpInput);           return; }
         if (keyHash == keccak256("name"))      { _checkName(inv, pmpInput);                return; }
         if (keyHash == keccak256("col"))       { _checkCol(inv, pmpInput);                 return; }
@@ -165,17 +174,25 @@ contract KolobConfigureHook is IPMPConfigureHook {
 
     // ── validators ─────────────────────────────────────────────────────────────
 
-    function _checkTier(uint256 inv, uint256 tokenId, IPMPV0.PMPInput calldata pmpInput) internal view {
+    function _checkTier(uint256 inv, IPMPV0.PMPInput calldata pmpInput) internal {
         if (inv < INV_THRONE_START || inv > INV_THRONE_END) revert WrongTokenKind("tier");
 
         uint8 newTier = uint8(uint256(pmpInput.configuredValue)); // Select index, confirmed vs. PMPV0.sol
-        uint8 curTier = _currentTier(tokenId);
+        // Prior tier from our own registry: a throne that has never advanced
+        // defaults to Telestial. See the `_tier`/`_tierSet` note above for why
+        // we don't read this back from PMPV0.
+        uint8 curTier = _tierSet[inv] ? _tier[inv] : TIER_TELESTIAL;
 
         // Advance-only: new tier must be strictly inward (lower index).
         // Native pmpLockedAfterTimestamp on this key already freezes the
         // value entirely once `deadline` passes — this check only guards
         // the window *before* that lock.
         if (newTier >= curTier) revert TierMustAdvance(curTier, newTier);
+
+        // Seal the new tier. If any later step in the collector's
+        // configureTokenParams() tx reverts, this write rolls back with it.
+        _tier[inv]    = newTier;
+        _tierSet[inv] = true;
     }
 
     function _checkArchetype(uint256 inv, IPMPV0.PMPInput calldata pmpInput) internal {
@@ -206,6 +223,14 @@ contract KolobConfigureHook is IPMPConfigureHook {
         uint8 r = uint8(packed >> 16);
         uint8 g = uint8(packed >> 8);
         uint8 b = uint8(packed);
+
+        // Reject fully-desaturated colours (r==g==b: gray/white/black). They have
+        // no hue, so _hueDegrees() returns 0 — which falls inside the red band
+        // (center 15°) and would let Kai-e-vanrash be set to white/gray/black,
+        // defeating the "three suns always read as distinct" guarantee.
+        uint8 mx = r > g ? (r > b ? r : b) : (g > b ? g : b);
+        uint8 mn = r < g ? (r < b ? r : b) : (g < b ? g : b);
+        if (mx == mn) revert AchromaticColor(inv);
 
         uint16 h = _hueDegrees(r, g, b);
         uint16 center = inv == 0 ? HUE_GOLD : (inv == 1 ? HUE_BLUE : HUE_RED);
@@ -241,21 +266,4 @@ contract KolobConfigureHook is IPMPConfigureHook {
         return diff <= uint256(HUE_BAND);
     }
 
-    // ── helpers ────────────────────────────────────────────────────────────────
-
-    /// @dev Reads the token's currently-stored tier via PMPV0.getTokenParams().
-    ///      Defaults to Telestial (2) if never configured (fresh mint).
-    function _currentTier(uint256 tokenId) internal view returns (uint8) {
-        IPMPV0.TokenParam[] memory params = IPMPV0(pmpV0).getTokenParams(coreContract, tokenId);
-        for (uint256 i = 0; i < params.length; i++) {
-            if (keccak256(bytes(params[i].key)) == keccak256("tier")) {
-                // getTokenParams returns string values (per IWeb3Call) — parse decimal digit.
-                bytes memory v = bytes(params[i].value);
-                if (v.length == 1 && v[0] >= 0x30 && v[0] <= 0x39) {
-                    return uint8(uint8(v[0]) - 0x30);
-                }
-            }
-        }
-        return TIER_TELESTIAL;
-    }
 }
