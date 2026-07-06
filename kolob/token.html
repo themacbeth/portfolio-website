@@ -705,6 +705,21 @@ if(INV<3){
         Intelligence:tt.Intelligence,Affinity:tt.Affinity,Dispensation:tt.Dispensation,Glory:tt.Glory};
   if(tt.Signature) feat.Signature=tt.Signature;
 }
+
+/* ── seeded sonic identity, exposed as traits ──
+   Derived here from the exact PRNG stream _audioBuild consumes
+   (seed^0x50AD10: two delay draws, then root, then band) so the
+   metadata and the synth can never disagree. Outer Darkness is
+   silent — no Tone/Band traits there. */
+var _SOLF=[396,432,528,963];                          // solfeggio roots (Hz)
+var _BANDN=["Delta","Theta","Alpha","Beta"];          // brainwave band names
+var _BANDS=[[1,4],[4,8],[8,14],[14,30]];              // beat ranges (Hz)
+var _aseed=(mode==='star'?CORE_SEEDS[INV]:system.seed)>>>0;
+var _ar=mk((_aseed^0x50AD10)>>>0);
+var _aD1=0.26+_ar()*0.10,_aD2=0.40+_ar()*0.12;        // seeded delay times
+var _toneI=_ar.int(0,3),_bandI=_ar.int(0,3);
+var _beat=_BANDS[_bandI][0]+_ar()*(_BANDS[_bandI][1]-_BANDS[_bandI][0]);
+if(!(system&&system._od)){ feat.Tone=_SOLF[_toneI]+" Hz"; feat.Band=_BANDN[_bandI]; }
 window.$features=feat;
 
 /* ── resonance audio: the system's orbital ratios sounded as a chord ──
@@ -735,15 +750,13 @@ function _audioBuild(){
   var cp=_ac.createDynamicsCompressor();            // absorbs summation transients
   cp.threshold.value=-20;cp.knee.value=18;cp.ratio.value=5;
   cp.attack.value=0.012;cp.release.value=0.28;
-  var aseed=(mode==='star'?CORE_SEEDS[INV]:system.seed)>>>0;
-  var ar=mk((aseed^0x50AD10)>>>0);
   // ambient wash: two cross-fed delay lines (a convolver is too CPU-heavy
   // next to the render loop and causes audio underruns — this is ~free)
   var d1=_ac.createDelay(1),d2=_ac.createDelay(1),
       fb1=_ac.createGain(),fb2=_ac.createGain(),
       dl=_ac.createBiquadFilter();
-  d1.delayTime.value=0.26+ar()*0.10;                // seeded, mutually prime-ish
-  d2.delayTime.value=0.40+ar()*0.12;
+  d1.delayTime.value=_aD1;                          // seeded, mutually prime-ish
+  d2.delayTime.value=_aD2;                          // (drawn at init with Tone/Band)
   fb1.gain.value=0.42;fb2.gain.value=0.42;
   dl.type='lowpass';dl.frequency.value=700;
   d1.connect(fb1);fb1.connect(d2);d2.connect(fb2);fb2.connect(dl);dl.connect(d1);
@@ -755,9 +768,10 @@ function _audioBuild(){
   cp.connect(_ac.destination);
   // tuning: seeded from the solfeggio / healing set —
   //   396 release · 432 nature · 528 miracle · 963 awakening
-  // octave-dropped so it sits as a drone root (~99–133 Hz)
-  var SOLF=[396,432,528,963];
-  var BASE=SOLF[ar.int(0,3)];
+  // octave-dropped so it sits as a drone root (~99–133 Hz).
+  // _toneI/_bandI/_beat were drawn at init and surfaced as the
+  // Tone/Band traits — the synth sounds exactly what the metadata says.
+  var BASE=_SOLF[_toneI];
   var root=BASE; while(root>150) root/=2;
   // brainwave layer: L/R pair detuned by a seeded beat from one of the
   // four bands — Delta 1–4 (deep sleep) · Theta 4–8 (meditation) ·
@@ -765,9 +779,7 @@ function _audioBuild(){
   // The beat is perceived between the ears, not in either channel;
   // bypasses the delay wash so it stays clean. Best on headphones.
   if(_ac.createStereoPanner){
-    var BANDS=[[1,4],[4,8],[8,14],[14,30]];
-    var bd=BANDS[ar.int(0,3)];
-    var alpha=bd[0]+ar()*(bd[1]-bd[0]);
+    var alpha=_beat;
     var bf=BASE; while(bf>300) bf/=2;
     var
         pL=_ac.createStereoPanner(),pR=_ac.createStereoPanner(),
