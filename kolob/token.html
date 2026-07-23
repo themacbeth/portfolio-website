@@ -67,6 +67,29 @@ function ppCol(k,d){var v=PP[k];if(v==null)return d;                          //
 var INV=(function(){var u=new URLSearchParams(location.search),q=u.get('inv');
   if(q!=null)return +q;
   var tid=parseInt(String(tokenData.tokenId).split('-').pop())||0;return tid%1000000;})();
+
+/* ── which of the two KOLOB projects is this? ──
+   KOLOB ships as two Art Blocks projects that share this one script:
+     "throne" — Thrones (129), invocations 0-128, seeded by tokenData.hash
+     "core15" — Core 15 (15), invocations 0-2 great stars · 3-14 governing systems
+   Once the projects exist, set THRONE_PID / CORE15_PID to their real Art Blocks
+   projectIds and KIND resolves automatically from the tokenId. Until then, and
+   for local ?kind= testing, it falls back to the legacy unified numbering (the
+   pre-split 0-2 / 3-14 / 15-143 layout) so the existing website keeps working. */
+var THRONE_PID=null, CORE15_PID=null;      // ← set to real AB projectIds pre-deploy
+var KIND=(function(){
+  var q=new URLSearchParams(location.search).get('kind');
+  if(q==='throne'||q==='core15'||q==='legacy') return q;
+  try{ var pid=Math.floor(parseInt(String(tokenData.tokenId).split('-').pop())/1000000);
+    if(pid===CORE15_PID) return 'core15';
+    if(pid===THRONE_PID) return 'throne';
+  }catch(e){}
+  return 'legacy';                          // pre-split default; every caller still works
+})();
+/* Effective invocation for the build router below: map each project's local
+   invocation back into the legacy 0-143 space the three branches already expect.
+   Thrones are hash-seeded, so any throne value works; 15 lands in the throne branch. */
+var EINV = KIND==='throne' ? 15 : INV;      // core15 (0-14) and legacy pass through
 /* For preview / capture (?inv=N), synthesize a per-piece hash so each invocation
    exercises its own seed. In production Art Blocks supplies a real unique hash
    for every mint, so this branch is dormant. */
@@ -648,7 +671,7 @@ function applyPreset(rich){
 
 /* ── decide which piece this token is, build it ── */
 var mode,feat={};
-if(INV<3){
+if(EINV<3){
   // Great Star: start from the locked SUN_PARAMS, then apply Creator-Mode PostParams (token-owner authored)
   var bs=SUN_PARAMS[INV];
   SUN={col:ppCol('col',bs.col.slice()),size:bs.size,density:ppFlt('density',bs.density),
@@ -661,7 +684,7 @@ if(INV<3){
   feat={Kind:"Great Star",Name:sName,Kingdom:"Celestial",
     Authored:(PP.col||PP.density||PP.length||PP.rot||PP.speed||PP.curl||PP.big||PP.name)?"yes":"no",
     Intelligence:tg.Intelligence,Affinity:tg.Affinity,Dispensation:tg.Dispensation,Glory:"Celestial"};
-}else if(INV<15){
+}else if(EINV<15){
   var ci=Math.max(0,Math.min(11,ppInt('archetype',INV-3)));   // Creator-mode: archetype swap (PMP)
   var cseed=CORE_SEEDS[3+(INV-3)];
   system=buildSystem(cseed,0); extremize(system,mk((cseed^0xABCDEF)>>>0),ci);

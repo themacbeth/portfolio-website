@@ -162,7 +162,7 @@
     <p class="dim" style="margin-top:14px">Range, option-list, and lock-date enforcement (tier's 3 options,
       archetype's 12 options, all six star ranges, the 22 Oct 2026 lock) are native to PMPV0, set once via
       <code>configureProject()</code>. Four constraints PMPV0 can't express natively are enforced by a
-      custom configure hook instead:</p>
+      custom configure hook instead (one per project — Thrones and Core 15):</p>
     <ul class="dim" style="margin-top:6px;padding-left:20px;font-size:13px;line-height:1.7">
       <li><b style="color:#e0d6c2">Thrones:</b> <code>tier</code> only accepts one-directional advances
         (Telestial → Terrestrial → Celestial); a collector can't move a throne back outward.</li>
@@ -174,7 +174,8 @@
         to the same colour. Saturation and lightness are free.</li>
     </ul>
     <p class="dim" style="margin-top:10px">Reference Solidity:
-      <a href="contracts/KolobConfigureHook.sol" style="color:var(--cyan);text-decoration:underline">KolobConfigureHook.sol ↗</a> ·
+      <a href="contracts/KolobThroneHook.sol" style="color:var(--cyan);text-decoration:underline">KolobThroneHook.sol ↗</a> ·
+      <a href="contracts/KolobCore15Hook.sol" style="color:var(--cyan);text-decoration:underline">KolobCore15Hook.sol ↗</a> ·
       native PMPV0 project config values:
       <a href="contracts/PMPV0-project-config.md" style="color:var(--cyan);text-decoration:underline">PMPV0-project-config.md ↗</a></p>
 
