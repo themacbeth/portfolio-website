@@ -82,7 +82,7 @@
   <div class="mintbox" style="text-align:center">
     <p class="eyebrow" style="margin-bottom:14px">Mint · <span class="dry">Dry Run</span></p>
     <h1 style="font-size:clamp(44px,8vw,92px)">144</h1>
-    <p class="lede" style="margin-top:20px">129 thrones, 15 sealed at the core.</p>
+    <p class="lede" style="margin-top:20px">Two projects: 129 Thrones at a fixed price, and the Core 15 sealed at the core, by auction.</p>
 
     <div class="mintflow">
       <div class="mfs"><span class="mn">1</span><b>Mint</b>
@@ -109,8 +109,14 @@
       <p class="dim" style="font-size:13px;margin:2px 0 0">Advance each throne one kingdom at a time. The previous state is destroyed on contract confirmation.</p>
       <div class="mintlist" id="owned"></div>
 
-      <h2 style="margin-top:42px;font-size:18px">The Core 15 <span class="dim" style="font-size:13px;font-family:var(--mono)">sealed · celestial · authored</span></h2>
-      <div class="mintlist" id="core"></div>
+      <h2 style="margin-top:42px;font-size:18px">The Core 15 <span class="dim" style="font-size:13px;font-family:var(--mono)">separate project · by auction</span></h2>
+      <p class="dim" style="font-size:13px;margin:2px 0 0">The 3 Great Stars and 12 Governing Systems mint as their own project, by auction rather than fixed price. Each is a sealed, celestial, authored 1 of 1.</p>
+      <div class="mintlist">
+        <div class="mrow"><span class="dot" style="background:#e9c987"></span>
+          <span class="nm">Great Stars &amp; Governing Systems<small>15 unique core pieces · auctioned as a separate project</small></span>
+          <span class="pr">Auction</span></div>
+      </div>
+      <p class="dim" style="font-size:12px;margin:10px 0 0"><a href="core15.html" style="color:var(--cyan)">View the Core 15 ▸</a></p>
 
       <h2 style="margin-top:46px;font-size:18px">Advance fees</h2>
       <div class="mintlist">
@@ -206,17 +212,7 @@ function render(){
     });
   }
   document.getElementById('owned').innerHTML=oh;
-  // Core 15 mints
-  var sysLeft=coreLeft(3,14), starLeft=coreLeft(0,2);
-  document.getElementById('core').innerHTML=
-    '<div class="mrow"><span class="dot" style="background:'+rs(TC.core)+'"></span>'+
-      '<span class="nm">Governing Systems<small>'+sysLeft+' / 12 left · each a distinct archetype</small></span>'+
-      '<span class="pr">0.20 ETH</span>'+
-      '<button class="mbtn" data-core="sys"'+(sysLeft<=0?' disabled':'')+'>'+(sysLeft<=0?'Sold out':'Mint')+'</button></div>'+
-    '<div class="mrow"><span class="dot" style="background:'+rs(TC.core)+'"></span>'+
-      '<span class="nm">Great Stars<small>'+starLeft+' / 3 left · the triangle around Kolob</small></span>'+
-      '<span class="pr">0.50 ETH</span>'+
-      '<button class="mbtn" data-core="star"'+(starLeft<=0?' disabled':'')+'>'+(starLeft<=0?'Sold out':'Mint')+'</button></div>';
+  // Core 15 mints as a separate auction project — no fixed-price dry run here.
   wire();
 }
 function logLine(html){var l=document.getElementById('log');
