@@ -165,24 +165,23 @@ var POD="kolob-pod-1d.html";
 // must match the explorer's canonical token hash so minted tiers show up there
 var HASH="0x4b4f4c42a17f0c3e9d5b8e2160f47a93c8d1e0b6452f9a3c7e1d80b54f2a69c3";
 var H8=HASH.slice(2,10);
-var TC={cel:[233,201,135],ter:[233,143,206],tel:[127,200,255],core:[255,255,255]};
+var TC={cel:[233,201,135],ter:[233,143,206],tel:[127,200,255]};
 function rs(c){return"rgb("+c[0]+","+c[1]+","+c[2]+")";}
 function load(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
 function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 function setTier(i,t){try{localStorage.setItem('kolob:'+H8+':'+i,t);}catch(e){}}
 
 var mintedTh=load('kolob:mint:thrones',[]);   // [{i,tier}]
-var mintedCore=load('kolob:mint:core',[]);    // [idx 0-14]
 var connected=false;
 
 function thronesLeft(){return 129-mintedTh.length;}
-function coreLeft(lo,hi){var n=0;for(var i=lo;i<=hi;i++) if(mintedCore.indexOf(i)<0)n++;return n;}
 function rndFree(taken,lo,hi){var pool=[];for(var i=lo;i<=hi;i++) if(taken.indexOf(i)<0)pool.push(i);
   return pool.length?pool[(Math.random()*pool.length)|0]:-1;}
 
 var TIER_LABEL=["Celestial","Terrestrial","Telestial"];
 var TIER_DOT  =[TC.cel,TC.ter,TC.tel];
-var ADVANCE_FEE=[null,"0.04","0.05"];     // index = current tier; cost to advance from that tier
+var ADVANCE_FEE=[null,"0.05","0.04"];     // index = current tier; cost to advance from that tier
+                                          // Telestial(2)->Terrestrial 0.04 · Terrestrial(1)->Celestial 0.05
 
 function render(){
   document.getElementById('thLeft').textContent=thronesLeft()+" / 129 left";
@@ -248,23 +247,9 @@ function advanceThrone(idx){
     render();
   });
 }
-function mintCore(kind){
-  if(needWallet())return;
-  var lo=kind==='star'?0:3, hi=kind==='star'?2:14, price=kind==='star'?'0.50':'0.20';
-  if(coreLeft(lo,hi)<=0)return;
-  simulate(kind==='star'?'a great star':'a governing system',function(){
-    var idx=rndFree(mintedCore,lo,hi); if(idx<0)return;
-    mintedCore.push(idx); save('kolob:mint:core',mintedCore);
-    var link=kind==='star'?POD+'#sun='+idx:POD+'#core='+(idx-3);
-    var nm=kind==='star'?'Great Star '+(idx+1):'Core System '+(idx-2);
-    logLine('Minted <b>'+nm+'</b> · '+price+' ETH, <a href="'+link+'">VIEW ▸</a>');
-    render();
-  });
-}
 function wire(){
   document.querySelectorAll('[data-mint="th"]').forEach(function(b){b.onclick=function(){mintThrone();};});
   document.querySelectorAll('[data-adv]').forEach(function(b){b.onclick=function(){advanceThrone(+b.dataset.adv);};});
-  document.querySelectorAll('[data-core]').forEach(function(b){b.onclick=function(){mintCore(b.dataset.core);};});
 }
 document.getElementById('connect').onclick=function(){
   connected=!connected;
@@ -272,7 +257,7 @@ document.getElementById('connect').onclick=function(){
   document.getElementById('addr').textContent=connected?'0xDRY…RUN':'';
 };
 document.getElementById('reset').onclick=function(){
-  mintedTh=[];mintedCore=[];save('kolob:mint:thrones',[]);save('kolob:mint:core',[]);
+  mintedTh=[];save('kolob:mint:thrones',[]);
   // clear minted-throne tiers too
   for(var i=0;i<129;i++){try{localStorage.removeItem('kolob:'+H8+':'+i);}catch(e){}}
   document.getElementById('log').innerHTML='';render();
