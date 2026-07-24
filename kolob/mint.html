@@ -13,6 +13,12 @@
   .wallet{display:flex;align-items:center;gap:12px;justify-content:center;margin:30px 0 8px;
     font:11px/1 var(--mono);letter-spacing:.08em;color:var(--dim)}
   .mintlist{border:1px solid var(--line);margin:14px 0 0}
+  /* cohesive per-section container (heading + description + list share one padded box) */
+  .msec{border:1px solid var(--line);background:var(--panel);padding:18px 20px;margin-top:16px}
+  .msec>h2{margin:0 0 4px;font-size:18px}
+  .msec>p.dim{margin:0 0 12px}
+  .msec .mintlist{border:0;margin:0}
+  .msec .mrow{padding:12px 0}
   .mrow{display:flex;align-items:center;gap:14px;padding:16px 18px;border-bottom:1px solid var(--line)}
   .mrow:last-child{border-bottom:0}
   .mrow .dot{width:9px;height:9px;border-radius:50%;flex:none}
@@ -82,7 +88,7 @@
   <div class="mintbox" style="text-align:center">
     <p class="eyebrow" style="margin-bottom:14px">Mint · <span class="dry">Dry Run</span></p>
     <h1 style="font-size:clamp(44px,8vw,92px)">144</h1>
-    <p class="lede" style="margin-top:20px">Two projects: 129 Thrones at a fixed price, and the Core 15 sealed at the core, by auction.</p>
+    <p class="lede" style="margin-top:20px">129 Thrones at a fixed price. The Core 15, sealed at the core, released by auction.</p>
 
     <div class="mintflow">
       <div class="mfs"><span class="mn">1</span><b>Mint</b>
@@ -101,37 +107,45 @@
     </div>
 
     <div style="text-align:left">
-      <h2 style="margin-top:46px;font-size:18px">Mint a Throne <span class="dim" style="font-size:13px;font-family:var(--mono)" id="thLeft"></span></h2>
-      <p class="dim" style="font-size:13px;margin:2px 0 0">Every throne starts at <b style="color:#cdd0d8">Telestial</b>. Advancing through the veils is paid, never instant.</p>
-      <div class="mintlist" id="thrones"></div>
-
-      <h2 style="margin-top:42px;font-size:18px">Your thrones <span class="dim" style="font-size:13px;font-family:var(--mono)" id="ownedCount"></span></h2>
-      <p class="dim" style="font-size:13px;margin:2px 0 0">Advance each throne one kingdom at a time. The previous state is destroyed on contract confirmation.</p>
-      <div class="mintlist" id="owned"></div>
-
-      <h2 style="margin-top:42px;font-size:18px">The Core 15 <span class="dim" style="font-size:13px;font-family:var(--mono)">separate project · by auction</span></h2>
-      <p class="dim" style="font-size:13px;margin:2px 0 0">The 3 Great Stars and 12 Governing Systems mint as their own project, by auction rather than fixed price. Each is a sealed, celestial, authored 1 of 1.</p>
-      <div class="mintlist">
-        <div class="mrow"><span class="dot" style="background:#e9c987"></span>
-          <span class="nm">Great Stars &amp; Governing Systems<small>15 unique core pieces · auctioned as a separate project</small></span>
-          <span class="pr">Auction</span></div>
+      <div class="msec">
+        <h2>Mint a Throne <span class="dim" style="font-size:13px;font-family:var(--mono)" id="thLeft"></span></h2>
+        <p class="dim" style="font-size:13px">Every throne starts at <b style="color:#cdd0d8">Telestial</b>. Advancing through the veils is paid, never instant.</p>
+        <div class="mintlist" id="thrones"></div>
       </div>
-      <p class="dim" style="font-size:12px;margin:10px 0 0"><a href="core15.html" style="color:var(--cyan)">View the Core 15 ▸</a></p>
 
-      <h2 style="margin-top:46px;font-size:18px">Advance fees</h2>
-      <div class="mintlist">
-        <div class="mrow"><span class="dot" style="background:#7fc8ff"></span>
-          <span class="nm">Telestial<small>base mint · the starting kingdom, sparse, on the rim</small></span>
-          <span class="pr">0.01 ETH</span></div>
-        <div class="mrow"><span class="dot" style="background:#e98fce"></span>
-          <span class="nm">Advance to Terrestrial<small>+ signature ringed giant · warmer palette · more planets, moons &amp; density</small></span>
-          <span class="pr">+ 0.04 ETH</span></div>
-        <div class="mrow"><span class="dot" style="background:#e9c987"></span>
-          <span class="nm">Advance to Celestial<small>+ binary companion star · comet swarm · gold palette · the richest worlds</small></span>
-          <span class="pr">+ 0.05 ETH</span></div>
-        <div class="mrow"><span class="dot" style="background:#fff;opacity:.4"></span>
-          <span class="nm" style="color:var(--dim)">Total to fully advance<small>across all three kingdoms</small></span>
-          <span class="pr" style="color:var(--dim)">= 0.10 ETH</span></div>
+      <div class="msec">
+        <h2>Your thrones <span class="dim" style="font-size:13px;font-family:var(--mono)" id="ownedCount"></span></h2>
+        <p class="dim" style="font-size:13px">Advance each throne one kingdom at a time. The previous state is destroyed on contract confirmation.</p>
+        <div class="mintlist" id="owned"></div>
+      </div>
+
+      <div class="msec">
+        <h2>The Core 15 <span class="dim" style="font-size:13px;font-family:var(--mono)">sealed · celestial · by auction</span></h2>
+        <p class="dim" style="font-size:13px">The 3 Great Stars and 12 Governing Systems are released by auction rather than a fixed price. Each is a sealed, celestial, authored 1 of 1.</p>
+        <div class="mintlist">
+          <div class="mrow"><span class="dot" style="background:#e9c987"></span>
+            <span class="nm">Great Stars &amp; Governing Systems<small>15 unique core pieces · released by auction</small></span>
+            <span class="pr">Auction</span></div>
+        </div>
+        <p class="dim" style="font-size:12px;margin:12px 0 0"><a href="core15.html" style="color:var(--cyan)">View the Core 15 ▸</a></p>
+      </div>
+
+      <div class="msec">
+        <h2>Advance fees</h2>
+        <div class="mintlist">
+          <div class="mrow"><span class="dot" style="background:#7fc8ff"></span>
+            <span class="nm">Telestial<small>base mint · the starting kingdom, sparse, on the rim</small></span>
+            <span class="pr">0.01 ETH</span></div>
+          <div class="mrow"><span class="dot" style="background:#e98fce"></span>
+            <span class="nm">Advance to Terrestrial<small>+ signature ringed giant · warmer palette · more planets, moons &amp; density</small></span>
+            <span class="pr">+ 0.04 ETH</span></div>
+          <div class="mrow"><span class="dot" style="background:#e9c987"></span>
+            <span class="nm">Advance to Celestial<small>+ binary companion star · comet swarm · gold palette · the richest worlds</small></span>
+            <span class="pr">+ 0.05 ETH</span></div>
+          <div class="mrow"><span class="dot" style="background:#fff;opacity:.4"></span>
+            <span class="nm" style="color:var(--dim)">Total to fully advance<small>across all three kingdoms</small></span>
+            <span class="pr" style="color:var(--dim)">= 0.10 ETH</span></div>
+        </div>
       </div>
 
       <p style="margin-top:26px;font:11px/1.8 var(--mono);letter-spacing:.05em;color:#c9a96b;
