@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>KOLOB · Core 15 auction, which mechanism?</title>
+<style>
+  :root{
+    --void:#07070b; --ink:#e7e9ef; --muted:#969aa6; --dim:#5c606c;
+    --gold:#e9c987; --gold-soft:rgba(233,201,135,.10); --gold-line:rgba(233,201,135,.42);
+    --cyan:#7fc8ff; --cyan-soft:rgba(127,200,255,.08); --cyan-line:rgba(127,200,255,.38);
+    --line:rgba(255,255,255,.11); --line-hi:rgba(255,255,255,.20);
+    --surf:rgba(255,255,255,.028);
+    --f-disp:"Jost","Century Gothic",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --f-body:system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+    --f-mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--void)}
+  body{color:var(--ink);font-family:var(--f-body);
+    font-size:16px;line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:880px;margin:0 auto;padding:52px 26px 76px}
+  h1{font-family:var(--f-disp);font-weight:300;font-size:clamp(29px,5.2vw,45px);line-height:1.12;
+    letter-spacing:.005em;margin:0 0 20px;text-wrap:balance;color:#fff}
+  h1 .em{color:var(--gold)}
+  .lede{font-size:clamp(16px,2.2vw,18px);color:var(--muted);max-width:60ch;margin:0 0 14px}
+  .rule{height:1px;background:var(--line);border:0;margin:44px 0}
+  .sec-lab{font-family:var(--f-mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--gold);margin:0 0 18px}
+  .sec-lab.cool{color:var(--cyan)}
+  .stakes{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--line);
+    border:1px solid var(--line)}
+  .stakes>div{background:var(--void);padding:22px 22px}
+  .comp-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:9px}
+  .dot{width:12px;height:12px;border-radius:50%;flex:none}
+  .dot.g{background:var(--gold);box-shadow:0 0 0 1px rgba(233,201,135,.3)}
+  .dot.c{width:9px;height:9px;background:var(--cyan)}
+  .comp-cap{font-family:var(--f-mono);font-size:12px;letter-spacing:.04em;color:var(--muted)}
+  .comp-cap b{color:var(--ink);font-weight:500}
+  .facts{margin:0;padding:0;list-style:none;font-size:14.5px;color:var(--muted)}
+  .facts li{padding:7px 0;border-top:1px solid var(--line)}
+  .facts li:first-child{border-top:0;padding-top:0}
+  .facts b{color:var(--ink);font-weight:500}
+  .worry{border:1px solid var(--gold-line);background:var(--gold-soft);padding:22px 24px;
+    display:flex;gap:18px;align-items:flex-start}
+  .worry .tag{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--gold);border:1px solid var(--gold-line);padding:5px 9px;white-space:nowrap;margin-top:2px}
+  .worry p{margin:0;font-size:16.5px;color:var(--ink)}
+  .opts{display:flex;flex-direction:column;gap:18px}
+  .opt{border:1px solid var(--line);background:var(--surf);padding:0;overflow:hidden}
+  .opt-grid{display:grid;grid-template-columns:250px 1fr;gap:0}
+  .opt-vis{padding:22px 20px;border-right:1px solid var(--line);display:flex;flex-direction:column;
+    justify-content:center;gap:14px;background:rgba(255,255,255,.015)}
+  .opt-body{padding:22px 24px}
+  .opt-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  .opt-name{font-family:var(--f-disp);font-weight:400;font-size:21px;color:#fff;margin:0}
+  .opt-name .k{font-family:var(--f-mono);font-size:12px;color:var(--dim);margin-right:8px;font-weight:400}
+  .badge{font-family:var(--f-mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+    padding:5px 9px;white-space:nowrap}
+  .badge.rec{color:var(--gold);border:1px solid var(--gold-line);background:var(--gold-soft)}
+  .badge.hedge{color:var(--cyan);border:1px solid var(--cyan-line);background:var(--cyan-soft)}
+  .badge.against{color:var(--dim);border:1px solid var(--line)}
+  .opt.dim{opacity:.72}
+  .opt.rec{border-color:var(--gold-line)}
+  .opt.hedge-b{border-color:var(--cyan-line)}
+  .one{font-size:15.5px;color:var(--ink);margin:8px 0 16px}
+  .pc{display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:14px}
+  .pc .h{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--dim);margin:0 0 5px;display:flex;align-items:center;gap:6px}
+  .pc p{margin:0;color:var(--muted)}
+  .pc .plus .h{color:#8fc9a0}
+  .pc .minus .h{color:#d99}
+  .meter{display:flex;align-items:center;gap:9px;font-family:var(--f-mono);font-size:10.5px;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .segs{display:flex;gap:3px}
+  .segs i{width:20px;height:5px;background:rgba(255,255,255,.12);border-radius:1px}
+  .segs i.on{background:var(--gold)}
+  .hedge-b .segs i.on{background:var(--cyan)}
+  .dim .segs i.on{background:var(--muted)}
+  .tablewrap{overflow-x:auto;border:1px solid var(--line)}
+  table{border-collapse:collapse;width:100%;min-width:560px;font-size:13.5px}
+  th,td{text-align:left;padding:13px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+  thead th{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--dim);font-weight:400}
+  tbody th{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-weight:400;white-space:nowrap}
+  td{color:var(--ink)}
+  td.gold{color:var(--gold)}
+  td.cyan{color:var(--cyan)}
+  td.mut{color:var(--dim)}
+  tr:last-child td,tr:last-child th{border-bottom:0}
+  .ask{border:1px solid var(--line-hi);padding:26px 26px}
+  .ask ol{margin:14px 0 0;padding-left:0;list-style:none;counter-reset:q}
+  .ask li{counter-increment:q;position:relative;padding:12px 0 12px 40px;border-top:1px solid var(--line);
+    color:var(--ink);font-size:15.5px}
+  .ask li:first-child{border-top:0}
+  .ask li::before{content:counter(q,decimal-leading-zero);position:absolute;left:0;top:13px;
+    font-family:var(--f-mono);font-size:12px;color:var(--gold);letter-spacing:.05em}
+  .ask li span{color:var(--muted);font-size:14px}
+  footer{margin-top:40px;padding-top:22px;border-top:1px solid var(--line);
+    font-family:var(--f-mono);font-size:12px;letter-spacing:.04em;color:var(--dim);
+    display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  footer a{color:var(--cyan);text-decoration:none}
+  footer a:hover{text-decoration:underline}
+  a:focus-visible,li:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+  @media(max-width:640px){
+    .stakes{grid-template-columns:1fr}
+    .opt-grid{grid-template-columns:1fr}
+    .opt-vis{border-right:0;border-bottom:1px solid var(--line)}
+    .pc{grid-template-columns:1fr}
+    .worry{flex-direction:column;gap:12px}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <h1>How should I auction the <span class="em">Core 15</span>?</h1>
+  <p class="lede">KOLOB is a fully on-chain generative collection launching on Art Blocks. The 129 Thrones sell at a fixed price. That part's settled. What if I auction the core 15?</p>
+
+  <hr class="rule">
+
+  <p class="sec-lab">What's being sold</p>
+  <div class="stakes">
+    <div>
+      <div class="comp-row">
+        <span class="dot g"></span><span class="dot g"></span><span class="dot g"></span>
+        <span class="comp-cap"><b>3 Great Stars</b>, the rarest</span>
+      </div>
+      <div class="comp-row">
+        <span class="dot c"></span><span class="dot c"></span><span class="dot c"></span><span class="dot c"></span>
+        <span class="dot c"></span><span class="dot c"></span><span class="dot c"></span><span class="dot c"></span>
+        <span class="dot c"></span><span class="dot c"></span><span class="dot c"></span><span class="dot c"></span>
+        <span class="comp-cap"><b>12 Governing Systems</b></span>
+      </div>
+    </div>
+    <div>
+      <ul class="facts">
+        <li>Each of the 15 is a <b>1 of 1</b>, sealed at the core</li>
+        <li>Holders <b>personalise</b> theirs after mint (star colour / archetype), on-chain</li>
+        <li>They're the <b>trophy tier</b> above the 129 Thrones</li>
+      </ul>
+    </div>
+  </div>
+
+  <hr class="rule">
+
+  <div class="worry">
+    <span class="tag">The catch</span>
+    <p>My real concern isn't price, it's <b>depth</b>. A big competitive auction that expects fifteen-plus serious bidders could fall flat in a thin market. So I'm weighing mechanisms by how well they hold up when turnout is <em>low</em>, not high.</p>
+  </div>
+
+  <hr class="rule">
+
+  <p class="sec-lab cool">Three ways to run it</p>
+  <div class="opts">
+
+    <div class="opt rec">
+      <div class="opt-grid">
+        <div class="opt-vis">
+          <svg viewBox="0 0 240 96" width="100%" role="img" aria-label="A price line falling left to right; the first three points are gold, the rest cyan.">
+            <line x1="18" y1="20" x2="18" y2="82" stroke="#4a4d57" stroke-width="1"/>
+            <line x1="18" y1="82" x2="228" y2="82" stroke="#4a4d57" stroke-width="1"/>
+            <polyline points="30,26 55,36 80,46 105,54 130,60 155,66 180,71 205,76" fill="none" stroke="#5c606c" stroke-width="1.4"/>
+            <circle cx="30" cy="26" r="6" fill="#e9c987"/>
+            <circle cx="55" cy="36" r="6" fill="#e9c987"/>
+            <circle cx="80" cy="46" r="6" fill="#e9c987"/>
+            <circle cx="105" cy="54" r="4.5" fill="#7fc8ff"/>
+            <circle cx="130" cy="60" r="4.5" fill="#7fc8ff"/>
+            <circle cx="155" cy="66" r="4.5" fill="#7fc8ff"/>
+            <circle cx="180" cy="71" r="4.5" fill="#7fc8ff"/>
+            <circle cx="205" cy="76" r="4.5" fill="#7fc8ff"/>
+          </svg>
+          <div class="meter">resilience <span class="segs"><i class="on"></i><i class="on"></i><i></i></span> low risk</div>
+        </div>
+        <div class="opt-body">
+          <div class="opt-head">
+            <h3 class="opt-name"><span class="k">B</span>Dutch auction, buy-order</h3>
+            <span class="badge rec">Leaning toward</span>
+          </div>
+          <p class="one">One descending price. The first 3 to buy claim the Great Stars; the next 12 get the Systems. A reserve floor keeps the stars from going too cheap.</p>
+          <div class="pc">
+            <div class="plus"><p class="h">Holds up because</p><p>It clears one piece at a time as the price falls. No crowd bidding at once. Keeps the "highest commitment ascends to the core" story, and it's basically an Art Blocks-native minter.</p></div>
+            <div class="minus"><p class="h">Watch out</p><p>In a quiet market a star could get grabbed cheaply once the price drops. The reserve floor blunts that.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="opt hedge-b">
+      <div class="opt-grid">
+        <div class="opt-vis">
+          <svg viewBox="0 0 240 96" width="100%" role="img" aria-label="Left: three rising gold bars. Right: a flat cyan line of evenly spaced dots.">
+            <line x1="20" y1="80" x2="112" y2="80" stroke="#4a4d57" stroke-width="1"/>
+            <line x1="34" y1="80" x2="34" y2="44" stroke="#5c606c" stroke-width="1.2"/>
+            <line x1="66" y1="80" x2="66" y2="30" stroke="#5c606c" stroke-width="1.2"/>
+            <line x1="98" y1="80" x2="98" y2="52" stroke="#5c606c" stroke-width="1.2"/>
+            <circle cx="34" cy="44" r="6" fill="#e9c987"/>
+            <circle cx="66" cy="30" r="6" fill="#e9c987"/>
+            <circle cx="98" cy="52" r="6" fill="#e9c987"/>
+            <line x1="128" y1="8" x2="128" y2="88" stroke="#2b2d35" stroke-width="1" stroke-dasharray="3 4"/>
+            <line x1="140" y1="56" x2="228" y2="56" stroke="#4a4d57" stroke-width="1"/>
+            <circle cx="148" cy="56" r="4.5" fill="#7fc8ff"/>
+            <circle cx="164" cy="56" r="4.5" fill="#7fc8ff"/>
+            <circle cx="180" cy="56" r="4.5" fill="#7fc8ff"/>
+            <circle cx="196" cy="56" r="4.5" fill="#7fc8ff"/>
+            <circle cx="212" cy="56" r="4.5" fill="#7fc8ff"/>
+          </svg>
+          <div class="meter">resilience <span class="segs"><i class="on"></i><i class="on"></i><i class="on"></i></span> lowest risk</div>
+        </div>
+        <div class="opt-body">
+          <div class="opt-head">
+            <h3 class="opt-name"><span class="k">D</span>Hybrid</h3>
+            <span class="badge hedge">The hedge</span>
+          </div>
+          <p class="one">The 3 Great Stars run as separate ascending (English) auctions. The 12 Systems all sell at one fixed price.</p>
+          <div class="pc">
+            <div class="plus"><p class="h">Holds up because</p><p>It puts real competition only on the 3 trophies (where it'll show up even in a thin market), and the 12 can't "fail to fill." There's no bidding, they just clear.</p></div>
+            <div class="minus"><p class="h">Watch out</p><p>Two mechanisms to build and explain. Loses the single unified event.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="opt dim">
+      <div class="opt-grid">
+        <div class="opt-vis">
+          <svg viewBox="0 0 240 96" width="100%" role="img" aria-label="A loose cluster of dots with a dashed bracket around the top three gold ones.">
+            <rect x="40" y="14" width="120" height="30" fill="none" stroke="#3a3d45" stroke-width="1" stroke-dasharray="3 4"/>
+            <circle cx="64" cy="28" r="6" fill="#e9c987"/>
+            <circle cx="100" cy="24" r="6" fill="#e9c987"/>
+            <circle cx="134" cy="30" r="6" fill="#e9c987"/>
+            <circle cx="52" cy="58" r="4.5" fill="#7fc8ff"/>
+            <circle cx="86" cy="66" r="4.5" fill="#7fc8ff"/>
+            <circle cx="120" cy="60" r="4.5" fill="#7fc8ff"/>
+            <circle cx="156" cy="66" r="4.5" fill="#7fc8ff"/>
+            <circle cx="188" cy="56" r="4.5" fill="#7fc8ff"/>
+            <circle cx="200" cy="72" r="4.5" fill="#7fc8ff"/>
+          </svg>
+          <div class="meter">resilience <span class="segs"><i class="on"></i><i></i><i></i></span> fragile</div>
+        </div>
+        <div class="opt-body">
+          <div class="opt-head">
+            <h3 class="opt-name"><span class="k">A</span>Ranked pool</h3>
+            <span class="badge against">Leaning against</span>
+          </div>
+          <p class="one">Everyone bids into one pool. The top 3 bids claim the Great Stars; everyone below gets a System.</p>
+          <div class="pc">
+            <div class="plus"><p class="h">The appeal</p><p>Best story of the three. The highest bidders literally ascend to the three stars at the core.</p></div>
+            <div class="minus"><p class="h">Why I'm cool on it</p><p>The ranking is meaningless without 15+ bids, and it needs a custom contract to hand out the star slots by rank, which fights Art Blocks' sequential minting.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <hr class="rule">
+
+  <p class="sec-lab">Side by side</p>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>&nbsp;</th><th>B · Dutch</th><th>D · Hybrid</th><th>A · Ranked pool</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Feel</th><td>one unified ascent</td><td>two separate sales</td><td class="mut">one big event</td></tr>
+        <tr><th>Star pricing</th><td class="gold">falls until claimed</td><td class="gold">true bidding war</td><td class="mut">by rank</td></tr>
+        <tr><th>System pricing</th><td class="cyan">falls until claimed</td><td class="cyan">flat, guaranteed</td><td class="mut">by rank</td></tr>
+        <tr><th>Thin-market</th><td>holds up</td><td>bulletproof</td><td class="mut">breaks</td></tr>
+        <tr><th>Build effort</th><td>~1 native minter</td><td>2 mechanisms</td><td class="mut">custom contract</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr class="rule">
+
+  <p class="sec-lab cool">What I'd love your take on</p>
+  <div class="ask">
+    <ol>
+      <li>For a set like this (3 trophies + 12 siblings, uncertain turnout), which would you actually run? <span>B, D, or none of the above?</span></li>
+      <li>If Dutch (B): where would you set the opening price and the star reserve floor?</li>
+      <li>Am I wrong to rule out a blind / sealed-bid format? <span>My instinct: hidden bids suppress the casual bidders, making the thin-market problem worse, but tell me if I'm off.</span></li>
+      <li>Anything I'm missing entirely?</li>
+    </ol>
+  </div>
+
+  <footer>
+    <span>KOLOB · 144 pieces · fully on-chain · Art Blocks</span>
+    <a href="https://macbeth-kolob.vercel.app">see the live pieces →</a>
+  </footer>
+
+</div>
+
+</body>
+</html>
