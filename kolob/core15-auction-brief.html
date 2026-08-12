@@ -47,6 +47,9 @@
   .worry .tag{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;
     color:var(--gold);border:1px solid var(--gold-line);padding:5px 9px;white-space:nowrap;margin-top:2px}
   .worry p{margin:0;font-size:16.5px;color:var(--ink)}
+  .worry.upd{border-color:var(--cyan-line);background:var(--cyan-soft)}
+  .worry.upd .tag{color:var(--cyan);border-color:var(--cyan-line)}
+  .worry.upd a{color:var(--cyan);text-decoration:underline}
   .opts{display:flex;flex-direction:column;gap:18px}
   .opt{border:1px solid var(--line);background:var(--surf);padding:0;overflow:hidden}
   .opt-grid{display:grid;grid-template-columns:250px 1fr;gap:0}
@@ -59,11 +62,9 @@
   .badge{font-family:var(--f-mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
     padding:5px 9px;white-space:nowrap}
   .badge.rec{color:var(--gold);border:1px solid var(--gold-line);background:var(--gold-soft)}
-  .badge.hedge{color:var(--cyan);border:1px solid var(--cyan-line);background:var(--cyan-soft)}
   .badge.against{color:var(--dim);border:1px solid var(--line)}
   .opt.dim{opacity:.72}
   .opt.rec{border-color:var(--gold-line)}
-  .opt.hedge-b{border-color:var(--cyan-line)}
   .one{font-size:15.5px;color:var(--ink);margin:8px 0 16px}
   .pc{display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:14px}
   .pc .h{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
@@ -76,7 +77,6 @@
   .segs{display:flex;gap:3px}
   .segs i{width:20px;height:5px;background:rgba(255,255,255,.12);border-radius:1px}
   .segs i.on{background:var(--gold)}
-  .hedge-b .segs i.on{background:var(--cyan)}
   .dim .segs i.on{background:var(--muted)}
   .tablewrap{overflow-x:auto;border:1px solid var(--line)}
   table{border-collapse:collapse;width:100%;min-width:560px;font-size:13.5px}
@@ -153,10 +153,17 @@
 
   <hr class="rule">
 
+  <div class="worry upd">
+    <span class="tag">Update</span>
+    <p>Art Blocks confirmed their <a href="https://docs.artblocks.io/developer/minter-suite/minters/">minter suite</a>. Two of the three options below turn out to be existing minters, not something I'd have to build.</p>
+  </div>
+
+  <hr class="rule">
+
   <p class="sec-lab cool">Three ways to run it</p>
   <div class="opts">
 
-    <div class="opt rec">
+    <div class="opt dim">
       <div class="opt-grid">
         <div class="opt-vis">
           <svg viewBox="0 0 240 96" width="100%" role="img" aria-label="A price line falling left to right; the first three points are gold, the rest cyan.">
@@ -177,18 +184,18 @@
         <div class="opt-body">
           <div class="opt-head">
             <h3 class="opt-name"><span class="k">B</span>Dutch auction, buy-order</h3>
-            <span class="badge rec">Leaning toward</span>
+            <span class="badge against">Not offered</span>
           </div>
           <p class="one">One descending price. The first 3 to buy claim the Great Stars; the next 12 get the Systems. A reserve floor keeps the stars from going too cheap.</p>
           <div class="pc">
-            <div class="plus"><p class="h">Holds up because</p><p>It clears one piece at a time as the price falls. No crowd bidding at once. Keeps the "highest commitment ascends to the core" story, and it's basically an Art Blocks-native minter.</p></div>
-            <div class="minus"><p class="h">Watch out</p><p>In a quiet market a star could get grabbed cheaply once the price drops. The reserve floor blunts that.</p></div>
+            <div class="plus"><p class="h">The appeal</p><p>It clears one piece at a time as the price falls. No crowd bidding at once. Keeps the "highest commitment ascends to the core" story.</p></div>
+            <div class="minus"><p class="h">Why it's out</p><p>No Art Blocks minter auto-routes early buyers into different reward tiers by descending price. Building this would mean a genuinely custom minter, more work than anything else here.</p></div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="opt hedge-b">
+    <div class="opt rec">
       <div class="opt-grid">
         <div class="opt-vis">
           <svg viewBox="0 0 240 96" width="100%" role="img" aria-label="Left: three rising gold bars. Right: a flat cyan line of evenly spaced dots.">
@@ -212,12 +219,12 @@
         <div class="opt-body">
           <div class="opt-head">
             <h3 class="opt-name"><span class="k">D</span>Hybrid</h3>
-            <span class="badge hedge">The hedge</span>
+            <span class="badge rec">The plan</span>
           </div>
-          <p class="one">The 3 Great Stars run as separate ascending (English) auctions. The 12 Systems all sell at one fixed price.</p>
+          <p class="one">The 3 Great Stars as a <b>Serial English Auction</b>, sequential ascending bidding, one star at a time. The 12 Systems at a <b>Set Price</b>. Both are existing Art Blocks minters.</p>
           <div class="pc">
-            <div class="plus"><p class="h">Holds up because</p><p>It puts real competition only on the 3 trophies (where it'll show up even in a thin market), and the 12 can't "fail to fill." There's no bidding, they just clear.</p></div>
-            <div class="minus"><p class="h">Watch out</p><p>Two mechanisms to build and explain. Loses the single unified event.</p></div>
+            <div class="plus"><p class="h">Holds up because</p><p>It puts real, open bidding only on the 3 trophies (where it'll show up even in a thin market), and the 12 can't "fail to fill." There's no bidding, they just clear. No custom minter needed for either half.</p></div>
+            <div class="minus"><p class="h">Watch out</p><p>Two mechanisms to explain, and I need to confirm with Art Blocks how to switch the project's minter from the star auctions to the fixed-price systems once the stars sell.</p></div>
           </div>
         </div>
       </div>
@@ -248,7 +255,7 @@
           <p class="one">Everyone bids into one pool. The top 3 bids claim the Great Stars; everyone below gets a System.</p>
           <div class="pc">
             <div class="plus"><p class="h">The appeal</p><p>Best story of the three. The highest bidders literally ascend to the three stars at the core.</p></div>
-            <div class="minus"><p class="h">Why I'm cool on it</p><p>The ranking is meaningless without 15+ bids, and it needs a custom contract to hand out the star slots by rank, which fights Art Blocks' sequential minting.</p></div>
+            <div class="minus"><p class="h">Why I'm cool on it</p><p>Art Blocks' actual native version of this is the Ranked Auction Minter, sealed-bid, all winners pay the lowest winning bid. Same low-turnout risk as a blind auction: hidden bids tend to draw fewer casual bidders than an open one.</p></div>
           </div>
         </div>
       </div>
@@ -269,19 +276,20 @@
         <tr><th>Star pricing</th><td class="gold">falls until claimed</td><td class="gold">true bidding war</td><td class="mut">by rank</td></tr>
         <tr><th>System pricing</th><td class="cyan">falls until claimed</td><td class="cyan">flat, guaranteed</td><td class="mut">by rank</td></tr>
         <tr><th>Thin-market</th><td>holds up</td><td>bulletproof</td><td class="mut">breaks</td></tr>
-        <tr><th>Build effort</th><td>~1 native minter</td><td>2 mechanisms</td><td class="mut">custom contract</td></tr>
+        <tr><th>Native minter</th><td class="mut">none, custom</td><td class="gold">SEA + Set Price</td><td class="mut">RAM (sealed-bid)</td></tr>
+        <tr><th>Build effort</th><td class="mut">custom minter</td><td>zero, both native</td><td class="mut">RAM x2, no custom</td></tr>
       </tbody>
     </table>
   </div>
 
   <hr class="rule">
 
-  <p class="sec-lab cool">What I'd love your take on</p>
+  <p class="sec-lab cool">Where this landed</p>
   <div class="ask">
+    <p style="margin:0 0 16px;color:var(--ink);font-size:15.5px">Going with <b>D</b>. The 3 Great Stars as a Serial English Auction, the 12 Governing Systems at a Set Price, both existing Art Blocks minters. B needed custom development Art Blocks doesn't offer. A's real native form is sealed-bid, which trades away the open-bidding energy that makes an English auction hold up in a thin market.</p>
     <ol>
-      <li>For a set like this (3 trophies + 12 siblings, uncertain turnout), which would you actually run? <span>B, D, or none of the above?</span></li>
-      <li>If Dutch (B): where would you set the opening price and the star reserve floor?</li>
-      <li>Am I wrong to rule out a blind / sealed-bid format? <span>My instinct: hidden bids suppress the casual bidders, making the thin-market problem worse, but tell me if I'm off.</span></li>
+      <li>Do the 3 star auctions run at the same time or one after another? <span>Sequential, like nouns.wtf, probably reads better for the "ascension" story than three parallel auctions.</span></li>
+      <li>What should the opening bid on each star be, and the fixed price on the systems?</li>
       <li>Anything I'm missing entirely?</li>
     </ol>
   </div>
